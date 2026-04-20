@@ -5,11 +5,12 @@ import { MetricsGrid } from './components/MetricsGrid';
 import { StoryStatePanel } from './components/StoryStatePanel';
 import { MatrixPanel } from './components/MatrixPanel';
 import { ChapterSummaryPanel } from './components/ChapterSummaryPanel';
+import { TuningPanel } from './components/TuningPanel';
 import { RecommendationsPanel } from './components/RecommendationsPanel';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { LogsPanel } from './components/LogsPanel';
 import { fetchDashboard, type DashboardResponse } from './api';
-import { overview as fallbackOverview, narrativeSignals as fallbackSignals, matrixWeights as fallbackWeights, chapterSummary as fallbackSummary, recommendations as fallbackRecommendations, feedbackNotes as fallbackFeedback, logs as fallbackLogs } from './data';
+import { overview as fallbackOverview, narrativeSignals as fallbackSignals, matrixWeights as fallbackWeights, chapterSummary as fallbackSummary, tuningWeights as fallbackTuning, recommendations as fallbackRecommendations, feedbackNotes as fallbackFeedback, logs as fallbackLogs } from './data';
 
 export function App() {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -34,6 +35,7 @@ export function App() {
   const narrativeSignals = data?.narrativeSignals ?? fallbackSignals;
   const matrixWeights = data?.matrixWeights ?? fallbackWeights;
   const chapterSummary = data?.chapterSummary ?? fallbackSummary;
+  const tuningWeights = data?.tuningWeights ?? fallbackTuning;
   const recommendations = data?.recommendations ?? fallbackRecommendations;
   const feedbackNotes = data?.feedbackNotes ?? fallbackFeedback;
   const logs = data?.logs ?? fallbackLogs;
@@ -51,13 +53,14 @@ export function App() {
         </section>
         <section className="content-grid two">
           <ChapterSummaryPanel summary={chapterSummary} />
+          <TuningPanel weights={tuningWeights} />
+        </section>
+        <section className="content-grid two">
           <RecommendationsPanel recommendations={recommendations} />
-        </section>
-        <section className="content-grid two">
           <FeedbackPanel notes={feedbackNotes} />
-          <LogsPanel logs={logs} />
         </section>
         <section className="content-grid two">
+          <LogsPanel logs={logs} />
           <section className="panel glass">
             <div className="panel-head">
               <div>
@@ -72,20 +75,6 @@ export function App() {
               <li>每个推荐结果都保留解释理由和权重分布。</li>
               <li>版本、样本、反馈、风险分区展示，便于审查。</li>
               <li>操作按钮集中在可见区域，减少页面跳转成本。</li>
-            </ul>
-          </section>
-          <section className="panel glass">
-            <div className="panel-head">
-              <div>
-                <p className="label">摘要解释</p>
-                <h3>章节建议的结构化表达</h3>
-              </div>
-              <span className="pill success">ready</span>
-            </div>
-            <ul className="note-list">
-              <li>章节建议摘要负责把推荐动作翻译成可写作的结构提示。</li>
-              <li>它应该与推荐排序同源，避免前后矛盾。</li>
-              <li>后续可扩展为“开头-冲突-转折-回报”的模板化输出。</li>
             </ul>
           </section>
         </section>

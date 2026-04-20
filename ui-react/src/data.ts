@@ -32,6 +32,39 @@ export const chapterSummary = {
   payoff: '结尾给出明确的阶段性回报或下一章钩子，增强续读动力。',
 };
 
+export const tuningWeights = [
+  {
+    label: '爽点强度',
+    value: 0.78,
+    direction: 'up' as const,
+    description: '提升打脸、压制、反转后的情绪释放强度。',
+  },
+  {
+    label: '节奏速度',
+    value: 0.62,
+    direction: 'up' as const,
+    description: '加快章节推进速度，提升阅读推进感。',
+  },
+  {
+    label: '打斗密度',
+    value: 0.55,
+    direction: 'up' as const,
+    description: '增加动作场景与冲突交锋的出现频率。',
+  },
+  {
+    label: '情绪沉淀',
+    value: 0.47,
+    direction: 'down' as const,
+    description: '适度降低抒情停顿，避免影响爽感连贯。',
+  },
+  {
+    label: '铺垫权重',
+    value: 0.58,
+    direction: 'down' as const,
+    description: '减少过长铺垫，让主线反馈更快发生。',
+  },
+];
+
 export const recommendations = [
   {
     action: '推进主线冲突',

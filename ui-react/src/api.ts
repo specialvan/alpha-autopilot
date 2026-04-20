@@ -16,6 +16,12 @@ export type ChapterSummary = {
   turn: string;
   payoff: string;
 };
+export type TuningWeight = {
+  label: string;
+  value: number;
+  direction: 'up' | 'down';
+  description: string;
+};
 export type Recommendation = {
   action: string;
   score: string;
@@ -33,6 +39,7 @@ export type DashboardResponse = {
   narrativeSignals: StorySignal[];
   matrixWeights: MatrixWeight[];
   chapterSummary: ChapterSummary;
+  tuningWeights: TuningWeight[];
   recommendations: Recommendation[];
   feedbackNotes: FeedbackNote[];
   logs: LogEntry[];
