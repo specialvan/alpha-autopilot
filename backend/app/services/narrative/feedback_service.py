@@ -26,16 +26,17 @@ class NarrativeFeedbackService:
         self.logger = TrainingLogger()
         self.matrix = FeatureMatrix()
 
-    def record_feedback(self, action: str, target: float, predicted: float, feedback: float) -> FeedbackResult:
+    def record_feedback(self, action: str, target: float, predicted: float, feedback: float, notes: str = "") -> FeedbackResult:
         self.logger.record(
             stage="feedback",
             action=action,
             predicted=predicted,
             target=target,
             feedback=feedback,
-            notes="feedback recorded from api",
+            notes=notes or "feedback recorded from api",
         )
-        if abs(target - predicted) > 0.12:
+        version = None
+        if abs(target - predicted) > 0.12 or feedback < 0.8:
             snapshot = self.versioner.create_version(self.matrix.weights, self.matrix.bias, 0, notes="feedback correction")
-            return FeedbackResult(True, snapshot.version, "feedback accepted and versioned")
-        return FeedbackResult(True, None, "feedback accepted")
+            version = snapshot.version
+        return FeedbackResult(True, version, "feedback accepted")

@@ -106,3 +106,26 @@ export const logs = [
   { time: '2026-04-21 11:08', text: '补充中段样本，伏笔与节奏权重上调。' },
   { time: '2026-04-21 11:32', text: '增加后段样本，回收压力与情绪回报闭环增强。' },
 ];
+
+export const trainingSnapshot = {
+  version: 'v004',
+  sampleCount: 4,
+  averagePredicted: 0.864,
+  averageTarget: 0.862,
+  averageFeedback: 0.833,
+  weights: [
+    ['conflict_push', '1.21'],
+    ['emotion_payoff', '1.14'],
+    ['hook_strength', '1.09'],
+    ['continuity_safety', '1.26'],
+    ['character_focus', '1.03'],
+    ['foreshadowing_value', '1.18'],
+    ['tempo_fit', '1.07'],
+  ] as const,
+  history: [
+    { action: 'push_conflict', predicted: 0.914, target: 0.92, feedback: 0.88 },
+    { action: 'plant_foreshadow', predicted: 0.836, target: 0.84, feedback: 0.81 },
+    { action: 'deliver_payoff', predicted: 0.948, target: 0.95, feedback: 0.93 },
+    { action: 'stabilize_continuity', predicted: 0.725, target: 0.74, feedback: 0.71 },
+  ],
+};

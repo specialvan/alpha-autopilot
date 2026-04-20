@@ -1,7 +1,7 @@
 from .feature_matrix import FeatureMatrix
 from .narrative import CharacterState, NarrativeCandidate, RecommendationResult, StoryState
 from .planner import ChapterPlanner
-from .recommend import recommend_chapter
+from .recommend import preview_recommendations, recommend_chapter
 from .trainer import Trainer, TrainingSample
 from .training_log import TrainingLogger
 from .versioning import MatrixSnapshot, VersionManager
@@ -18,5 +18,6 @@ __all__ = [
     "TrainingLogger",
     "TrainingSample",
     "VersionManager",
+    "preview_recommendations",
     "recommend_chapter",
 ]

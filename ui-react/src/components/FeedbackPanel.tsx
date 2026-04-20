@@ -1,4 +1,4 @@
-export function FeedbackPanel({ notes }: { notes: string[] }) {
+export function FeedbackPanel({ notes, onTrain, onFeedback }: { notes: string[]; onTrain: () => void; onFeedback: () => void }) {
   return (
     <article className="panel glass" id="feedback">
       <div className="panel-head">
@@ -18,6 +18,11 @@ export function FeedbackPanel({ notes }: { notes: string[] }) {
       <ul className="note-list">
         {notes.map((note) => <li key={note}>{note}</li>)}
       </ul>
+
+      <div className="review-flag-row" style={{ marginTop: 16 }}>
+        <button className="secondary" type="button" onClick={onTrain}>运行训练</button>
+        <button className="primary" type="button" onClick={onFeedback}>提交反馈</button>
+      </div>
     </article>
   );
 }

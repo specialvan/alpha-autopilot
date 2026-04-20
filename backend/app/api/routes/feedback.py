@@ -10,12 +10,20 @@ service = NarrativeFeedbackService()
 
 
 class FeedbackRequest(BaseModel):
-    action: str
-    target: float = Field(ge=0, le=1)
-    predicted: float = Field(ge=0, le=1)
-    feedback: float = Field(ge=0, le=1)
+    recommendationAction: str
+    accepted: bool
+    score: float = Field(ge=0, le=1)
+    notes: str | None = None
 
 
 @router.post("/feedback")
-def submit_feedback(payload: FeedbackRequest):
-    return service.record_feedback(payload.action, payload.target, payload.predicted, payload.feedback).to_dict()
+def record_feedback(payload: FeedbackRequest):
+    predicted = payload.score if payload.accepted else max(0.0, payload.score - 0.18)
+    result = service.record_feedback(
+        action=payload.recommendationAction,
+        target=payload.score,
+        predicted=predicted,
+        feedback=payload.score,
+        notes=payload.notes or "",
+    )
+    return result.to_dict()

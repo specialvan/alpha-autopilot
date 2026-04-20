@@ -45,6 +45,38 @@ export type DashboardResponse = {
   logs: LogEntry[];
 };
 
+export type TrainingResponse = {
+  version: string;
+  sample_count: number;
+  bias: number;
+  weights: Record<string, number>;
+  summary: {
+    sample_count: number;
+    average_predicted: number;
+    average_target: number;
+    average_feedback: number;
+  };
+  history: Array<{
+    action: string;
+    predicted: number;
+    target: number;
+    feedback?: number;
+  }>;
+};
+
+export type FeedbackRequest = {
+  recommendationAction: string;
+  accepted: boolean;
+  score: number;
+  notes?: string;
+};
+
+export type FeedbackResponse = {
+  accepted: boolean;
+  version?: string | null;
+  message: string;
+};
+
 export type RecommendationPreviewRequest = {
   tuningWeights: TuningWeight[];
   recommendations: Recommendation[];
@@ -78,4 +110,28 @@ export async function fetchRecommendationPreview(
     throw new Error(`recommendation preview failed: ${response.status}`);
   }
   return (await response.json()) as RecommendationPreviewResponse;
+}
+
+export async function runTraining(): Promise<TrainingResponse> {
+  const response = await fetch(`${DEFAULT_BASE_URL}/api/training`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    throw new Error(`training failed: ${response.status}`);
+  }
+  return (await response.json()) as TrainingResponse;
+}
+
+export async function submitFeedback(payload: FeedbackRequest): Promise<FeedbackResponse> {
+  const response = await fetch(`${DEFAULT_BASE_URL}/api/feedback`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`feedback failed: ${response.status}`);
+  }
+  return (await response.json()) as FeedbackResponse;
 }

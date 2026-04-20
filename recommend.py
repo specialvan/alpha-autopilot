@@ -21,13 +21,14 @@ def build_state() -> StoryState:
         pacing_speed=0.49,
         foreshadowing_load=0.36,
         payoff_pressure=0.31,
+        tags=["power", "middle"],
     )
 
 
 def main() -> None:
     state = build_state()
     recommendations = recommend_chapter(state, FeatureMatrix())
-    print(json.dumps(recommendations, ensure_ascii=False, indent=2))
+    print(json.dumps({"state": state.__dict__, "recommendations": recommendations}, ensure_ascii=False, indent=2, default=lambda o: o.__dict__))
 
 
 if __name__ == "__main__":
