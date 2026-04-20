@@ -13,6 +13,9 @@ export type Recommendation = {
   action: string;
   score: string;
   description: string;
+  riskLevel?: 'low' | 'medium' | 'high';
+  prerequisites?: string[];
+  nextStep?: string;
   top?: boolean;
 };
 export type LogEntry = { time: string; text: string };

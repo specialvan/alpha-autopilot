@@ -19,6 +19,25 @@ export function RecommendationsPanel({ recommendations }: { recommendations: Rec
               <span>{item.score}</span>
             </div>
             <p>{item.description}</p>
+            <div className="review-flag-row">
+              <span className={`micro-pill ${item.riskLevel === 'high' ? 'danger' : ''}`}>
+                风险 {item.riskLevel ?? 'unknown'}
+              </span>
+            </div>
+            {item.prerequisites?.length ? (
+              <>
+                <p className="label" style={{ marginTop: '14px' }}>前置条件</p>
+                <ul className="note-list">
+                  {item.prerequisites.map((prerequisite) => <li key={prerequisite}>{prerequisite}</li>)}
+                </ul>
+              </>
+            ) : null}
+            {item.nextStep ? (
+              <>
+                <p className="label" style={{ marginTop: '14px' }}>下一步建议</p>
+                <p>{item.nextStep}</p>
+              </>
+            ) : null}
           </div>
         ))}
       </div>
