@@ -16,6 +16,22 @@
     "tags": ["opening", "fast_pace", "conflict"]
   },
   {
+    "chapter_index": 3,
+    "stage": "opening",
+    "mainline_progress": 0.16,
+    "sideplot_progress": 0.05,
+    "conflict_intensity": 0.54,
+    "emotional_temperature": 0.38,
+    "pacing_speed": 0.59,
+    "foreshadowing_load": 0.20,
+    "payoff_pressure": 0.15,
+    "target_action": "push_conflict",
+    "target_score": 0.88,
+    "feedback": 0.86,
+    "source": "sample_set_a",
+    "tags": ["opening", "conflict"]
+  },
+  {
     "chapter_index": 4,
     "stage": "opening",
     "mainline_progress": 0.18,
@@ -30,6 +46,22 @@
     "feedback": 0.84,
     "source": "sample_set_a",
     "tags": ["opening", "conflict"]
+  },
+  {
+    "chapter_index": 6,
+    "stage": "opening",
+    "mainline_progress": 0.21,
+    "sideplot_progress": 0.10,
+    "conflict_intensity": 0.57,
+    "emotional_temperature": 0.41,
+    "pacing_speed": 0.56,
+    "foreshadowing_load": 0.24,
+    "payoff_pressure": 0.17,
+    "target_action": "focus_character",
+    "target_score": 0.76,
+    "feedback": 0.74,
+    "source": "sample_set_a",
+    "tags": ["opening", "character"]
   },
   {
     "chapter_index": 8,
@@ -48,6 +80,22 @@
     "tags": ["opening", "character"]
   },
   {
+    "chapter_index": 10,
+    "stage": "opening",
+    "mainline_progress": 0.31,
+    "sideplot_progress": 0.14,
+    "conflict_intensity": 0.52,
+    "emotional_temperature": 0.47,
+    "pacing_speed": 0.55,
+    "foreshadowing_load": 0.27,
+    "payoff_pressure": 0.20,
+    "target_action": "plant_foreshadow",
+    "target_score": 0.73,
+    "feedback": 0.70,
+    "source": "sample_set_b",
+    "tags": ["opening", "foreshadow"]
+  },
+  {
     "chapter_index": 12,
     "stage": "middle",
     "mainline_progress": 0.54,
@@ -61,6 +109,22 @@
     "target_score": 0.84,
     "feedback": 0.81,
     "source": "sample_set_a",
+    "tags": ["middle", "foreshadow"]
+  },
+  {
+    "chapter_index": 14,
+    "stage": "middle",
+    "mainline_progress": 0.58,
+    "sideplot_progress": 0.35,
+    "conflict_intensity": 0.63,
+    "emotional_temperature": 0.50,
+    "pacing_speed": 0.46,
+    "foreshadowing_load": 0.43,
+    "payoff_pressure": 0.31,
+    "target_action": "plant_foreshadow",
+    "target_score": 0.82,
+    "feedback": 0.79,
+    "source": "sample_set_b",
     "tags": ["middle", "foreshadow"]
   },
   {
@@ -80,6 +144,22 @@
     "tags": ["middle", "transition"]
   },
   {
+    "chapter_index": 17,
+    "stage": "middle",
+    "mainline_progress": 0.64,
+    "sideplot_progress": 0.39,
+    "conflict_intensity": 0.66,
+    "emotional_temperature": 0.54,
+    "pacing_speed": 0.44,
+    "foreshadowing_load": 0.40,
+    "payoff_pressure": 0.36,
+    "target_action": "adjust_pacing",
+    "target_score": 0.70,
+    "feedback": 0.68,
+    "source": "sample_set_b",
+    "tags": ["middle", "transition"]
+  },
+  {
     "chapter_index": 19,
     "stage": "middle",
     "mainline_progress": 0.66,
@@ -96,6 +176,22 @@
     "tags": ["middle", "payoff"]
   },
   {
+    "chapter_index": 21,
+    "stage": "middle",
+    "mainline_progress": 0.69,
+    "sideplot_progress": 0.44,
+    "conflict_intensity": 0.70,
+    "emotional_temperature": 0.58,
+    "pacing_speed": 0.51,
+    "foreshadowing_load": 0.45,
+    "payoff_pressure": 0.39,
+    "target_action": "deliver_payoff",
+    "target_score": 0.90,
+    "feedback": 0.88,
+    "source": "sample_set_b",
+    "tags": ["middle", "payoff"]
+  },
+  {
     "chapter_index": 23,
     "stage": "mid_late",
     "mainline_progress": 0.71,
@@ -109,6 +205,22 @@
     "target_score": 0.91,
     "feedback": 0.89,
     "source": "sample_set_a",
+    "tags": ["mid_late", "payoff"]
+  },
+  {
+    "chapter_index": 25,
+    "stage": "mid_late",
+    "mainline_progress": 0.72,
+    "sideplot_progress": 0.49,
+    "conflict_intensity": 0.68,
+    "emotional_temperature": 0.58,
+    "pacing_speed": 0.54,
+    "foreshadowing_load": 0.45,
+    "payoff_pressure": 0.47,
+    "target_action": "deliver_payoff",
+    "target_score": 0.93,
+    "feedback": 0.90,
+    "source": "sample_set_b",
     "tags": ["mid_late", "payoff"]
   },
   {
@@ -144,6 +256,22 @@
     "tags": ["late", "payoff"]
   },
   {
+    "chapter_index": 32,
+    "stage": "late",
+    "mainline_progress": 0.84,
+    "sideplot_progress": 0.60,
+    "conflict_intensity": 0.76,
+    "emotional_temperature": 0.64,
+    "pacing_speed": 0.55,
+    "foreshadowing_load": 0.50,
+    "payoff_pressure": 0.63,
+    "target_action": "stabilize_continuity",
+    "target_score": 0.73,
+    "feedback": 0.70,
+    "source": "sample_set_b",
+    "tags": ["late", "continuity"]
+  },
+  {
     "chapter_index": 33,
     "stage": "late",
     "mainline_progress": 0.86,
@@ -157,6 +285,22 @@
     "target_score": 0.74,
     "feedback": 0.71,
     "source": "sample_set_a",
+    "tags": ["late", "continuity"]
+  },
+  {
+    "chapter_index": 35,
+    "stage": "late",
+    "mainline_progress": 0.88,
+    "sideplot_progress": 0.63,
+    "conflict_intensity": 0.74,
+    "emotional_temperature": 0.62,
+    "pacing_speed": 0.52,
+    "foreshadowing_load": 0.54,
+    "payoff_pressure": 0.68,
+    "target_action": "stabilize_continuity",
+    "target_score": 0.75,
+    "feedback": 0.72,
+    "source": "sample_set_c",
     "tags": ["late", "continuity"]
   }
 ]

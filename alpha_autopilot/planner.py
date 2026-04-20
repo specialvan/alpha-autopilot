@@ -14,9 +14,19 @@ DEFAULT_CANDIDATES = [
         explanation="推进主线冲突，提升当前章节张力。",
     ),
     NarrativeCandidate(
+        action="escalate_pressure",
+        delta={"conflict_intensity": 0.22, "payoff_pressure": 0.10, "pacing_speed": 0.06},
+        explanation="加压当前局面，推动角色进入更强对抗区。",
+    ),
+    NarrativeCandidate(
         action="focus_character",
         delta={"emotional_temperature": 0.08, "sideplot_progress": 0.05},
         explanation="强化人物关系与情绪沉淀，补足人物弧线。",
+    ),
+    NarrativeCandidate(
+        action="deepen_relationship",
+        delta={"emotional_temperature": 0.10, "sideplot_progress": 0.07},
+        explanation="加深人物互动，让关系变化成为推进动力。",
     ),
     NarrativeCandidate(
         action="plant_foreshadow",
@@ -24,9 +34,19 @@ DEFAULT_CANDIDATES = [
         explanation="埋设伏笔，增强后续回收价值。",
     ),
     NarrativeCandidate(
+        action="open_new_branch",
+        delta={"sideplot_progress": 0.14, "foreshadowing_load": 0.06},
+        explanation="开启新支线，扩大叙事空间。",
+    ),
+    NarrativeCandidate(
         action="deliver_payoff",
         delta={"payoff_pressure": -0.15, "emotional_temperature": 0.18, "mainline_progress": 0.12},
         explanation="回收已有铺垫，获得明确情绪回报。",
+    ),
+    NarrativeCandidate(
+        action="reverse_twist",
+        delta={"conflict_intensity": 0.14, "emotional_temperature": 0.12, "foreshadowing_load": -0.04},
+        explanation="用反转提升惊讶值和局势波动。",
     ),
     NarrativeCandidate(
         action="adjust_pacing",
@@ -37,6 +57,11 @@ DEFAULT_CANDIDATES = [
         action="stabilize_continuity",
         delta={"continuity_safety": 0.18, "pacing_speed": -0.04},
         explanation="优先修复叙事连续性，降低章节跳跃风险。",
+    ),
+    NarrativeCandidate(
+        action="close_branch",
+        delta={"sideplot_progress": -0.08, "payoff_pressure": 0.06},
+        explanation="收束支线，避免故事发散过度。",
     ),
 ]
 
