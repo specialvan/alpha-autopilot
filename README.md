@@ -8,6 +8,7 @@ Python reimplementation of a traditional Alpha-Beta Chinese chess engine, adapte
 - Keep the architecture database-free
 - Provide a feature-matrix style evaluation that can later be adapted to chapter-planning and scene-scoring for novel generation
 - Separate board state, move generation, evaluation, and search so the system remains extensible
+- Maintain a clear training, logging, and versioning loop for the narrative prototype
 
 ## Contents
 
@@ -26,11 +27,7 @@ Python reimplementation of a traditional Alpha-Beta Chinese chess engine, adapte
 - `recommend.py` - recommendation entry point
 - `ui/index.html` - modern quant-style dashboard mockup
 - `ui/styles.css` - visual system for the dashboard
-- `frontend_PRD.md` - frontend delivery requirements
-- `frontend_PROJECT_STATUS.md` - frontend progress report
-- `frontend_TECH_BOTTLENECKS.md` - frontend bottleneck log
-- `frontend_REVIEW_GUIDE.md` - frontend review guide
-- `frontend_DELIVERY_CHECKLIST.md` - frontend delivery checklist
+- `ui-react/` - React version of the dashboard with API fallback support
 
 ## Notes for novel-fusion-autopilot
 
@@ -49,7 +46,8 @@ If the matrix is expressive enough, it can act as a compact prior over chapter r
 
 - `python train.py` to train the initial matrix and write version/log artifacts
 - `python recommend.py` to print chapter recommendation rankings
-- Open `ui/index.html` for the quant-style dashboard mockup
+- Open `ui/index.html` for the static quant-style dashboard mockup
+- Use `ui-react/` for the componentized React dashboard prototype
 
 ## UI direction
 

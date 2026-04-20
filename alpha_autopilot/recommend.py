@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Dict, List
 
 from .feature_matrix import FeatureMatrix

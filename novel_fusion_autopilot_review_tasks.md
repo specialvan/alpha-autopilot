@@ -1,50 +1,89 @@
-# novel-fusion-autopilot 接口草案评审任务单
+# novel-fusion-autopilot 接口评审任务单
 
-## 任务名称
+## 任务目标
 
-评审 `alpha-autopilot` 到 `novel-fusion-autopilot` 的接口迁移草案。
+评审 `alpha-autopilot` 向 `novel-fusion-autopilot` 的接口草案与集成目录树，确认其是否满足后续工程迁移条件。
 
-## 评审目标
+---
 
-确认该小说章节推荐原型是否具备迁移到正式工程的最小可行接口。
+## 评审任务 1：数据契约是否清晰
 
-## 评审范围
+### 检查项
+- `StoryState` 是否包含章节规划所需的核心字段
+- `CharacterState` 是否足够表达人物状态
+- `NarrativeCandidate` 是否足够表达候选推进动作
+- `RecommendationResult` 是否支持解释与排序
 
-### 必看文档
-- `novel_fusion_autopilot_interface_draft.md`
-- `novel_fusion_autopilot_migration_plan.md`
-- `PRD.md`
-- `PROJECT_STATUS.md`
-- `TECH_BOTTLENECKS.md`
-- `CODEx_REVIEW_PACKAGE.md`
+### 评审结论期望
+- 字段稳定
+- 语义明确
+- 可直接映射为 API schema
 
-### 必看代码
-- `alpha_autopilot/narrative.py`
-- `alpha_autopilot/feature_matrix.py`
-- `alpha_autopilot/planner.py`
-- `alpha_autopilot/trainer.py`
-- `alpha_autopilot/versioning.py`
-- `alpha_autopilot/training_log.py`
-- `train.py`
-- `recommend.py`
+---
 
-## 重点检查项
+## 评审任务 2：服务边界是否合理
 
-1. `StoryState` 数据契约是否足以表达章节上下文
-2. `FeatureMatrix` 是否适合作为可解释评分核心
-3. `ChapterPlanner` 是否能作为章节推荐服务雏形
-4. 训练日志和版本快照是否支持复盘与回滚
-5. 迁移边界是否清晰，是否避免与 `novel-fusion-autopilot` 过早耦合
-6. 接口命名是否便于后续工程化重构
+### 检查项
+- 状态构建、特征评分、候选推演、训练、反馈、版本管理是否拆分清楚
+- 是否避免单一大服务耦合过重
+- 是否可以独立测试
 
-## 评审输出要求
+### 评审结论期望
+- 模块边界清楚
+- 单测容易编写
+- 接入成本可控
 
-- 接口是否可用
-- 哪些字段需要补充
-- 哪些服务应继续抽象
-- 哪些部分不建议直接迁移
-- 是否建议进入下一阶段正式集成
+---
 
-## 预期结论
+## 评审任务 3：目录树是否便于落地
 
-如果评审通过，则可以把当前原型作为 `novel-fusion-autopilot` 的章节推荐基础模块接口蓝本。
+### 检查项
+- `backend/app/services/narrative/` 是否足以承载当前逻辑
+- `api/routes/` 是否便于前后端联动
+- `frontend/src/api/` 是否便于做统一请求层
+- `docs/` 和 `artifacts/` 是否便于沉淀研究结果
+
+### 评审结论期望
+- 结构可扩展
+- 不与现有主工程冲突
+- 易于逐步替换
+
+---
+
+## 评审任务 4：迁移边界是否正确
+
+### 检查项
+- 是否保留 `alpha-autopilot` 的研究独立性
+- 是否避免过早把研究原型改成正式产品逻辑
+- 是否明确哪些代码应重写而非复制
+
+### 评审结论期望
+- 保持最小耦合
+- 保持可验证性
+- 保持迁移节奏可控
+
+---
+
+## 评审任务 5：闭环是否可继续扩展
+
+### 检查项
+- 推荐结果是否可以进入反馈循环
+- 训练日志是否可持续追加
+- 版本快照是否可回滚
+- 是否支持后续纳入更多题材样本
+
+### 评审结论期望
+- 满足渐进式演化
+- 能支撑多轮迭代
+- 能支撑后续接入 `novel-fusion-autopilot`
+
+---
+
+## 最终评审输出格式
+
+请在评审后输出：
+
+1. 通过 / 需修改 / 不通过
+2. 主要风险点
+3. 推荐修改方案
+4. 是否可以进入下一阶段实现

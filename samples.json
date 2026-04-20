@@ -12,7 +12,8 @@
     "target_action": "push_conflict",
     "target_score": 0.92,
     "feedback": 0.88,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["opening", "fast_pace", "conflict"]
   },
   {
     "chapter_index": 4,
@@ -27,7 +28,8 @@
     "target_action": "push_conflict",
     "target_score": 0.87,
     "feedback": 0.84,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["opening", "conflict"]
   },
   {
     "chapter_index": 8,
@@ -42,7 +44,8 @@
     "target_action": "focus_character",
     "target_score": 0.79,
     "feedback": 0.77,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["opening", "character"]
   },
   {
     "chapter_index": 12,
@@ -57,7 +60,8 @@
     "target_action": "plant_foreshadow",
     "target_score": 0.84,
     "feedback": 0.81,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["middle", "foreshadow"]
   },
   {
     "chapter_index": 16,
@@ -72,7 +76,8 @@
     "target_action": "adjust_pacing",
     "target_score": 0.72,
     "feedback": 0.69,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["middle", "transition"]
   },
   {
     "chapter_index": 19,
@@ -87,7 +92,8 @@
     "target_action": "deliver_payoff",
     "target_score": 0.88,
     "feedback": 0.86,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["middle", "payoff"]
   },
   {
     "chapter_index": 23,
@@ -102,7 +108,8 @@
     "target_action": "deliver_payoff",
     "target_score": 0.91,
     "feedback": 0.89,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["mid_late", "payoff"]
   },
   {
     "chapter_index": 26,
@@ -117,7 +124,8 @@
     "target_action": "deliver_payoff",
     "target_score": 0.95,
     "feedback": 0.93,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["mid_late", "payoff"]
   },
   {
     "chapter_index": 30,
@@ -132,7 +140,8 @@
     "target_action": "deliver_payoff",
     "target_score": 0.97,
     "feedback": 0.95,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["late", "payoff"]
   },
   {
     "chapter_index": 33,
@@ -144,9 +153,10 @@
     "pacing_speed": 0.55,
     "foreshadowing_load": 0.51,
     "payoff_pressure": 0.66,
-    "target_action": "adjust_pacing",
+    "target_action": "stabilize_continuity",
     "target_score": 0.74,
     "feedback": 0.71,
-    "source": "sample_set_a"
+    "source": "sample_set_a",
+    "tags": ["late", "continuity"]
   }
 ]

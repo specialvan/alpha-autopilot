@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 import json
@@ -38,8 +38,8 @@ class VersionManager:
         snapshot = MatrixSnapshot(
             version=version,
             created_at=datetime.now(timezone.utc).isoformat(),
-            weights=weights,
-            bias=bias,
+            weights=dict(sorted(weights.items())),
+            bias=round(bias, 6),
             sample_count=sample_count,
             notes=notes,
         )
@@ -47,6 +47,13 @@ class VersionManager:
         self._save_registry(registry)
         self._write_snapshot(snapshot)
         return snapshot
+
+    def latest(self) -> MatrixSnapshot | None:
+        registry = self._load_registry()
+        if not registry:
+            return None
+        item = registry[-1]
+        return MatrixSnapshot(**item)
 
     def _write_snapshot(self, snapshot: MatrixSnapshot) -> None:
         path = self.store_dir / f"matrix_{snapshot.version}.json"

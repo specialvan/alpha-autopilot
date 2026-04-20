@@ -15,7 +15,7 @@ DEFAULT_CANDIDATES = [
     ),
     NarrativeCandidate(
         action="focus_character",
-        delta={"character_focus": 0.0, "emotional_temperature": 0.08, "sideplot_progress": 0.05},
+        delta={"emotional_temperature": 0.08, "sideplot_progress": 0.05},
         explanation="强化人物关系与情绪沉淀，补足人物弧线。",
     ),
     NarrativeCandidate(
@@ -33,6 +33,11 @@ DEFAULT_CANDIDATES = [
         delta={"pacing_speed": -0.10, "continuity_safety": 0.10},
         explanation="降低推进速度，保证过渡自然与稳定性。",
     ),
+    NarrativeCandidate(
+        action="stabilize_continuity",
+        delta={"continuity_safety": 0.18, "pacing_speed": -0.04},
+        explanation="优先修复叙事连续性，降低章节跳跃风险。",
+    ),
 ]
 
 
@@ -42,14 +47,20 @@ class ChapterPlanner:
 
     def extract_features(self, state: StoryState, candidate: NarrativeCandidate) -> Dict[str, float]:
         delta = candidate.delta
+        stage_bias = {
+            "opening": 0.15,
+            "middle": 0.10,
+            "mid_late": 0.08,
+            "late": 0.05,
+        }.get(state.stage, 0.10)
         return {
-            "conflict_push": max(0.0, delta.get("conflict_intensity", 0.0)),
-            "emotion_payoff": max(0.0, delta.get("emotional_temperature", 0.0)),
-            "hook_strength": max(0.0, delta.get("pacing_speed", 0.0) + delta.get("mainline_progress", 0.0)),
+            "conflict_push": max(0.0, delta.get("conflict_intensity", 0.0) + state.conflict_intensity * 0.15),
+            "emotion_payoff": max(0.0, delta.get("emotional_temperature", 0.0) + state.emotional_temperature * 0.10),
+            "hook_strength": max(0.0, delta.get("pacing_speed", 0.0) + delta.get("mainline_progress", 0.0) + stage_bias),
             "continuity_safety": max(0.0, delta.get("continuity_safety", 0.0) + 0.2 - abs(state.pacing_speed - 0.5)),
-            "character_focus": max(0.0, delta.get("sideplot_progress", 0.0) + state.emotional_temperature * 0.2),
-            "foreshadowing_value": max(0.0, delta.get("foreshadowing_load", 0.0) + state.payoff_pressure * 0.2),
-            "tempo_fit": max(0.0, 1.0 - abs(state.pacing_speed - (0.55 if state.stage == "opening" else 0.45))),
+            "character_focus": max(0.0, delta.get("sideplot_progress", 0.0) + state.sideplot_progress * 0.12 + state.emotional_temperature * 0.2),
+            "foreshadowing_value": max(0.0, delta.get("foreshadowing_load", 0.0) + state.foreshadowing_load * 0.15 + state.payoff_pressure * 0.2),
+            "tempo_fit": max(0.0, 1.0 - abs(state.pacing_speed - (0.58 if state.stage == "opening" else 0.46))),
         }
 
     def recommend(self, state: StoryState) -> List[RecommendationResult]:

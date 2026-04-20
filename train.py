@@ -26,6 +26,7 @@ def load_samples() -> list[TrainingSample]:
             pacing_speed=item["pacing_speed"],
             foreshadowing_load=item["foreshadowing_load"],
             payoff_pressure=item["payoff_pressure"],
+            tags=item.get("tags", []),
         )
         samples.append(
             TrainingSample(
@@ -61,6 +62,7 @@ def main() -> None:
         print(f"  {key}: {value:.4f}")
     print(f"bias={matrix.bias:.4f}")
     print(f"history_len={len(trainer.history)}")
+    print(f"summary={trainer.summary()}")
     print(f"version={snapshot.version}")
 
 
