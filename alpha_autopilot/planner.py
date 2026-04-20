@@ -25,7 +25,7 @@ DEFAULT_CANDIDATES = [
     ),
     NarrativeCandidate(
         action="deepen_relationship",
-        delta={"emotional_temperature": 0.10, "sideplot_progress": 0.07},
+        delta={"emotional_temperature": 0.10, "sideplot_progress": 0.04, "character_focus": 0.06},
         explanation="加深人物互动，让关系变化成为推进动力。",
     ),
     NarrativeCandidate(
