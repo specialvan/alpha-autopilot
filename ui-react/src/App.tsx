@@ -9,18 +9,25 @@ import { TuningPanel } from './components/TuningPanel';
 import { RecommendationsPanel } from './components/RecommendationsPanel';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { LogsPanel } from './components/LogsPanel';
-import { fetchDashboard, type DashboardResponse } from './api';
+import { fetchDashboard, fetchRecommendationPreview, type DashboardResponse, type Recommendation, type TuningWeight } from './api';
 import { overview as fallbackOverview, narrativeSignals as fallbackSignals, matrixWeights as fallbackWeights, chapterSummary as fallbackSummary, tuningWeights as fallbackTuning, recommendations as fallbackRecommendations, feedbackNotes as fallbackFeedback, logs as fallbackLogs } from './data';
 
 export function App() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tuning, setTuning] = useState<TuningWeight[]>(fallbackTuning);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>(fallbackRecommendations);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetchDashboard()
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (!cancelled) {
+          setData(result);
+          setTuning(result.tuningWeights ?? fallbackTuning);
+          setRecommendations(result.recommendations ?? fallbackRecommendations);
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'unknown error');
@@ -35,10 +42,35 @@ export function App() {
   const narrativeSignals = data?.narrativeSignals ?? fallbackSignals;
   const matrixWeights = data?.matrixWeights ?? fallbackWeights;
   const chapterSummary = data?.chapterSummary ?? fallbackSummary;
-  const tuningWeights = data?.tuningWeights ?? fallbackTuning;
-  const recommendations = data?.recommendations ?? fallbackRecommendations;
   const feedbackNotes = data?.feedbackNotes ?? fallbackFeedback;
   const logs = data?.logs ?? fallbackLogs;
+
+  const handleAdjust = (label: string, delta: number) => {
+    setTuning((current) =>
+      current.map((item) =>
+        item.label === label
+          ? {
+              ...item,
+              value: Math.max(0, Math.min(1, Number((item.value + delta).toFixed(2)))),
+              direction: delta >= 0 ? 'up' : 'down',
+            }
+          : item,
+      ),
+    );
+  };
+
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    try {
+      const result = await fetchRecommendationPreview({ tuningWeights: tuning, recommendations });
+      setRecommendations(result.recommendations);
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : 'preview failed');
+      setRecommendations((current) => current.slice());
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -53,8 +85,9 @@ export function App() {
         </section>
         <section className="content-grid two">
           <ChapterSummaryPanel summary={chapterSummary} />
-          <TuningPanel weights={tuningWeights} />
+          <TuningPanel weights={tuning} onAdjust={handleAdjust} onPreview={handlePreview} />
         </section>
+        {previewLoading ? <div className="banner info">正在刷新推荐预览...</div> : null}
         <section className="content-grid two">
           <RecommendationsPanel recommendations={recommendations} />
           <FeedbackPanel notes={feedbackNotes} />

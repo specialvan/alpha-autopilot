@@ -1,6 +1,12 @@
 import type { TuningWeight } from '../api';
 
-export function TuningPanel({ weights }: { weights: TuningWeight[] }) {
+type TuningPanelProps = {
+  weights: TuningWeight[];
+  onAdjust: (label: string, delta: number) => void;
+  onPreview: () => void;
+};
+
+export function TuningPanel({ weights, onAdjust, onPreview }: TuningPanelProps) {
   return (
     <article className="panel glass" id="tuning">
       <div className="panel-head">
@@ -8,7 +14,7 @@ export function TuningPanel({ weights }: { weights: TuningWeight[] }) {
           <p className="label">推荐生成调参</p>
           <h3>爽点、节奏、打斗等量化细节</h3>
         </div>
-        <span className="pill success">editable</span>
+        <span className="pill success">interactive</span>
       </div>
 
       <div className="signal-stack">
@@ -22,6 +28,10 @@ export function TuningPanel({ weights }: { weights: TuningWeight[] }) {
               <span style={{ width: `${Math.round(item.value * 100)}%` }} />
             </div>
             <p className="muted" style={{ marginTop: 8 }}>{item.description}</p>
+            <div className="review-flag-row" style={{ marginTop: 12 }}>
+              <button className="secondary micro-action" type="button" onClick={() => onAdjust(item.label, -0.05)}>削弱</button>
+              <button className="primary micro-action" type="button" onClick={() => onAdjust(item.label, 0.05)}>强化</button>
+            </div>
           </div>
         ))}
       </div>
@@ -30,6 +40,7 @@ export function TuningPanel({ weights }: { weights: TuningWeight[] }) {
         <span className="micro-pill">可强化</span>
         <span className="micro-pill">可削弱</span>
         <span className="micro-pill">可对比上一版</span>
+        <button className="secondary" type="button" onClick={onPreview}>刷新推荐预览</button>
       </div>
     </article>
   );

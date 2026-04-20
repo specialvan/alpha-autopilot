@@ -45,6 +45,15 @@ export type DashboardResponse = {
   logs: LogEntry[];
 };
 
+export type RecommendationPreviewRequest = {
+  tuningWeights: TuningWeight[];
+  recommendations: Recommendation[];
+};
+
+export type RecommendationPreviewResponse = {
+  recommendations: Recommendation[];
+};
+
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
 
 export async function fetchDashboard(): Promise<DashboardResponse> {
@@ -53,4 +62,20 @@ export async function fetchDashboard(): Promise<DashboardResponse> {
     throw new Error(`dashboard fetch failed: ${response.status}`);
   }
   return (await response.json()) as DashboardResponse;
+}
+
+export async function fetchRecommendationPreview(
+  payload: RecommendationPreviewRequest,
+): Promise<RecommendationPreviewResponse> {
+  const response = await fetch(`${DEFAULT_BASE_URL}/api/recommendation/preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`recommendation preview failed: ${response.status}`);
+  }
+  return (await response.json()) as RecommendationPreviewResponse;
 }
