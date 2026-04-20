@@ -9,6 +9,13 @@ export type OverviewResponse = {
 
 export type StorySignal = { label: string; value: number };
 export type MatrixWeight = { label: string; value: string };
+export type ChapterSummary = {
+  title: string;
+  hook: string;
+  conflict: string;
+  turn: string;
+  payoff: string;
+};
 export type Recommendation = {
   action: string;
   score: string;
@@ -25,6 +32,7 @@ export type DashboardResponse = {
   overview: OverviewResponse;
   narrativeSignals: StorySignal[];
   matrixWeights: MatrixWeight[];
+  chapterSummary: ChapterSummary;
   recommendations: Recommendation[];
   feedbackNotes: FeedbackNote[];
   logs: LogEntry[];

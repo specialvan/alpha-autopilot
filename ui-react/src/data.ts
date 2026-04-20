@@ -24,6 +24,14 @@ export const matrixWeights = [
   ['节奏适配', '1.04'],
 ] as const;
 
+export const chapterSummary = {
+  title: '本章建议摘要',
+  hook: '通过一个高压事件或关键信息切入口，快速建立读者注意力。',
+  conflict: '本章优先推进主线冲突，并保留一个可回收的矛盾点。',
+  turn: '在中段加入轻量反转或信息偏转，避免节奏平直。',
+  payoff: '结尾给出明确的阶段性回报或下一章钩子，增强续读动力。',
+};
+
 export const recommendations = [
   {
     action: '推进主线冲突',
