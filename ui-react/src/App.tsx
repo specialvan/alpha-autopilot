@@ -8,19 +8,37 @@ import { ChapterSummaryPanel } from './components/ChapterSummaryPanel';
 import { TuningPanel } from './components/TuningPanel';
 import { RecommendationsPanel } from './components/RecommendationsPanel';
 import { TrainingResultPanel } from './components/TrainingResultPanel';
+import { ValueTrendPanel } from './components/ValueTrendPanel';
+import { VersionComparePanel } from './components/VersionComparePanel';
+import { HistoryPanel } from './components/HistoryPanel';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { LogsPanel } from './components/LogsPanel';
-import { fetchDashboard, fetchRecommendationPreview, runTraining, submitFeedback, type DashboardResponse, type Recommendation, type TrainingResponse, type TuningWeight } from './api';
+import { fetchDashboard, fetchHistory, fetchRecommendationPreview, runTraining, submitFeedback, type DashboardResponse, type HistoryResponse, type Recommendation, type TrainingResponse, type TuningWeight } from './api';
 import { overview as fallbackOverview, narrativeSignals as fallbackSignals, matrixWeights as fallbackWeights, chapterSummary as fallbackSummary, tuningWeights as fallbackTuning, recommendations as fallbackRecommendations, feedbackNotes as fallbackFeedback, logs as fallbackLogs, trainingSnapshot as fallbackTraining } from './data';
 
 export function App() {
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<{ stage?: string; action?: string; limit?: number }>({ limit: 20 });
   const [tuning, setTuning] = useState<TuningWeight[]>(fallbackTuning);
   const [recommendations, setRecommendations] = useState<Recommendation[]>(fallbackRecommendations);
   const [trainingResult, setTrainingResult] = useState<TrainingResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [feedbackSummary, setFeedbackSummary] = useState<TrainingResponse['value_metrics'] | null>(null);
+  const [feedbackTopActions, setFeedbackTopActions] = useState<Array<{ action: string; average_quality: number }> | null>(null);
+  const [historySnapshots, setHistorySnapshots] = useState<TrainingResponse[]>([]);
+  const [historyLogs, setHistoryLogs] = useState<string[]>([]);
+
+  const refreshHistory = (filter = historyFilter) => {
+    fetchHistory(filter)
+      .then((result) => {
+        setHistory(result);
+        setHistoryLogs(result.historyLogs.map((item) => `${item.time} ${item.text}`));
+      })
+      .catch(() => setHistory(null));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +52,17 @@ export function App() {
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'unknown error');
+      });
+
+    fetchHistory(historyFilter)
+      .then((result) => {
+        if (!cancelled) {
+          setHistory(result);
+          setHistoryLogs(result.historyLogs.map((item) => `${item.time} ${item.text}`));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setHistory(null);
       });
 
     return () => {
@@ -80,22 +109,37 @@ export function App() {
     try {
       const result = await runTraining();
       setTrainingResult(result);
+      setHistorySnapshots((current) => [...current, result].slice(-5));
+      setHistoryLogs((current) => [...current, `训练版本 ${result.version} 完成，反馈 ${result.summary.avg_feedback.toFixed(3)}`].slice(-8));
       setError(null);
+      refreshHistory();
     } catch (trainError) {
       setError(trainError instanceof Error ? trainError.message : 'training failed');
-      setTrainingResult({
+      const fallbackResult: TrainingResponse = {
         version: fallbackTraining.version,
         sample_count: fallbackTraining.sampleCount,
         bias: 0.0,
         weights: Object.fromEntries(fallbackTraining.weights.map(([name, value]) => [name, Number(value)])),
         summary: {
-          sample_count: fallbackTraining.sampleCount,
-          average_predicted: fallbackTraining.averagePredicted,
-          average_target: fallbackTraining.averageTarget,
-          average_feedback: fallbackTraining.averageFeedback,
+          count: fallbackTraining.sampleCount,
+          avg_predicted: fallbackTraining.averagePredicted,
+          avg_target: fallbackTraining.averageTarget,
+          avg_feedback: fallbackTraining.averageFeedback,
+          rmse: 0.031,
         },
         history: fallbackTraining.history,
-      });
+        value_metrics: {
+          sample_count: fallbackTraining.sampleCount,
+          accept_rate: 0.75,
+          average_chapter_quality: 0.82,
+          average_followup_writeability: 0.79,
+          average_continuity_delta: 0.03,
+        },
+        top_actions: fallbackTraining.history.map((item) => ({ action: item.action, average_quality: item.feedback })).slice(0, 3),
+      };
+      setTrainingResult(fallbackResult);
+      setHistorySnapshots((current) => [...current, fallbackResult].slice(-5));
+      setHistoryLogs((current) => [...current, `训练版本 ${fallbackResult.version} 使用本地回退数据`].slice(-8));
     } finally {
       setActionLoading(null);
     }
@@ -112,13 +156,35 @@ export function App() {
         score: Number(top.score),
         notes: 'from frontend feedback panel',
       });
+      if (result.value_summary) setFeedbackSummary(result.value_summary);
+      if (result.top_actions) setFeedbackTopActions(result.top_actions);
       if (!result.accepted) {
         setError(result.message);
+      } else {
+        setHistoryLogs((current) => [...current, `反馈 ${top.action} 已记录${result.version ? `，版本 ${result.version}` : ''}`].slice(-8));
+        refreshHistory();
       }
     } catch (feedbackError) {
       setError(feedbackError instanceof Error ? feedbackError.message : 'feedback failed');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleHistoryFilter = (filter: { stage?: string; action?: string; limit?: number }) => {
+    const next = { ...historyFilter, ...filter };
+    setHistoryFilter(next);
+    refreshHistory(next);
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/history/export', { method: 'POST' });
+      if (!response.ok) throw new Error(`export failed: ${response.status}`);
+      const result = await response.json() as { ok: boolean; path: string; counts: { training_logs: number; value_metrics: number } };
+      setHistoryLogs((current) => [...current, `历史已导出至 ${result.path}`].slice(-8));
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : 'export failed');
     }
   };
 
@@ -145,39 +211,31 @@ export function App() {
           <TrainingResultPanel result={trainingResult} />
         </section>
         <section className="content-grid two">
-          <FeedbackPanel notes={feedbackNotes} onTrain={handleTrain} onFeedback={handleFeedback} />
-          <LogsPanel logs={logs} />
+          <ValueTrendPanel current={trainingResult} baseline={fallbackTraining} />
+          <VersionComparePanel current={trainingResult} baseline={fallbackTraining} />
         </section>
         <section className="content-grid two">
+          <HistoryPanel history={history} liveSnapshots={historySnapshots} valueSummary={feedbackSummary} topActions={feedbackTopActions} onFilterChange={handleHistoryFilter} />
+          <FeedbackPanel notes={feedbackNotes} onTrain={handleTrain} onFeedback={handleFeedback} summary={feedbackSummary} topActions={feedbackTopActions} />
+        </section>
+        <section className="content-grid two">
+          <LogsPanel logs={logs} />
           <section className="panel glass">
             <div className="panel-head">
               <div>
-                <p className="label">生产实践对齐</p>
-                <h3>量化系统的 UX 重点</h3>
+                <p className="label">归档 / 备份 / 迁移</p>
+                <h3>历史导出工具</h3>
               </div>
-              <span className="pill">review-ready</span>
+              <span className="pill">archive-ready</span>
             </div>
             <ul className="note-list">
-              <li>突出关键指标，避免信息面板过载。</li>
-              <li>使用分层卡片和清晰状态色，支持快速扫读。</li>
-              <li>每个推荐结果都保留解释理由和权重分布。</li>
-              <li>版本、样本、反馈、风险分区展示，便于审查。</li>
-              <li>操作按钮集中在可见区域，减少页面跳转成本。</li>
+              <li>支持把训练日志和价值记录导出为 JSON。</li>
+              <li>导出文件可用于离线分析和归档。</li>
+              <li>可作为迁移到新存储后端的数据中转格式。</li>
             </ul>
-          </section>
-          <section className="panel glass">
-            <div className="panel-head">
-              <div>
-                <p className="label">摘要解释</p>
-                <h3>章节建议的结构化表达</h3>
-              </div>
-              <span className="pill success">ready</span>
+            <div className="review-flag-row" style={{ marginTop: 16 }}>
+              <button className="primary" type="button" onClick={handleExport}>导出历史</button>
             </div>
-            <ul className="note-list">
-              <li>章节建议摘要负责把推荐动作翻译成可写作的结构提示。</li>
-              <li>它应该与推荐排序同源，避免前后矛盾。</li>
-              <li>后续可扩展为“开头-冲突-转折-回报”的模板化输出。</li>
-            </ul>
           </section>
         </section>
       </main>

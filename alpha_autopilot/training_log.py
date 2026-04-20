@@ -43,3 +43,6 @@ class TrainingLogger:
         )
         self.entries.append(asdict(entry))
         self.log_path.write_text(json.dumps(self.entries, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def history(self) -> List[Dict[str, Any]]:
+        return list(self.entries)

@@ -1,4 +1,22 @@
-export function FeedbackPanel({ notes, onTrain, onFeedback }: { notes: string[]; onTrain: () => void; onFeedback: () => void }) {
+export function FeedbackPanel({
+  notes,
+  onTrain,
+  onFeedback,
+  summary,
+  topActions,
+}: {
+  notes: string[];
+  onTrain: () => void;
+  onFeedback: () => void;
+  summary: {
+    sample_count: number;
+    accept_rate: number;
+    average_chapter_quality: number;
+    average_followup_writeability: number;
+    average_continuity_delta: number;
+  } | null;
+  topActions: Array<{ action: string; average_quality: number }> | null;
+}) {
   return (
     <article className="panel glass" id="feedback">
       <div className="panel-head">
@@ -18,6 +36,29 @@ export function FeedbackPanel({ notes, onTrain, onFeedback }: { notes: string[];
       <ul className="note-list">
         {notes.map((note) => <li key={note}>{note}</li>)}
       </ul>
+
+      {summary ? (
+        <div className="matrix-list" style={{ marginTop: 16 }}>
+          <div className="matrix-row"><span>采纳率</span><strong>{(summary.accept_rate * 100).toFixed(1)}%</strong></div>
+          <div className="matrix-row"><span>章节质量</span><strong>{summary.average_chapter_quality.toFixed(3)}</strong></div>
+          <div className="matrix-row"><span>后续可写性</span><strong>{summary.average_followup_writeability.toFixed(3)}</strong></div>
+          <div className="matrix-row"><span>连续性变化</span><strong>{summary.average_continuity_delta.toFixed(3)}</strong></div>
+        </div>
+      ) : null}
+
+      {topActions?.length ? (
+        <>
+          <p className="label" style={{ marginTop: 16 }}>高价值动作</p>
+          <div className="matrix-list">
+            {topActions.map((item) => (
+              <div className="matrix-row" key={item.action}>
+                <span>{item.action}</span>
+                <strong>{item.average_quality.toFixed(3)}</strong>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
 
       <div className="review-flag-row" style={{ marginTop: 16 }}>
         <button className="secondary" type="button" onClick={onTrain}>运行训练</button>

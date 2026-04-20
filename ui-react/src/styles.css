@@ -34,8 +34,23 @@ body {
 
 button,
 select,
-textarea {
+textarea,
+input {
   font: inherit;
+}
+
+input.search-input {
+  min-width: 280px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+input.search-input::placeholder {
+  color: #7383a8;
 }
 
 .app-shell {
@@ -181,7 +196,12 @@ h3 {
 .metrics-grid,
 .content-grid,
 .note-list,
-.log-list {
+.log-list,
+.history-board,
+.history-column,
+.chip-row,
+.stage-grid,
+.version-grid {
   display: grid;
 }
 
@@ -195,7 +215,7 @@ button {
   border-radius: 16px;
   padding: 14px 16px;
   cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 button:hover {
@@ -375,6 +395,55 @@ button:hover {
   color: var(--muted);
 }
 
+.stage-grid,
+.version-grid {
+  gap: 14px;
+}
+
+.history-board {
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.history-column {
+  gap: 12px;
+}
+
+.history-column-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 4px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.timeline-card {
+  min-height: 180px;
+  position: relative;
+}
+
+.timeline-card:hover {
+  border-color: rgba(109, 141, 255, 0.4);
+  box-shadow: 0 14px 35px rgba(109, 141, 255, 0.12);
+}
+
+.chip-row {
+  grid-template-columns: repeat(auto-fit, minmax(120px, max-content));
+  gap: 8px;
+}
+
+.chip-button {
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(109, 141, 255, 0.12);
+  border: 1px solid rgba(109, 141, 255, 0.2);
+  color: var(--text);
+}
+
+.chip-button:hover {
+  background: rgba(109, 141, 255, 0.2);
+}
+
 @media (max-width: 1200px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -387,7 +456,8 @@ button:hover {
 
   .metrics-grid,
   .content-grid,
-  .content-grid.two {
+  .content-grid.two,
+  .history-board {
     grid-template-columns: 1fr;
   }
 

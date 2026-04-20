@@ -1,9 +1,21 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Dict, List
+import sqlite3
 
-from alpha_autopilot import FeatureMatrix, Trainer, TrainingSample, VersionManager, TrainingLogger, StoryState
+from alpha_autopilot import (
+    ArtifactStore,
+    DbHistoryRepository,
+    FeatureMatrix,
+    Trainer,
+    TrainingLogger,
+    TrainingSample,
+    StoryState,
+    VersionManager,
+)
+from .write_service import NarrativeWriteService
 
 
 @dataclass
@@ -14,6 +26,8 @@ class TrainingResult:
     weights: Dict[str, float]
     summary: Dict[str, float]
     history: List[Dict[str, Any]]
+    value_metrics: Dict[str, float]
+    top_actions: List[Dict[str, float]]
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -24,6 +38,15 @@ class NarrativeTrainingService:
         self.trainer = Trainer()
         self.versioner = VersionManager()
         self.logger = TrainingLogger()
+        self.store = ArtifactStore.default()
+        self.metrics_path = self.store.value_metrics_path
+        self._db = self._open_db()
+        self.repository = DbHistoryRepository(self._db)
+        self.writer = NarrativeWriteService(self.repository)
+
+    def _open_db(self) -> sqlite3.Connection:
+        self.store.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+        return sqlite3.connect(self.store.sqlite_path)
 
     def _default_samples(self) -> list[TrainingSample]:
         raw = [
@@ -117,14 +140,32 @@ class NarrativeTrainingService:
         matrix = self.trainer.fit(samples)
         snapshot = self.versioner.create_version(matrix.weights, matrix.bias, len(samples), notes="fastapi training run")
         for entry in self.trainer.history:
+            payload = {
+                "timestamp": entry.get("timestamp", snapshot.created_at),
+                "stage": "train",
+                "action": entry["action"],
+                "predicted": entry["predicted"],
+                "target": entry["target"],
+                "feedback": entry.get("feedback", 0.0),
+                "notes": snapshot.version,
+            }
             self.logger.record(
-                stage="train",
-                action=entry["action"],
-                predicted=entry["predicted"],
-                target=entry["target"],
-                feedback=entry.get("feedback", 0.0),
-                notes=snapshot.version,
+                stage=payload["stage"],
+                action=payload["action"],
+                predicted=payload["predicted"],
+                target=payload["target"],
+                feedback=payload["feedback"],
+                notes=payload["notes"],
             )
+            self.writer.persist_training(payload)
+
+        self.trainer.value_metrics.save(self.metrics_path)
+        for record in self.trainer.value_metrics.records:
+            self.writer.persist_value_metric(record)
+
+        value_metrics_summary = self.repository.read_value_metrics().summary()
+        top_actions = self.repository.read_value_metrics().top_actions()
+
         return TrainingResult(
             version=snapshot.version,
             sample_count=len(samples),
@@ -132,4 +173,6 @@ class NarrativeTrainingService:
             weights=matrix.weights,
             summary=self.trainer.summary(),
             history=list(self.trainer.history),
+            value_metrics=value_metrics_summary,
+            top_actions=top_actions,
         )
