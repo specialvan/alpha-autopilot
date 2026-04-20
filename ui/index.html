@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novel Autopilot Quant Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar glass">
+        <div class="brand">
+          <div class="brand-mark">NQ</div>
+          <div>
+            <p class="eyebrow">Novel Quant Lab</p>
+            <h1>章节推荐中台</h1>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a href="#overview" class="nav-item active">总览</a>
+          <a href="#state" class="nav-item">叙事状态</a>
+          <a href="#matrix" class="nav-item">特征矩阵</a>
+          <a href="#recommendations" class="nav-item">推荐结果</a>
+          <a href="#feedback" class="nav-item">反馈闭环</a>
+          <a href="#logs" class="nav-item">训练日志</a>
+        </nav>
+
+        <div class="sidebar-card">
+          <p class="label">当前版本</p>
+          <strong id="matrixVersion">v003</strong>
+          <p class="muted">可追踪、可回滚、可比较的矩阵快照</p>
+        </div>
+
+        <div class="sidebar-card accent">
+          <p class="label">推荐健康度</p>
+          <div class="ring">
+            <span id="healthValue">82</span>
+            <small>/100</small>
+          </div>
+          <p class="muted">当前处于可用的早期收敛阶段</p>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="hero glass" id="overview">
+          <div>
+            <p class="eyebrow">爆款拆解 · 特征矩阵 · 状态推演 · 反馈闭环</p>
+            <h2>面向小说章节规划的量化推荐工作台</h2>
+            <p class="lede">
+              参考成熟量化系统的生产实践，将“数据接入、信号评分、候选排序、版本追踪、人工复核”统一到一个现代化仪表盘中。
+            </p>
+          </div>
+          <div class="hero-actions">
+            <button class="primary">运行一次推荐</button>
+            <button class="secondary">导入拆解样本</button>
+          </div>
+        </header>
+
+        <section class="metrics-grid">
+          <article class="metric-card glass">
+            <p class="label">训练样本</p>
+            <strong id="sampleCount">10</strong>
+            <span class="delta up">+4 本周新增</span>
+          </article>
+          <article class="metric-card glass">
+            <p class="label">版本快照</p>
+            <strong id="versionCount">3</strong>
+            <span class="delta up">持续可回滚</span>
+          </article>
+          <article class="metric-card glass">
+            <p class="label">反馈命中率</p>
+            <strong id="hitRate">76%</strong>
+            <span class="delta up">较上轮提升 8%</span>
+          </article>
+          <article class="metric-card glass">
+            <p class="label">AI 风险</p>
+            <strong id="riskScore">34</strong>
+            <span class="delta down">低于警戒线</span>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel glass" id="state">
+            <div class="panel-head">
+              <div>
+                <p class="label">叙事状态</p>
+                <h3>当前章节的上下文信号</h3>
+              </div>
+              <span class="pill">Chapter 18</span>
+            </div>
+
+            <div class="signal-stack">
+              <div class="signal">
+                <div class="signal-row"><span>主线推进</span><strong>61%</strong></div>
+                <div class="bar"><span style="width:61%"></span></div>
+              </div>
+              <div class="signal">
+                <div class="signal-row"><span>冲突强度</span><strong>64%</strong></div>
+                <div class="bar"><span style="width:64%"></span></div>
+              </div>
+              <div class="signal">
+                <div class="signal-row"><span>伏笔负载</span><strong>36%</strong></div>
+                <div class="bar"><span style="width:36%"></span></div>
+              </div>
+              <div class="signal">
+                <div class="signal-row"><span>回收压力</span><strong>31%</strong></div>
+                <div class="bar"><span style="width:31%"></span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel glass" id="matrix">
+            <div class="panel-head">
+              <div>
+                <p class="label">特征矩阵</p>
+                <h3>可解释的量化权重</h3>
+              </div>
+              <span class="pill">v003</span>
+            </div>
+
+            <div class="matrix-list">
+              <div class="matrix-row"><span>冲突推进</span><strong>1.32</strong></div>
+              <div class="matrix-row"><span>情绪回报</span><strong>1.18</strong></div>
+              <div class="matrix-row"><span>钩子强度</span><strong>1.09</strong></div>
+              <div class="matrix-row"><span>连续性安全</span><strong>1.24</strong></div>
+              <div class="matrix-row"><span>人物聚焦</span><strong>0.96</strong></div>
+              <div class="matrix-row"><span>伏笔价值</span><strong>1.12</strong></div>
+              <div class="matrix-row"><span>节奏适配</span><strong>1.04</strong></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="content-grid two" id="recommendations">
+          <article class="panel glass">
+            <div class="panel-head">
+              <div>
+                <p class="label">推荐结果</p>
+                <h3>候选章节推进排序</h3>
+              </div>
+              <span class="pill success">Top 3</span>
+            </div>
+
+            <div class="recommendation-list">
+              <div class="recommendation-card top">
+                <div class="rec-head">
+                  <strong>推进主线冲突</strong>
+                  <span>0.924</span>
+                </div>
+                <p>在合法前提下优先放大对抗压力，推动下一章进入高张力区间。</p>
+              </div>
+              <div class="recommendation-card">
+                <div class="rec-head">
+                  <strong>埋设伏笔</strong>
+                  <span>0.841</span>
+                </div>
+                <p>适合在中段补齐信息缺口，为后续爆发保留解释空间。</p>
+              </div>
+              <div class="recommendation-card">
+                <div class="rec-head">
+                  <strong>回收旧钩子</strong>
+                  <span>0.799</span>
+                </div>
+                <p>在当前回收压力上升时，把前文悬而未决的信息转化为情绪回报。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel glass" id="feedback">
+            <div class="panel-head">
+              <div>
+                <p class="label">反馈闭环</p>
+                <h3>训练结果与反馈趋势</h3>
+              </div>
+              <span class="pill">stable</span>
+            </div>
+
+            <div class="feedback-graph">
+              <div class="bar-col"><span style="height:42%"></span><small>样本 A</small></div>
+              <div class="bar-col"><span style="height:58%"></span><small>样本 B</small></div>
+              <div class="bar-col"><span style="height:66%"></span><small>样本 C</small></div>
+              <div class="bar-col active"><span style="height:74%"></span><small>当前轮次</small></div>
+            </div>
+            <ul class="note-list">
+              <li>早期开篇样本对冲突推进的权重修正最明显。</li>
+              <li>中段样本提高了伏笔与节奏的联动强度。</li>
+              <li>后段样本增强了回收压力与情绪回报的相关性。</li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="content-grid two" id="logs">
+          <article class="panel glass">
+            <div class="panel-head">
+              <div>
+                <p class="label">训练日志</p>
+                <h3>版本与样本演进</h3>
+              </div>
+              <span class="pill">append-only</span>
+            </div>
+            <div class="log-list">
+              <div class="log-item">
+                <span class="log-time">2026-04-21 10:41</span>
+                <p>v001 初始矩阵生成，完成 10 条样本训练。</p>
+              </div>
+              <div class="log-item">
+                <span class="log-time">2026-04-21 11:08</span>
+                <p>补充中段样本，伏笔与节奏权重上调。</p>
+              </div>
+              <div class="log-item">
+                <span class="log-time">2026-04-21 11:32</span>
+                <p>增加后段样本，回收压力与情绪回报闭环增强。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel glass">
+            <div class="panel-head">
+              <div>
+                <p class="label">生产实践对齐</p>
+                <h3>量化系统的 UX 重点</h3>
+              </div>
+              <span class="pill">review-ready</span>
+            </div>
+            <ul class="note-list">
+              <li>突出关键指标，避免信息面板过载。</li>
+              <li>使用分层卡片和清晰状态色，支持快速扫读。</li>
+              <li>每个推荐结果都保留解释理由和权重分布。</li>
+              <li>版本、样本、反馈、风险分区展示，便于审查。</li>
+              <li>操作按钮集中在可见区域，减少页面跳转成本。</li>
+            </ul>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

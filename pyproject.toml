@@ -1,0 +1,8 @@
+[project]
+name = "alpha-autopilot"
+version = "0.1.0"
+description = "Python reimplementation of a heuristic Chinese chess search core"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
