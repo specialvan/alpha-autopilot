@@ -12,3 +12,4 @@ ui-react/node_modules/
 ui-react/dist/
 
 artifacts/
+.worktrees/
