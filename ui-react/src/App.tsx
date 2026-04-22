@@ -13,14 +13,16 @@ import { VersionComparePanel } from './components/VersionComparePanel';
 import { HistoryPanel } from './components/HistoryPanel';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { LogsPanel } from './components/LogsPanel';
-import { fetchDashboard, fetchHistory, fetchRecommendationPreview, runTraining, submitFeedback, type DashboardResponse, type HistoryResponse, type Recommendation, type TrainingResponse, type TuningWeight } from './api';
+import { exportHistory, fetchDashboard, fetchHistory, fetchRecommendationPreview, runTraining, submitFeedback, type DashboardResponse, type HistoryResponse, type Recommendation, type TrainingResponse, type TuningWeight } from './api';
 import { overview as fallbackOverview, narrativeSignals as fallbackSignals, matrixWeights as fallbackWeights, chapterSummary as fallbackSummary, tuningWeights as fallbackTuning, recommendations as fallbackRecommendations, feedbackNotes as fallbackFeedback, logs as fallbackLogs, trainingSnapshot as fallbackTraining } from './data';
+
+const DEFAULT_HISTORY_FILTER = { limit: 20 };
 
 export function App() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [historyFilter, setHistoryFilter] = useState<{ stage?: string; action?: string; limit?: number }>({ limit: 20 });
+  const [historyFilter, setHistoryFilter] = useState<{ stage?: string; action?: string; limit?: number }>(DEFAULT_HISTORY_FILTER);
   const [tuning, setTuning] = useState<TuningWeight[]>(fallbackTuning);
   const [recommendations, setRecommendations] = useState<Recommendation[]>(fallbackRecommendations);
   const [trainingResult, setTrainingResult] = useState<TrainingResponse | null>(null);
@@ -31,8 +33,15 @@ export function App() {
   const [historySnapshots, setHistorySnapshots] = useState<TrainingResponse[]>([]);
   const [historyLogs, setHistoryLogs] = useState<string[]>([]);
 
+  const normalizeHistoryFilter = (filter: { stage?: string; action?: string; limit?: number } = {}) => ({
+    ...(filter.stage ? { stage: filter.stage } : {}),
+    ...(filter.action ? { action: filter.action } : {}),
+    limit: filter.limit ?? DEFAULT_HISTORY_FILTER.limit,
+  });
+
   const refreshHistory = (filter = historyFilter) => {
-    fetchHistory(filter)
+    const next = normalizeHistoryFilter(filter);
+    fetchHistory(next)
       .then((result) => {
         setHistory(result);
         setHistoryLogs(result.historyLogs.map((item) => `${item.time} ${item.text}`));
@@ -172,16 +181,14 @@ export function App() {
   };
 
   const handleHistoryFilter = (filter: { stage?: string; action?: string; limit?: number }) => {
-    const next = { ...historyFilter, ...filter };
+    const next = normalizeHistoryFilter(filter);
     setHistoryFilter(next);
     refreshHistory(next);
   };
 
   const handleExport = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/history/export', { method: 'POST' });
-      if (!response.ok) throw new Error(`export failed: ${response.status}`);
-      const result = await response.json() as { ok: boolean; path: string; counts: { training_logs: number; value_metrics: number } };
+      const result = await exportHistory();
       setHistoryLogs((current) => [...current, `历史已导出至 ${result.path}`].slice(-8));
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : 'export failed');

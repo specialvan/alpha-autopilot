@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 from ...services.narrative.feedback_service import NarrativeFeedbackService
 
 router = APIRouter(prefix="/api", tags=["feedback"])
-service = NarrativeFeedbackService()
 
 
 class FeedbackRequest(BaseModel):
@@ -19,7 +18,7 @@ class FeedbackRequest(BaseModel):
 @router.post("/feedback")
 def record_feedback(payload: FeedbackRequest):
     predicted = payload.score if payload.accepted else max(0.0, payload.score - 0.18)
-    result = service.record_feedback(
+    result = NarrativeFeedbackService().record_feedback(
         action=payload.recommendationAction,
         target=payload.score,
         predicted=predicted,

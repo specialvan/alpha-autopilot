@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any, Dict, List
-import sqlite3
 
 from alpha_autopilot import (
     ArtifactStore,
-    DbHistoryRepository,
-    FeatureMatrix,
+    HistoryRepository,
     Trainer,
     TrainingLogger,
     TrainingSample,
     StoryState,
     VersionManager,
+    create_history_repository,
 )
 from .write_service import NarrativeWriteService
 
@@ -34,19 +33,12 @@ class TrainingResult:
 
 
 class NarrativeTrainingService:
-    def __init__(self) -> None:
-        self.trainer = Trainer()
+    def __init__(self, repository: HistoryRepository | None = None, store: ArtifactStore | None = None) -> None:
         self.versioner = VersionManager()
-        self.logger = TrainingLogger()
-        self.store = ArtifactStore.default()
-        self.metrics_path = self.store.value_metrics_path
-        self._db = self._open_db()
-        self.repository = DbHistoryRepository(self._db)
+        self.store = store or ArtifactStore.default()
+        self.logger = TrainingLogger(self.store.root)
+        self.repository = repository or create_history_repository(self.store)
         self.writer = NarrativeWriteService(self.repository)
-
-    def _open_db(self) -> sqlite3.Connection:
-        self.store.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-        return sqlite3.connect(self.store.sqlite_path)
 
     def _default_samples(self) -> list[TrainingSample]:
         raw = [
@@ -136,18 +128,21 @@ class NarrativeTrainingService:
         return samples
 
     def train(self) -> TrainingResult:
+        trainer = Trainer()
         samples = self._default_samples()
-        matrix = self.trainer.fit(samples)
+        matrix = trainer.fit(samples)
         snapshot = self.versioner.create_version(matrix.weights, matrix.bias, len(samples), notes="fastapi training run")
-        for entry in self.trainer.history:
+        for entry in trainer.history:
+            timestamp = datetime.now(timezone.utc).isoformat()
             payload = {
-                "timestamp": entry.get("timestamp", snapshot.created_at),
+                "timestamp": timestamp,
                 "stage": "train",
                 "action": entry["action"],
                 "predicted": entry["predicted"],
                 "target": entry["target"],
                 "feedback": entry.get("feedback", 0.0),
-                "notes": snapshot.version,
+                "notes": "fastapi training run",
+                "version": snapshot.version,
             }
             self.logger.record(
                 stage=payload["stage"],
@@ -156,23 +151,25 @@ class NarrativeTrainingService:
                 target=payload["target"],
                 feedback=payload["feedback"],
                 notes=payload["notes"],
+                version=payload["version"],
+                timestamp=payload["timestamp"],
             )
             self.writer.persist_training(payload)
 
-        self.trainer.value_metrics.save(self.metrics_path)
-        for record in self.trainer.value_metrics.records:
+        for record in trainer.value_metrics.records:
             self.writer.persist_value_metric(record)
 
-        value_metrics_summary = self.repository.read_value_metrics().summary()
-        top_actions = self.repository.read_value_metrics().top_actions()
+        metrics = self.repository.read_value_metrics()
+        value_metrics_summary = metrics.summary()
+        top_actions = metrics.top_actions()
 
         return TrainingResult(
             version=snapshot.version,
             sample_count=len(samples),
             bias=matrix.bias,
             weights=matrix.weights,
-            summary=self.trainer.summary(),
-            history=list(self.trainer.history),
+            summary=trainer.summary(),
+            history=list(trainer.history),
             value_metrics=value_metrics_summary,
             top_actions=top_actions,
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from alpha_autopilot import ArtifactStore, DbHistoryRepository, RecommendationMetricRecord, TrainingLogger
+from alpha_autopilot import HistoryRepository, RecommendationMetricRecord, create_history_repository
 
 
 @dataclass
@@ -21,22 +21,26 @@ class WriteResult:
 
 
 class NarrativeWriteService:
-    def __init__(self, repository: DbHistoryRepository | None = None) -> None:
-        self.store = ArtifactStore.default()
-        self.logger = TrainingLogger()
-        self.repository = repository
+    def __init__(self, repository: HistoryRepository | None = None) -> None:
+        self.repository = repository or create_history_repository()
 
-    def attach_repository(self, repository: DbHistoryRepository) -> None:
+    def attach_repository(self, repository: HistoryRepository) -> None:
         self.repository = repository
 
     def persist_training(self, entry: Dict[str, Any]) -> WriteResult:
         if self.repository is None:
             return WriteResult(False, "repository unavailable", False)
-        self.repository.insert_training_log(entry)
+        try:
+            self.repository.insert_training_log(entry)
+        except Exception as exc:
+            return WriteResult(False, f"training log persistence failed: {exc}", False)
         return WriteResult(True, "training log persisted", True)
 
     def persist_value_metric(self, record: RecommendationMetricRecord) -> WriteResult:
         if self.repository is None:
             return WriteResult(False, "repository unavailable", False)
-        self.repository.insert_value_metric(record)
+        try:
+            self.repository.insert_value_metric(record)
+        except Exception as exc:
+            return WriteResult(False, f"value metric persistence failed: {exc}", False)
         return WriteResult(True, "value metric persisted", True)

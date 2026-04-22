@@ -1,0 +1,58 @@
+[
+  {
+    "case_id": "golden-middle-conflict",
+    "state": {
+      "chapter_index": 12,
+      "stage": "middle",
+      "mainline_progress": 0.46,
+      "sideplot_progress": 0.24,
+      "conflict_intensity": 0.68,
+      "emotional_temperature": 0.59,
+      "pacing_speed": 0.52,
+      "foreshadowing_load": 0.41,
+      "payoff_pressure": 0.33,
+      "tags": ["power", "escalation"],
+      "characters": {
+        "hero": {
+          "name": "hero",
+          "presence": 0.83,
+          "consistency_risk": 0.12,
+          "relationship_tension": 0.58,
+          "arc_progress": 0.31
+        }
+      }
+    },
+    "expected_top_action": "push_conflict",
+    "accepted_actions": ["push_conflict", "reveal_clue"],
+    "blocked_actions": ["deliver_payoff"],
+    "notes": "Middle stage baseline should escalate instead of cashing out."
+  },
+  {
+    "case_id": "golden-late-payoff",
+    "state": {
+      "chapter_index": 31,
+      "stage": "late",
+      "mainline_progress": 0.84,
+      "sideplot_progress": 0.73,
+      "conflict_intensity": 0.71,
+      "emotional_temperature": 0.77,
+      "pacing_speed": 0.64,
+      "foreshadowing_load": 0.29,
+      "payoff_pressure": 0.86,
+      "tags": ["power", "payoff"],
+      "characters": {
+        "hero": {
+          "name": "hero",
+          "presence": 0.9,
+          "consistency_risk": 0.08,
+          "relationship_tension": 0.69,
+          "arc_progress": 0.79
+        }
+      }
+    },
+    "expected_top_action": "deliver_payoff",
+    "accepted_actions": ["deliver_payoff", "close_sideplot"],
+    "blocked_actions": ["open_new_thread"],
+    "notes": "Late stage baseline should cash a prepared payoff instead of opening a new branch."
+  }
+]

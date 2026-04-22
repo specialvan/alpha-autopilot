@@ -1,0 +1,32 @@
+[
+  {
+    "fixture_id": "rule-middle-legal-conflict",
+    "stage": "middle",
+    "action": "push_conflict",
+    "status": "legal",
+    "prerequisites": ["mainline_active"],
+    "blockers": [],
+    "risk_flags": ["pace_up"],
+    "notes": "Escalation is legal in the middle stage."
+  },
+  {
+    "fixture_id": "rule-middle-block-payoff",
+    "stage": "middle",
+    "action": "deliver_payoff",
+    "status": "blocked",
+    "prerequisites": ["payoff_pressure>=0.6"],
+    "blockers": ["payoff_pressure_low"],
+    "risk_flags": ["premature_resolution"],
+    "notes": "Do not resolve too early when payoff pressure is still low."
+  },
+  {
+    "fixture_id": "rule-late-missing-thread",
+    "stage": "late",
+    "action": "open_new_thread",
+    "status": "prerequisite_missing",
+    "prerequisites": ["sideplot_capacity_available"],
+    "blockers": ["late_stage_locked"],
+    "risk_flags": ["focus_drift"],
+    "notes": "Late stage should avoid opening fresh major branches."
+  }
+]

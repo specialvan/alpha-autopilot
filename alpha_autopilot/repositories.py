@@ -69,7 +69,8 @@ class DbHistoryRepository(HistoryRepository):
                 predicted REAL NOT NULL,
                 target REAL NOT NULL,
                 feedback REAL NOT NULL,
-                notes TEXT DEFAULT ''
+                notes TEXT DEFAULT '',
+                version TEXT DEFAULT ''
             )
             """
         )
@@ -86,14 +87,20 @@ class DbHistoryRepository(HistoryRepository):
             )
             """
         )
+        columns = {
+            row[1]
+            for row in cursor.execute("PRAGMA table_info(training_logs)").fetchall()
+        }
+        if "version" not in columns:
+            cursor.execute("ALTER TABLE training_logs ADD COLUMN version TEXT DEFAULT ''")
         self.connection.commit()
 
     def insert_training_log(self, entry: Dict[str, Any]) -> None:
         cursor = self.connection.cursor()
         cursor.execute(
             """
-            INSERT INTO training_logs (timestamp, stage, action, predicted, target, feedback, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO training_logs (timestamp, stage, action, predicted, target, feedback, notes, version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry.get("timestamp", ""),
@@ -103,6 +110,7 @@ class DbHistoryRepository(HistoryRepository):
                 float(entry.get("target", 0.0)),
                 float(entry.get("feedback", 0.0)),
                 entry.get("notes", ""),
+                entry.get("version", ""),
             ),
         )
         self.connection.commit()
@@ -130,7 +138,7 @@ class DbHistoryRepository(HistoryRepository):
     def read_training_logs(self) -> List[Dict[str, Any]]:
         cursor = self.connection.cursor()
         rows = cursor.execute(
-            "SELECT timestamp, stage, action, predicted, target, feedback, notes FROM training_logs ORDER BY timestamp ASC"
+            "SELECT timestamp, stage, action, predicted, target, feedback, notes, version FROM training_logs ORDER BY timestamp ASC"
         ).fetchall()
         return [
             {
@@ -141,6 +149,7 @@ class DbHistoryRepository(HistoryRepository):
                 "target": row[4],
                 "feedback": row[5],
                 "notes": row[6],
+                "version": row[7] or "",
             }
             for row in rows
         ]
@@ -172,24 +181,65 @@ class FallbackHistoryRepository(HistoryRepository):
         self.file_repo = file_repo or FileHistoryRepository()
 
     def read_training_logs(self) -> List[Dict[str, Any]]:
+        combined: list[Dict[str, Any]] = []
         if self.db_repo is not None:
             try:
-                rows = self.db_repo.read_training_logs()
-                if rows:
-                    return rows
+                combined.extend(self.db_repo.read_training_logs())
             except Exception:
                 pass
-        return self.file_repo.read_training_logs()
+        combined.extend(self.file_repo.read_training_logs())
+
+        deduped: dict[tuple[Any, ...], Dict[str, Any]] = {}
+        for entry in combined:
+            key = (
+                entry.get("timestamp", ""),
+                entry.get("stage", ""),
+                entry.get("action", ""),
+                float(entry.get("predicted", 0.0)),
+                float(entry.get("target", 0.0)),
+                float(entry.get("feedback", 0.0)),
+                entry.get("notes", ""),
+                entry.get("version", ""),
+            )
+            deduped[key] = {
+                "timestamp": entry.get("timestamp", ""),
+                "stage": entry.get("stage", ""),
+                "action": entry.get("action", ""),
+                "predicted": float(entry.get("predicted", 0.0)),
+                "target": float(entry.get("target", 0.0)),
+                "feedback": float(entry.get("feedback", 0.0)),
+                "notes": entry.get("notes", ""),
+                "version": entry.get("version", ""),
+            }
+        return sorted(deduped.values(), key=lambda item: item.get("timestamp", ""))
 
     def read_value_metrics(self) -> RecommendationValueMetrics:
+        merged = RecommendationValueMetrics()
+        seen: set[tuple[Any, ...]] = set()
+        sources: list[RecommendationValueMetrics] = []
         if self.db_repo is not None:
             try:
-                metrics = self.db_repo.read_value_metrics()
-                if metrics.records:
-                    return metrics
+                sources.append(self.db_repo.read_value_metrics())
             except Exception:
                 pass
-        return self.file_repo.read_value_metrics()
+        sources.append(self.file_repo.read_value_metrics())
+
+        for metrics in sources:
+            for record in metrics.records:
+                key = (
+                    record.action,
+                    float(record.score),
+                    bool(record.accepted),
+                    float(record.chapter_quality),
+                    float(record.followup_writeability),
+                    float(record.continuity_delta),
+                    record.notes,
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.add_record(record)
+        return merged
 
     def insert_training_log(self, entry: Dict[str, Any]) -> None:
         if self.db_repo is not None:
@@ -212,6 +262,7 @@ class FallbackHistoryRepository(HistoryRepository):
 
 def create_history_repository(store: ArtifactStore | None = None) -> HistoryRepository:
     store = store or ArtifactStore.default()
+    store.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         connection = sqlite3.connect(store.sqlite_path)
         return FallbackHistoryRepository(DbHistoryRepository(connection), FileHistoryRepository(store))

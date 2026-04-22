@@ -3,7 +3,13 @@ from .metrics import RecommendationMetricRecord, RecommendationValueMetrics
 from .narrative import CharacterState, NarrativeCandidate, RecommendationResult, StoryState
 from .planner import ChapterPlanner
 from .recommend import preview_recommendations, recommend_chapter
-from .repositories import FileHistoryRepository, HistoryRepository
+from .repositories import (
+    DbHistoryRepository,
+    FallbackHistoryRepository,
+    FileHistoryRepository,
+    HistoryRepository,
+    create_history_repository,
+)
 from .storage import ArtifactStore
 from .trainer import Trainer, TrainingSample
 from .training_log import TrainingLogger
@@ -13,7 +19,9 @@ __all__ = [
     "ArtifactStore",
     "CharacterState",
     "ChapterPlanner",
+    "DbHistoryRepository",
     "FeatureMatrix",
+    "FallbackHistoryRepository",
     "FileHistoryRepository",
     "HistoryRepository",
     "MatrixSnapshot",
@@ -26,6 +34,7 @@ __all__ = [
     "TrainingLogger",
     "TrainingSample",
     "VersionManager",
+    "create_history_repository",
     "preview_recommendations",
     "recommend_chapter",
 ]

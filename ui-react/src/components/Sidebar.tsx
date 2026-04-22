@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { OverviewResponse } from '../api';
 
 export function Sidebar({ overview }: { overview: OverviewResponse }) {
@@ -12,12 +13,27 @@ export function Sidebar({ overview }: { overview: OverviewResponse }) {
       </div>
 
       <nav className="nav">
-        <a href="#overview" className="nav-item active">总览</a>
-        <a href="#state" className="nav-item">叙事状态</a>
-        <a href="#matrix" className="nav-item">特征矩阵</a>
-        <a href="#recommendations" className="nav-item">推荐结果</a>
-        <a href="#feedback" className="nav-item">反馈闭环</a>
-        <a href="#logs" className="nav-item">训练日志</a>
+        <a href="#overview" className="nav-item active">
+          总览
+        </a>
+        <a href="#state" className="nav-item">
+          叙事状态
+        </a>
+        <a href="#matrix" className="nav-item">
+          特征矩阵
+        </a>
+        <a href="#recommendations" className="nav-item">
+          推荐结果
+        </a>
+        <Link to="/v2/workbench" className="nav-item">
+          V2 Workbench
+        </Link>
+        <a href="#feedback" className="nav-item">
+          反馈闭环
+        </a>
+        <a href="#logs" className="nav-item">
+          训练日志
+        </a>
       </nav>
 
       <div className="sidebar-card">

@@ -16,7 +16,7 @@ export function HistoryPanel({
 }) {
   const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
-  const [actionQuery, setActionQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const logs = history?.historyLogs ?? [];
   const snapshots = history?.historySnapshots ?? [];
   const summary = history?.valueSummary ?? valueSummary;
@@ -26,23 +26,28 @@ export function HistoryPanel({
   const filters = history?.filters;
 
   const filteredVersions = useMemo(() => {
-    if (!actionQuery.trim()) return versions;
-    const q = actionQuery.trim().toLowerCase();
+    if (!searchQuery.trim()) return versions;
+    const q = searchQuery.trim().toLowerCase();
     return versions.filter((item) => item.version.toLowerCase().includes(q) || item.actions.some((action) => action.toLowerCase().includes(q)));
-  }, [versions, actionQuery]);
+  }, [versions, searchQuery]);
 
   const filteredStages = useMemo(() => {
-    if (!actionQuery.trim()) return stages;
-    const q = actionQuery.trim().toLowerCase();
+    if (!searchQuery.trim()) return stages;
+    const q = searchQuery.trim().toLowerCase();
     return stages.filter((item) => item.stage.toLowerCase().includes(q) || item.versions.some((version) => version.toLowerCase().includes(q)));
-  }, [stages, actionQuery]);
+  }, [stages, searchQuery]);
 
-  const visibleAction = actionQuery.trim() || filters?.action || 'all';
+  const visibleAction = filters?.action || 'all';
   const quickActions = actions?.slice(0, 6) ?? [];
 
   const applyAction = (action: string) => {
-    setActionQuery(action);
-    onFilterChange?.({ action, limit: 20 });
+    setSearchQuery(action);
+    onFilterChange?.({ stage: filters?.stage ?? undefined, action, limit: filters?.limit ?? 20 });
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    onFilterChange?.({ stage: undefined, action: undefined, limit: 20 });
   };
 
   return (
@@ -57,11 +62,9 @@ export function HistoryPanel({
 
       <div className="review-flag-row" style={{ marginBottom: 12, gap: 8 }}>
         <input
-          value={actionQuery}
+          value={searchQuery}
           onChange={(event) => {
-            const value = event.target.value;
-            setActionQuery(value);
-            onFilterChange?.({ action: value || undefined, limit: 20 });
+            setSearchQuery(event.target.value);
           }}
           placeholder="按版本或动作名搜索"
           className="search-input"
@@ -69,9 +72,9 @@ export function HistoryPanel({
         />
         {onFilterChange ? (
           <>
-            <button className="secondary" type="button" onClick={() => onFilterChange({ limit: 20 })}>全部</button>
-            <button className="secondary" type="button" onClick={() => onFilterChange({ stage: 'train', limit: 20 })}>训练</button>
-            <button className="secondary" type="button" onClick={() => onFilterChange({ stage: 'feedback', limit: 20 })}>反馈</button>
+            <button className="secondary" type="button" onClick={resetFilters}>全部</button>
+            <button className="secondary" type="button" onClick={() => { setSearchQuery(''); onFilterChange({ stage: 'train', action: undefined, limit: 20 }); }}>训练</button>
+            <button className="secondary" type="button" onClick={() => { setSearchQuery(''); onFilterChange({ stage: 'feedback', action: undefined, limit: 20 }); }}>反馈</button>
           </>
         ) : null}
       </div>
@@ -119,7 +122,7 @@ export function HistoryPanel({
                     <div className="matrix-list" style={{ marginTop: 12 }}>
                       {stageVersions.map((version) => (
                         <div className="matrix-row" key={version.version}>
-                          <span>{version.version} · {version.count} 条</span>
+                          <span>{version.version} / {version.count} 条</span>
                           <strong>{version.average_feedback.toFixed(3)}</strong>
                         </div>
                       ))}
@@ -215,13 +218,13 @@ export function HistoryPanel({
           <div className="matrix-list">
             {snapshots.slice(-2).map((item) => (
               <div className="matrix-row" key={`${item.timestamp}-${item.action}`}>
-                <span>{item.stage} · {item.action}</span>
+                <span>{item.stage} / {item.action}</span>
                 <strong>{item.feedback.toFixed(3)}</strong>
               </div>
             ))}
             {liveSnapshots.slice(-2).map((item) => (
               <div className="matrix-row" key={item.version}>
-                <span>{item.version} · {item.summary.avg_feedback.toFixed(3)}</span>
+                <span>{item.version} / {item.summary.avg_feedback.toFixed(3)}</span>
                 <strong>{item.summary.avg_predicted.toFixed(3)}</strong>
               </div>
             ))}
@@ -229,7 +232,12 @@ export function HistoryPanel({
         </>
       ) : null}
 
-      {filters ? <p className="muted" style={{ marginTop: 16 }}>当前过滤器：{filters.stage ?? 'all'} / {visibleAction} / limit {filters.limit}</p> : null}
+      {filters ? (
+        <p className="muted" style={{ marginTop: 16 }}>
+          当前过滤：{filters.stage ?? 'all'} / {visibleAction} / limit {filters.limit}
+          {searchQuery.trim() ? ` / search ${searchQuery.trim()}` : ''}
+        </p>
+      ) : null}
     </article>
   );
 }

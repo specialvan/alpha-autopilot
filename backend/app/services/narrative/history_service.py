@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from alpha_autopilot import create_history_repository
+from alpha_autopilot import HistoryRepository, create_history_repository
 
 
 class HistoryService:
-    def __init__(self) -> None:
-        self.repository = create_history_repository()
+    def __init__(self, repository: HistoryRepository | None = None) -> None:
+        self.repository = repository or create_history_repository()
+
+    def _version_key(self, entry: Dict[str, Any]) -> str:
+        if entry.get("version"):
+            return str(entry["version"])
+        stage = entry.get("stage") or "unknown"
+        return f"{stage}/unversioned"
 
     def get_history(self, stage: str | None = None, action: str | None = None, limit: int = 20) -> Dict[str, Any]:
         training_logs = self.repository.read_training_logs()
@@ -24,7 +30,7 @@ class HistoryService:
         grouped: Dict[str, Dict[str, Any]] = {}
         stage_groups: Dict[str, Dict[str, Any]] = {}
         for entry in training_logs:
-            key = entry.get("notes") or entry.get("stage") or "unknown"
+            key = self._version_key(entry)
             bucket = grouped.setdefault(
                 key,
                 {

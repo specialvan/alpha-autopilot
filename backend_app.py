@@ -8,8 +8,11 @@ from pydantic import BaseModel, Field
 
 from alpha_autopilot import FeatureMatrix, StoryState, preview_recommendations, recommend_chapter
 from alpha_autopilot.recommend import RecommendationPreviewRequest
+from backend.app.services.narrative_v2.preview_service import NarrativeV2PreviewService
+from backend.app.services.narrative_v2.schemas import NarrativeV2PreviewRequest
 
 app = FastAPI(title="alpha-autopilot api", version="0.1.0")
+v2_preview_service = NarrativeV2PreviewService()
 
 
 class TuningWeightPayload(BaseModel):
@@ -126,3 +129,8 @@ def preview(payload: PreviewRequest) -> Dict[str, Any]:
     tuning = [weight.model_dump() for weight in payload.tuningWeights]
     recommendations = preview_recommendations(state, tuning, FeatureMatrix())
     return {"recommendations": recommendations}
+
+
+@app.post("/api/v2/recommendation/preview")
+def preview_v2(payload: NarrativeV2PreviewRequest) -> Dict[str, Any]:
+    return v2_preview_service.build_preview(payload)

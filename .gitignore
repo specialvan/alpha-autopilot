@@ -13,3 +13,5 @@ ui-react/dist/
 
 artifacts/
 .worktrees/
+.env.local
+artifacts/testing/plotpilot/

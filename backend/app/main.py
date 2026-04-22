@@ -6,7 +6,9 @@ from .api.routes.dashboard import router as dashboard_router
 from .api.routes.feedback import router as feedback_router
 from .api.routes.history import router as history_router
 from .api.routes.recommendation import router as recommendation_router
+from .api.routes.recommendation_v2 import router as recommendation_v2_router
 from .api.routes.training import router as training_router
+from .api.routes.workbench_v2 import router as workbench_v2_router
 from .core.config import settings
 
 
@@ -14,6 +16,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, version=settings.app_version)
     app.include_router(dashboard_router)
     app.include_router(recommendation_router)
+    app.include_router(recommendation_v2_router)
+    app.include_router(workbench_v2_router)
     app.include_router(training_router)
     app.include_router(feedback_router)
     app.include_router(history_router)

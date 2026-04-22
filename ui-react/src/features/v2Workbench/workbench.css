@@ -1,0 +1,54 @@
+.v2-workbench-shell {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(109, 141, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, #050b16 0%, #07111f 55%, #091425 100%);
+}
+
+.v2-workbench-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+}
+
+.workbench-status {
+  grid-column: 1 / -1;
+}
+
+.v2-workbench-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+}
+
+.workbench-rail,
+.workbench-center {
+  display: grid;
+  gap: 14px;
+}
+
+.workbench-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-button {
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+@media (max-width: 1200px) {
+  .v2-workbench-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-workbench-topbar {
+    grid-template-columns: 1fr;
+  }
+}
