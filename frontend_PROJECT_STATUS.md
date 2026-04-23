@@ -3,6 +3,7 @@
 ## 当前阶段
 
 - 项目名称：小说章节智能推荐前端工作台
+- 治理结构：Dashboard 属于基线展示层，`V2 Workbench` 属于增量决策层
 - 当前状态：总览 dashboard 保留，`V2 Workbench` 已升级为独立路由和决策驾驶舱
 
 ## 进度清单
@@ -12,10 +13,10 @@
 | 总览 dashboard | 已完成 | 现有 `v1` 总览、训练、反馈、历史面板仍可用 |
 | 路由壳 | 已完成 | 已引入 `react-router-dom`，支持 `/` 与 `/v2/workbench` |
 | `V2 Workbench` 页面壳 | 已完成 | 已具备独立 top bar、三栏布局、独立样式 |
-| Context Rail | 已完成 | 已支持 source、chapter context、override、state diff |
-| Decision Surface | 已完成 | 已支持 top action、候选结果、score breakdown 基础展示 |
-| Validation Rail | 已完成 | 已支持 rule summary、validation record、run history |
-| workbench 上下文接线 | 已完成 | 已优先拉取 `/api/v2/workbench/contexts`，失败回退本地 seed |
+| Context Rail | 能力完成 | 已支持 source、chapter context、override、state diff |
+| Decision Surface | 能力完成 | 已支持 top action、候选结果、score breakdown 基础展示 |
+| Validation Rail | 能力完成 | 已支持 rule summary、validation record、run history |
+| workbench 上下文接线 | 能力完成 | 已优先拉取 `/api/v2/workbench/contexts`，失败回退本地 seed |
 | 路由与页面测试 | 已完成 | 已覆盖 router smoke test、workbench page interaction、helper tests |
 
 ## 当前已知风险

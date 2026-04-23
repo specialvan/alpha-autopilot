@@ -1,6 +1,13 @@
 # alpha-autopilot
 
-Python narrative recommendation prototype with a companion React dashboard.
+Research-oriented小说章节推荐与写作辅助系统。
+
+## Governance
+
+- `v1/v2` are the stable Baseline and should remain收口
+- `v3` is the Increment layer for quality, decomposition, QC, and recommendation enhancement
+- Experimental ideas must stay isolated from the mainline behavior
+- Follow `CODEX_DEVELOPMENT_GOVERNANCE.md` and `claude_review_package/README_FOR_CODEX.md` before making changes
 
 ## Goals
 
@@ -41,3 +48,5 @@ Python narrative recommendation prototype with a companion React dashboard.
 ## Notes
 
 This repository focuses on narrative recommendation research. The feature matrix, state推演, preview flow, and training loop are kept explicit so they can be reviewed, adjusted, and expanded without relying on a large database.
+
+For development execution, treat `Dashboard` as the Baseline display layer and `V2 Workbench` as the Increment decision layer.

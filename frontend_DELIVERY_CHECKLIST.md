@@ -1,5 +1,11 @@
 # 前端交付清单
 
+## 治理定位
+
+- `Dashboard`：Baseline 展示层
+- `V2 Workbench`：Increment 决策层
+- 两者需保持明确分层，不得混写成单一概念
+
 ## 已交付文件
 
 - `ui/index.html`
