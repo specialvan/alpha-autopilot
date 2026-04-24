@@ -23,3 +23,23 @@ def test_v3_pipeline_emits_evidence_style_qc_and_admission() -> None:
     assert result.evidence_spans
     assert result.workbench_context["narrative_signals"]["conflict_intensity"] > 0.6
     assert result.admission in {"approved", "provisional", "rejected"}
+
+
+def test_v3_pipeline_can_approve_non_conflict_primary_function() -> None:
+    chapter = (
+        "The squad finds a clue inside the archive.\n\n"
+        "They discover a hidden name etched behind the wall.\n\n"
+        "The chapter reveals why the envoy disappeared.\n\n"
+        "A final line hints a larger truth is still missing."
+    )
+
+    result = decompose_chapter_text(
+        chapter_number=4,
+        title="Archive Clue",
+        text=chapter,
+        genre="xuanhuan",
+        stage="middle",
+    )
+
+    assert result.primary_function in {"information-reveal", "payoff-delivery"}
+    assert result.admission == "approved"

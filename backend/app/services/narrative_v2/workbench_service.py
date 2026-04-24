@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from ..narrative.dashboard_service import build_dashboard
@@ -11,8 +11,10 @@ from .imported_contexts import load_imported_workbench_contexts
 
 @dataclass
 class NarrativeV2WorkbenchService:
-    history_service: HistoryService = HistoryService()
-    imported_context_path: Path = Path(__file__).resolve().parents[4] / "artifacts" / "testing" / "plotpilot" / "workbench_contexts.json"
+    history_service: HistoryService = field(default_factory=HistoryService)
+    imported_context_path: Path = (
+        Path(__file__).resolve().parents[4] / "artifacts" / "testing" / "plotpilot" / "workbench_contexts.json"
+    )
 
     def list_contexts(self) -> dict[str, object]:
         imported = load_imported_workbench_contexts(self.imported_context_path)

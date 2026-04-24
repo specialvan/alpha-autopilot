@@ -38,8 +38,64 @@ def test_v2_preview_service_writes_validation_record_to_ledger(tmp_path) -> None
 
     assert result["rule_checks"]
     assert result["recommendations"]
+    assert result["decision"]["selected_action"] == result["recommendations"][0]["action"]["action"]
+    assert result["decision"]["selected_score"] == result["recommendations"][0]["score"]
+    assert result["decision"]["accepted_actions"] == result["validation"]["accepted_actions"]
+    assert result["decision"]["blocked_actions"] == result["validation"]["blocked_actions"]
+    assert result["decision"]["prerequisite_missing_actions"] == ["close_sideplot"]
+    assert result["decision"]["validation_case_id"] == result["validation"]["case_id"]
+    assert result["decision"]["rule_status_summary"] == {
+        "legal_count": 3,
+        "blocked_count": 1,
+        "prerequisite_missing_count": 1,
+    }
+    assert result["decision"]["constraint_hint"] == "mixed_constraints"
+    assert result["decision"]["quality_hint"] == "review"
+    assert result["decision"]["retention_driver"]["target_function"] == "reader-retention"
+    assert result["decision"]["retention_driver"]["selected_final_score"] == result["decision"]["selected_score"]
     assert result["evaluation_summary"]["top_action"] == result["recommendations"][0]["action"]["action"]
+    assert result["evaluation_summary"]["top_action"] == result["decision"]["selected_action"]
+    assert result["evaluation_summary"]["top_score"] == result["decision"]["selected_score"]
     assert len(entries) == 1
     assert entries[0].case_id == "case-100"
     assert entries[0].source == "preview"
     assert entries[0].top_action == result["validation"]["top_action"]
+
+
+def test_v2_preview_service_keeps_preview_available_when_ledger_write_fails(tmp_path) -> None:
+    blocked_path = tmp_path / "preview-ledger-dir"
+    blocked_path.mkdir(parents=True, exist_ok=True)
+    service = NarrativeV2PreviewService(ledger_path=blocked_path)
+    payload = NarrativeV2PreviewRequest.model_validate(
+        {
+            "case_id": "case-101",
+            "state": {
+                "chapter_index": 5,
+                "stage": "middle",
+                "mainline_progress": 0.42,
+                "sideplot_progress": 0.2,
+                "conflict_intensity": 0.61,
+                "emotional_temperature": 0.58,
+                "pacing_speed": 0.47,
+                "foreshadowing_load": 0.34,
+                "payoff_pressure": 0.29,
+                "tags": ["power"],
+                "characters": {
+                    "hero": {
+                        "name": "hero",
+                        "presence": 0.8,
+                        "consistency_risk": 0.1,
+                        "relationship_tension": 0.5,
+                        "arc_progress": 0.25,
+                    }
+                },
+            },
+        }
+    )
+
+    result = service.build_preview(payload)
+
+    assert result["rule_checks"]
+    assert result["recommendations"]
+    assert result["decision"]["selected_action"]
+    assert "ledger_warning" in result

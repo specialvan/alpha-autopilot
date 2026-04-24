@@ -2,6 +2,29 @@ import type { NarrativeV2PreviewResponse, NarrativeV2StoryState } from '../../ap
 
 export type V2ContextSource = 'demo' | 'mapped_chapter' | 'manual_override';
 
+export type ContextCheckpoint = {
+  name: string;
+  status: 'pass' | 'mixed' | 'fail';
+  evidence?: string;
+  implication?: string;
+};
+
+export type ContextCheckpointSummary = {
+  total: number;
+  pass: number;
+  mixed: number;
+  fail: number;
+};
+
+export type ContextQualityMetadata = {
+  admission?: string;
+  primaryFunction?: string;
+  styleDna?: Record<string, string>;
+  checkpoints?: ContextCheckpoint[];
+  checkpointSummary?: ContextCheckpointSummary;
+  qualityNotes?: string;
+};
+
 export type ChapterMappedContext = {
   id: string;
   chapterNumber: number;
@@ -9,6 +32,7 @@ export type ChapterMappedContext = {
   stage: NarrativeV2StoryState['stage'];
   summary: string;
   state: NarrativeV2StoryState;
+  quality?: ContextQualityMetadata;
 };
 
 export type StateDiffEntry = {

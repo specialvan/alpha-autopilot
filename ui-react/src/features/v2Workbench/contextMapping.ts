@@ -1,7 +1,7 @@
 import type { NarrativeV2StoryState } from '../../api';
 import { DEFAULT_V2_PREVIEW_STATE } from '../../v2Preview';
 import { CHAPTER_MAPPED_CONTEXTS } from './chapterContexts';
-import type { StateDiffEntry, V2ContextSource } from './types';
+import type { ChapterMappedContext, StateDiffEntry, V2ContextSource } from './types';
 
 const EXCLUDED_DIFF_FIELDS = new Set<keyof NarrativeV2StoryState>(['characters', 'tags']);
 
@@ -9,10 +9,15 @@ export function listChapterMappedContexts() {
   return CHAPTER_MAPPED_CONTEXTS;
 }
 
-export function resolveBaseState(source: V2ContextSource, chapterId?: string): NarrativeV2StoryState {
+export function resolveBaseState(
+  source: V2ContextSource,
+  contexts: ChapterMappedContext[],
+  chapterId?: string,
+): NarrativeV2StoryState {
   if (source === 'mapped_chapter') {
-    const context = CHAPTER_MAPPED_CONTEXTS.find((item) => item.id === chapterId) ?? CHAPTER_MAPPED_CONTEXTS[0];
-    return context.state;
+    const availableContexts = contexts.length ? contexts : CHAPTER_MAPPED_CONTEXTS;
+    const context = availableContexts.find((item) => item.id === chapterId) ?? availableContexts[0];
+    return context?.state ?? DEFAULT_V2_PREVIEW_STATE;
   }
 
   return DEFAULT_V2_PREVIEW_STATE;

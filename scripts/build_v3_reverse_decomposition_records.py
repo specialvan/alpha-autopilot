@@ -12,6 +12,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from alpha_autopilot_v3.decomposition.pipeline import build_records_from_plotpilot_report  # noqa: E402
 from alpha_autopilot_v3.decomposition.projection import project_record_for_matrix  # noqa: E402
+from alpha_autopilot_v3.decomposition.qc import build_projection_qc_report  # noqa: E402
 
 
 def main() -> None:
@@ -38,6 +39,12 @@ def main() -> None:
         json.dumps(projections, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    qc_report = build_projection_qc_report(records, projections)
+    qc_path = args.output_dir / "qc_report.json"
+    qc_path.write_text(
+        json.dumps(qc_report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     print(
         json.dumps(
@@ -46,6 +53,7 @@ def main() -> None:
                 "projection_count": len(projections),
                 "records_path": str(records_path),
                 "projection_path": str(projection_path),
+                "qc_path": str(qc_path),
             },
             ensure_ascii=False,
             indent=2,

@@ -154,6 +154,77 @@ export type NarrativeV2SearchResult = {
   details: Record<string, number>;
 };
 
+export type NarrativeV2ContextCheckpoint = {
+  name: string;
+  status: 'pass' | 'mixed' | 'fail';
+  evidence?: string;
+  implication?: string;
+};
+
+export type NarrativeV2CheckpointSummary = {
+  total: number;
+  pass: number;
+  mixed: number;
+  fail: number;
+};
+
+export type NarrativeV2ContextQualityMetadata = {
+  admission?: string;
+  primary_function?: string;
+  style_dna?: Record<string, string>;
+  checkpoints?: NarrativeV2ContextCheckpoint[];
+  checkpoint_summary?: NarrativeV2CheckpointSummary;
+  quality_notes?: string;
+};
+
+export type NarrativeV2DecisionCandidate = {
+  action: string;
+  score: number;
+  explanation?: string;
+  details?: Record<string, number>;
+  delta?: Record<string, number>;
+};
+
+export type NarrativeV2DecisionRuleStatusSummary = {
+  legal_count: number;
+  blocked_count: number;
+  prerequisite_missing_count?: number;
+};
+
+export type NarrativeV2RetentionDriver = {
+  target_function: string;
+  primary_objective: string;
+  priority_order: string[];
+  guardrails: string[];
+  selected_base_score: number;
+  selected_retention_score: number;
+  selected_guardrail_penalty: number;
+  selected_final_score: number;
+  control_mode: string;
+  decision_tags?: Record<string, unknown>;
+};
+
+export type NarrativeV2Decision = {
+  selected_action?: string;
+  selected_score?: number;
+  accepted_actions?: string[];
+  blocked_actions?: string[];
+  prerequisite_missing_actions?: string[];
+  rule_status_summary?: NarrativeV2DecisionRuleStatusSummary;
+  constraint_hint?: 'clear' | 'hard_blocked' | 'prerequisite_missing' | 'mixed_constraints' | string;
+  validation_case_id?: string;
+  quality_hint?: 'ready' | 'review' | 'blocked' | 'prerequisite_missing' | string;
+  action?: string;
+  top_action?: string;
+  score?: number;
+  top_score?: number;
+  explanation?: string;
+  details?: Record<string, number>;
+  delta?: Record<string, number>;
+  candidates?: NarrativeV2DecisionCandidate[];
+  retention_driver?: NarrativeV2RetentionDriver;
+};
+
 export type NarrativeV2ValidationRecord = {
   case_id: string;
   accepted_actions: string[];
@@ -167,6 +238,7 @@ export type NarrativeV2PreviewResponse = {
   state: NarrativeV2StoryState;
   rule_checks: NarrativeV2RuleCheck[];
   recommendations: NarrativeV2SearchResult[];
+  decision?: NarrativeV2Decision;
   evaluation_summary: {
     count: number;
     top_action: string;
@@ -182,6 +254,13 @@ export type NarrativeV2WorkbenchContext = {
   stage: NarrativeV2StoryState['stage'];
   summary: string;
   state: NarrativeV2StoryState;
+  quality?: NarrativeV2ContextQualityMetadata;
+  admission?: string;
+  primary_function?: string;
+  style_dna?: Record<string, string>;
+  checkpoints?: NarrativeV2ContextCheckpoint[];
+  checkpoint_summary?: NarrativeV2CheckpointSummary;
+  quality_notes?: string;
 };
 
 export type NarrativeV2WorkbenchContextsResponse = {

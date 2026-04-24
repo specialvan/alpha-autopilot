@@ -37,8 +37,26 @@ def test_v3_build_script_emits_records_and_matrix_projection(tmp_path: Path) -> 
         "--genre",
         "xuanhuan",
     ]
-    result = subprocess.run(cmd, cwd=Path(__file__).resolve().parents[1], check=False)
+    result = subprocess.run(
+        cmd,
+        cwd=Path(__file__).resolve().parents[1],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
-    assert result.returncode == 0
+    assert result.returncode == 0, result.stderr
     assert (target / "reverse_outline_records.jsonl").exists()
     assert (target / "matrix_projection.json").exists()
+    assert (target / "qc_report.json").exists()
+
+    stdout = json.loads(result.stdout)
+    assert stdout["qc_path"] == str(target / "qc_report.json")
+
+    qc = json.loads((target / "qc_report.json").read_text(encoding="utf-8"))
+    assert qc["record_count"] == 1
+    assert qc["projection_count"] == 1
+    assert qc["schema_version"] == "1.0"
+    assert "admission_distribution" in qc
+    assert "checkpoint_status_distribution" in qc
+    assert "generated_at" in qc

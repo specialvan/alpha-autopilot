@@ -29,6 +29,12 @@ def read_ledger_entries(path: Path | None = None) -> list[EvaluationLedgerEntry]
     for line in ledger_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
-        payload = json.loads(line)
-        entries.append(EvaluationLedgerEntry(**payload))
+        try:
+            payload = json.loads(line)
+        except Exception:
+            continue
+        try:
+            entries.append(EvaluationLedgerEntry(**payload))
+        except Exception:
+            continue
     return entries

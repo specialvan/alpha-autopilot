@@ -36,3 +36,10 @@ class ChapterDecompositionRecord:
     checkpoints: list[CheckpointResult] = field(default_factory=list)
     admission: str = "provisional"
     workbench_context: dict[str, Any] = field(default_factory=dict)
+    retention_signal: float = 0.0
+    attraction_score: float = 0.0
+    hook_strength: float = 0.0
+    pace_pressure: float = 0.0
+    emotion_curve: str = "balanced"
+    decision_tags: dict[str, Any] = field(default_factory=dict)
+    control_suggestions: dict[str, Any] = field(default_factory=dict)

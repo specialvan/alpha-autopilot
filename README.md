@@ -6,6 +6,8 @@ Research-oriented小说章节推荐与写作辅助系统。
 
 - `v1/v2` are the stable Baseline and should remain收口
 - `v3` is the Increment layer for quality, decomposition, QC, and recommendation enhancement
+- authoritative Phase-3 scope note: `PHASE3_SCOPE_ALIGNMENT_2026_04_24.md`
+- phase-3 closeout report: `V3_PHASE_CLOSEOUT_2026_04_24.md`
 - Experimental ideas must stay isolated from the mainline behavior
 - Follow `CODEX_DEVELOPMENT_GOVERNANCE.md` and `claude_review_package/README_FOR_CODEX.md` before making changes
 
@@ -30,6 +32,7 @@ Research-oriented小说章节推荐与写作辅助系统。
 - `alpha_autopilot/training_log.py` - append-only training log
 - `alpha_autopilot/recommend.py` - engineered recommendation output and preview logic
 - `backend_app.py` - FastAPI demo app for dashboard and preview endpoints
+- `backend/app/main.py` - main FastAPI app with full API routes (history, v2 workbench, v2 preview, training, feedback)
 - `demo.py` - small runnable example
 - `train.py` - training entry point
 - `recommend.py` - recommendation entry point
@@ -41,7 +44,8 @@ Research-oriented小说章节推荐与写作辅助系统。
 
 - `python train.py` to train the initial matrix and write version/log artifacts
 - `python recommend.py` to print chapter recommendation rankings
-- `uvicorn backend_app:app --reload` to start the demo API
+- `uvicorn backend.app.main:app --reload` to start the main API
+- `uvicorn backend_app:app --reload` to start the demo-only API
 - Open `ui/index.html` for the static quant-style dashboard mockup
 - Use `ui-react/` for the componentized React dashboard prototype
 

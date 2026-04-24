@@ -58,3 +58,21 @@ def test_v2_validation_service_wraps_ledger_io(tmp_path) -> None:
     assert entry.source == "preview"
     assert entries[0].case_id == "case-003"
     assert entries[0].accepted_actions == ["reveal_clue"]
+
+
+def test_v2_core_ledger_skips_corrupted_lines(tmp_path) -> None:
+    ledger_path = tmp_path / "evaluation-ledger.jsonl"
+    ledger_path.write_text(
+        '\n'.join(
+            [
+                '{"case_id":"case-001","top_action":"push_conflict","accepted_actions":[],"blocked_actions":[],"notes":"","source":"test","recorded_at":"2026-04-21T10:00:00Z"}',
+                '{bad json',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    entries = read_ledger_entries(path=ledger_path)
+
+    assert len(entries) == 1
+    assert entries[0].case_id == "case-001"

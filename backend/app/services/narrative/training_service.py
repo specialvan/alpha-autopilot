@@ -2,17 +2,22 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List
 
 from alpha_autopilot import (
     ArtifactStore,
     HistoryRepository,
     Trainer,
-    TrainingLogger,
     TrainingSample,
     StoryState,
     VersionManager,
     create_history_repository,
+)
+from .v3_projection_bridge import (
+    build_training_samples_from_projection,
+    default_projection_paths,
+    load_matrix_projection,
 )
 from .write_service import NarrativeWriteService
 
@@ -27,18 +32,25 @@ class TrainingResult:
     history: List[Dict[str, Any]]
     value_metrics: Dict[str, float]
     top_actions: List[Dict[str, float]]
+    projection_sample_count: int = 0
+    projection_source: str | None = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
 class NarrativeTrainingService:
-    def __init__(self, repository: HistoryRepository | None = None, store: ArtifactStore | None = None) -> None:
-        self.versioner = VersionManager()
+    def __init__(
+        self,
+        repository: HistoryRepository | None = None,
+        store: ArtifactStore | None = None,
+        projection_paths: list[Path] | None = None,
+    ) -> None:
         self.store = store or ArtifactStore.default()
-        self.logger = TrainingLogger(self.store.root)
+        self.versioner = VersionManager(root=self.store.root)
         self.repository = repository or create_history_repository(self.store)
         self.writer = NarrativeWriteService(self.repository)
+        self.projection_paths = list(projection_paths or default_projection_paths(self.store.artifacts_dir))
 
     def _default_samples(self) -> list[TrainingSample]:
         raw = [
@@ -127,11 +139,27 @@ class NarrativeTrainingService:
             )
         return samples
 
+    def _projection_samples(self) -> tuple[list[TrainingSample], str | None]:
+        records, found_path = load_matrix_projection(self.projection_paths)
+        if found_path is None or not records:
+            return [], None
+        samples = build_training_samples_from_projection(records)
+        if not samples:
+            return [], None
+        return samples, str(found_path)
+
     def train(self) -> TrainingResult:
         trainer = Trainer()
-        samples = self._default_samples()
+        base_samples = self._default_samples()
+        projection_samples, projection_source = self._projection_samples()
+        samples = [*base_samples, *projection_samples]
+        notes = (
+            f"fastapi training run ({len(base_samples)} base + {len(projection_samples)} projection)"
+            if projection_samples
+            else "fastapi training run"
+        )
         matrix = trainer.fit(samples)
-        snapshot = self.versioner.create_version(matrix.weights, matrix.bias, len(samples), notes="fastapi training run")
+        snapshot = self.versioner.create_version(matrix.weights, matrix.bias, len(samples), notes=notes)
         for entry in trainer.history:
             timestamp = datetime.now(timezone.utc).isoformat()
             payload = {
@@ -141,19 +169,9 @@ class NarrativeTrainingService:
                 "predicted": entry["predicted"],
                 "target": entry["target"],
                 "feedback": entry.get("feedback", 0.0),
-                "notes": "fastapi training run",
+                "notes": notes,
                 "version": snapshot.version,
             }
-            self.logger.record(
-                stage=payload["stage"],
-                action=payload["action"],
-                predicted=payload["predicted"],
-                target=payload["target"],
-                feedback=payload["feedback"],
-                notes=payload["notes"],
-                version=payload["version"],
-                timestamp=payload["timestamp"],
-            )
             self.writer.persist_training(payload)
 
         for record in trainer.value_metrics.records:
@@ -172,4 +190,6 @@ class NarrativeTrainingService:
             history=list(trainer.history),
             value_metrics=value_metrics_summary,
             top_actions=top_actions,
+            projection_sample_count=len(projection_samples),
+            projection_source=projection_source,
         )

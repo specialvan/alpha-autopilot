@@ -25,6 +25,16 @@ const NUMERIC_FIELDS: Array<{
 export function ContextRail({ controller }: { controller: Controller }) {
   const selectedContext =
     controller.contexts.find((item) => item.id === controller.selectedChapter) ?? controller.contexts[0];
+  const quality = selectedContext?.quality;
+  const styleDnaEntries = Object.entries(quality?.styleDna ?? {});
+  const checkpointSummary = quality?.checkpointSummary;
+  const hasQualityMetadata =
+    Boolean(quality?.admission)
+    || Boolean(quality?.primaryFunction)
+    || Boolean(checkpointSummary)
+    || Boolean(quality?.qualityNotes)
+    || Boolean(quality?.checkpoints?.length)
+    || styleDnaEntries.length > 0;
 
   return (
     <aside className="panel glass workbench-rail">
@@ -70,8 +80,53 @@ export function ContextRail({ controller }: { controller: Controller }) {
 
       <div className="field-card">
         <span className="label">Mapped Summary</span>
-        <strong>{selectedContext.title}</strong>
-        <p className="muted">{selectedContext.summary}</p>
+        <strong>{selectedContext?.title ?? 'No context loaded'}</strong>
+        <p className="muted">{selectedContext?.summary ?? 'No backend context loaded yet.'}</p>
+      </div>
+
+      <div className="field-card">
+        <span className="label">Context Quality</span>
+        {hasQualityMetadata ? (
+          <>
+            {quality?.admission ? (
+              <div className="matrix-row">
+                <span>Admission</span>
+                <strong>{quality.admission}</strong>
+              </div>
+            ) : null}
+            {quality?.primaryFunction ? (
+              <div className="matrix-row">
+                <span>Primary Function</span>
+                <strong>{quality.primaryFunction}</strong>
+              </div>
+            ) : null}
+            {checkpointSummary ? (
+              <div className="matrix-row">
+                <span>Checkpoint Summary</span>
+                <strong>
+                  {checkpointSummary.pass} pass / {checkpointSummary.mixed} mixed / {checkpointSummary.fail} fail
+                </strong>
+              </div>
+            ) : null}
+            {quality?.qualityNotes ? (
+              <p className="muted">{quality.qualityNotes}</p>
+            ) : null}
+            {quality?.checkpoints?.slice(0, 3).map((checkpoint, index) => (
+              <div className="matrix-row" key={`${checkpoint.name}-${checkpoint.status}-${index}`}>
+                <span>{checkpoint.name}</span>
+                <strong>{checkpoint.status}</strong>
+              </div>
+            ))}
+            {styleDnaEntries.map(([key, value]) => (
+              <div className="matrix-row" key={key}>
+                <span>{key}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </>
+        ) : (
+          <p className="muted">No quality metadata loaded.</p>
+        )}
       </div>
 
       <div className="workbench-stack">
@@ -102,9 +157,7 @@ export function ContextRail({ controller }: { controller: Controller }) {
           controller.stateDiff.map((entry) => (
             <div className="matrix-row" key={String(entry.field)}>
               <span>{String(entry.field)}</span>
-              <strong>
-                {String(entry.previous)} → {String(entry.current)}
-              </strong>
+              <strong>{String(entry.previous)} -&gt; {String(entry.current)}</strong>
             </div>
           ))
         ) : (

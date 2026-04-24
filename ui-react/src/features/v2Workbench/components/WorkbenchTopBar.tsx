@@ -46,6 +46,13 @@ export function WorkbenchTopBar({ controller }: { controller: Controller }) {
           last run {new Date(latestHistory.timestamp).toLocaleTimeString()}
         </p>
       ) : null}
+      <p className="muted workbench-status">status: {controller.uiStatus}</p>
+      {controller.contextNotice ? (
+        <p className="muted workbench-status">{controller.contextNotice}</p>
+      ) : null}
+      {controller.error ? (
+        <p className="muted workbench-status">error: {controller.error}</p>
+      ) : null}
     </header>
   );
 }

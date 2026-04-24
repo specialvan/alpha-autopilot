@@ -19,7 +19,11 @@ export function RunHistoryPanel({ controller }: { controller: Controller }) {
             </div>
             <p className="muted">
               {new Date(entry.timestamp).toLocaleTimeString()} /{' '}
-              {entry.preview.evaluation_summary.top_score.toFixed(4)}
+              {(
+                typeof entry.preview.evaluation_summary.top_score === 'number'
+                  ? entry.preview.evaluation_summary.top_score
+                  : 0
+              ).toFixed(4)}
             </p>
           </button>
         ))

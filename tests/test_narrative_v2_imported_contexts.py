@@ -6,6 +6,7 @@ from pathlib import Path
 from backend.app.services.narrative.history_service import HistoryService
 from backend.app.services.narrative_v2.imported_contexts import (
     build_workbench_contexts_from_plotpilot_report,
+    load_imported_workbench_contexts,
 )
 from backend.app.services.narrative_v2.workbench_service import NarrativeV2WorkbenchService
 
@@ -45,6 +46,54 @@ def test_build_workbench_contexts_from_plotpilot_report_creates_stageful_context
     assert contexts[1]["stage"] == "mid_late"
     assert contexts[2]["stage"] == "late"
     assert "gpt-5.4" in contexts[0]["summary"]
+
+
+def test_build_workbench_contexts_from_plotpilot_report_includes_v3_quality_metadata() -> None:
+    payload = {
+        "model": "gpt-5.4",
+        "results": [
+            {
+                "chapter": 2,
+                "title": "guest_from_medicine_valley",
+                "success": True,
+                "chars": 3167,
+                "preview": "The prince blocks the road to the black market.",
+            }
+        ],
+    }
+
+    quality_records = [
+        {
+            "chapter_number": 2,
+            "title": "guest from medicine valley",
+            "admission": "provisional",
+            "primary_function": "information-reveal",
+            "style_dna": {
+                "pace": "brisk",
+                "dialogue_reliance": "medium",
+                "emotional_directness": "balanced",
+            },
+            "checkpoints": [
+                {
+                    "name": "chapter-function-fit",
+                    "status": "pass",
+                    "evidence": "Primary function resolved cleanly.",
+                    "implication": "Suitable for downstream use.",
+                }
+            ],
+            "workbench_context": {
+                "notes": "Derived from 1 paragraphs with information-reveal."
+            },
+        }
+    ]
+
+    contexts = build_workbench_contexts_from_plotpilot_report(payload, quality_records=quality_records)
+
+    assert contexts[0]["admission"] == "provisional"
+    assert contexts[0]["primary_function"] == "information-reveal"
+    assert contexts[0]["style_dna"]["pace"] == "brisk"
+    assert contexts[0]["checkpoints"][0]["name"] == "chapter-function-fit"
+    assert "information-reveal" in contexts[0]["quality_notes"]
 
 
 def test_workbench_service_prefers_imported_context_file(tmp_path) -> None:
@@ -90,3 +139,26 @@ def test_workbench_service_prefers_imported_context_file(tmp_path) -> None:
 
     assert result["contexts"][0]["id"] == "plotpilot-chapter-01"
     assert result["contexts"][0]["summary"] == "Imported PlotPilot fixture"
+
+
+def test_load_imported_workbench_contexts_returns_none_for_invalid_root_json(tmp_path) -> None:
+    imported_path = tmp_path / "workbench_contexts.json"
+    imported_path.write_text("{bad-json", encoding="utf-8")
+
+    loaded = load_imported_workbench_contexts(imported_path)
+
+    assert loaded is None
+
+
+def test_load_imported_workbench_contexts_returns_none_when_contexts_payload_has_no_dict_items(
+    tmp_path,
+) -> None:
+    imported_path = tmp_path / "workbench_contexts.json"
+    imported_path.write_text(
+        json.dumps({"contexts": ["not-a-dict", 3, None]}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    loaded = load_imported_workbench_contexts(imported_path)
+
+    assert loaded is None

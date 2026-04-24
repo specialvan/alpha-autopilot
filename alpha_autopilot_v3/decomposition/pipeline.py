@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..generation_control.policy import build_generation_control_plan
+from ..retention.metrics import build_retention_metrics
 from .models import ChapterDecompositionRecord, CheckpointResult, EvidenceSpan
 
 
@@ -53,7 +55,16 @@ def _build_checkpoints(primary_function: str, paragraphs: list[str]) -> list[Che
     return [
         CheckpointResult(
             name="chapter-function-fit",
-            status="pass" if primary_function == "conflict-escalation" else "mixed",
+            status=(
+                "pass"
+                if primary_function in {
+                    "conflict-escalation",
+                    "payoff-delivery",
+                    "information-reveal",
+                    "transition-breathing",
+                }
+                else "mixed"
+            ),
             evidence=f"Primary function resolved to {primary_function}.",
             implication="Function label is stable enough for downstream use.",
         ),
@@ -101,8 +112,9 @@ def decompose_chapter_text(
     admission = _admission_for_checkpoints(checkpoints)
     conflict_intensity = min(1.0, round(0.38 + len(paragraphs) * 0.08, 4))
     payoff_pressure = min(1.0, round(0.16 + max(len(paragraphs) - 1, 0) * 0.05, 4))
+    retention_rough_signal = min(1.0, round(0.4 + conflict_intensity * 0.25 + payoff_pressure * 0.18, 4))
 
-    return ChapterDecompositionRecord(
+    record = ChapterDecompositionRecord(
         chapter_number=chapter_number,
         title=title,
         scope="single",
@@ -140,7 +152,39 @@ def decompose_chapter_text(
             },
             "notes": f"Derived from {len(paragraphs)} paragraphs with {primary_function}.",
         },
+        retention_signal=retention_rough_signal,
     )
+
+    retention_metrics = build_retention_metrics(record)
+    control_plan = build_generation_control_plan(record)
+
+    record.attraction_score = retention_metrics.chapter_attraction_score
+    record.hook_strength = retention_metrics.hook_strength
+    record.pace_pressure = retention_metrics.pacing_drive
+    record.emotion_curve = control_plan.emotional_curve
+    record.decision_tags = control_plan.decision_tags
+    record.control_suggestions = control_plan.suggestions
+    record.workbench_context = {
+        **record.workbench_context,
+        "retention": {
+            "target_function": control_plan.target_function.name,
+            "primary_objective": control_plan.target_function.primary_objective,
+            "chapter_attraction_score": retention_metrics.chapter_attraction_score,
+            "continue_reading_intent": retention_metrics.continue_reading_intent,
+            "template_risk": retention_metrics.template_risk,
+        },
+        "control_plan": {
+            "focus_mode": control_plan.focus_mode,
+            "emotion_curve": control_plan.emotional_curve,
+            "pacing_curve": control_plan.pacing_curve,
+            "suspense_curve": control_plan.suspense_curve,
+            "conflict_curve": control_plan.conflict_curve,
+            "hook_strategy": control_plan.hook_strategy,
+            "anti_pattern_warnings": control_plan.anti_pattern_warnings,
+        },
+    }
+
+    return record
 
 
 def build_records_from_plotpilot_report(
