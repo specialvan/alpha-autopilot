@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CharacterStatePayload(BaseModel):
@@ -72,3 +72,110 @@ class NarrativeV2DecisionPayload(BaseModel):
     details: dict[str, float] = Field(default_factory=dict)
     candidates: list[NarrativeV2DecisionCandidatePayload] = Field(default_factory=list)
     retention_driver: NarrativeV2RetentionDriverPayload | None = None
+
+
+class StoryStateContextPayload(BaseModel):
+    chapter_index: int
+    stage: str
+    mainline_progress: float = Field(ge=0.0, le=1.0)
+    sideplot_progress: float = Field(ge=0.0, le=1.0)
+    conflict_intensity: float = Field(ge=0.0, le=1.0)
+    emotional_temperature: float = Field(ge=0.0, le=1.0)
+    pacing_speed: float = Field(ge=0.0, le=1.0)
+    foreshadowing_load: float = Field(ge=0.0, le=1.0)
+    payoff_pressure: float = Field(ge=0.0, le=1.0)
+    characters: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
+
+
+class NarrativeV2ContextCheckpointPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    name: str
+    status: str
+    evidence: str | None = None
+    implication: str | None = None
+
+
+class NarrativeV2ContextQualityPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    admission: str | None = None
+    primary_function: str | None = None
+    style_dna: dict[str, str] = Field(default_factory=dict)
+    checkpoints: list[NarrativeV2ContextCheckpointPayload] = Field(default_factory=list)
+    checkpoint_summary: dict[str, int] | None = None
+    quality_notes: str | None = None
+
+
+class NarrativeV2CompareBaselinePayload(BaseModel):
+    baseline_context_id: str | None = None
+    baseline_chapter_number: int | None = None
+    delta: dict[str, float] = Field(default_factory=dict)
+
+
+class NarrativeV4WorkbenchCandidatePayload(BaseModel):
+    candidate_id: str = ""
+    predicted_action: str = ""
+    predicted_turning_point: str = ""
+    predicted_conflict_type: str = ""
+    predicted_payoff_type: str = ""
+    retention_score: float = 0.0
+    tension_score: float = 0.0
+    explanation: str = ""
+    risk_flags: list[str] = Field(default_factory=list)
+
+
+class NarrativeV4WorkbenchPreviewPayload(BaseModel):
+    enabled: bool
+    fallback_reason: str | None = None
+    candidate_count: int = 0
+    retention_sort_key: str | None = None
+    relationship_graph: dict[str, Any] = Field(default_factory=dict)
+    relationship_displacements: list[dict[str, Any]] = Field(default_factory=list)
+    relationship_timeline: list[dict[str, Any]] = Field(default_factory=list)
+    candidate_timeline: list[dict[str, Any]] = Field(default_factory=list)
+    genre_calibration: dict[str, Any] = Field(default_factory=dict)
+    retention_writeback: dict[str, Any] = Field(default_factory=dict)
+    memory_summary: dict[str, Any] = Field(default_factory=dict)
+    selected_candidate: NarrativeV4WorkbenchCandidatePayload | None = None
+    top_candidates: list[NarrativeV4WorkbenchCandidatePayload] = Field(default_factory=list)
+    qc_summary: dict[str, Any] = Field(default_factory=dict)
+    v4_input_profile: dict[str, Any] = Field(default_factory=dict)
+
+
+class NarrativeV2WorkbenchContextPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    chapterNumber: int
+    title: str
+    stage: str
+    summary: str
+    state: StoryStateContextPayload
+    compare_baseline: NarrativeV2CompareBaselinePayload | None = None
+    v4_preview: NarrativeV4WorkbenchPreviewPayload | None = None
+    quality: NarrativeV2ContextQualityPayload | None = None
+    admission: str | None = None
+    primary_function: str | None = None
+    style_dna: dict[str, str] = Field(default_factory=dict)
+    checkpoints: list[NarrativeV2ContextCheckpointPayload] = Field(default_factory=list)
+    checkpoint_summary: dict[str, int] | None = None
+    quality_notes: str | None = None
+
+
+class NarrativeV2WorkbenchContextsResponsePayload(BaseModel):
+    contexts: list[NarrativeV2WorkbenchContextPayload] = Field(default_factory=list)
+    source: str | None = None
+    context_contract: str | None = None
+    fallback_reason: str | None = None
+    report_path: str | None = None
+    report_url: str | None = None
+    run_id: str | None = None
+    manifest_path: str | None = None
+    preferred_model: str | None = None
+    resolved_model: str | None = None
+    report_success_rate: float | None = None
+    report_timestamp: str | None = None
+    arbitration_strategy: str | None = None
+    source_diagnostics: dict[str, Any] = Field(default_factory=dict)

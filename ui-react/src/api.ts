@@ -33,6 +33,49 @@ export type Recommendation = {
 };
 export type LogEntry = { time: string; text: string };
 export type FeedbackNote = string;
+export type V4GenreObservability = {
+  genre: string;
+  sampleCount: number;
+  acceptRate: number;
+  feedbackSignal: number;
+};
+export type V4Observability = {
+  enabled: boolean;
+  windowLimit: number;
+  activeContexts: number;
+  relationshipRows: number;
+  feedbackRows: number;
+  averageTension: number;
+  feedbackSignal: number;
+  acceptRate: number;
+  genresTracked: number;
+  autoLearningReadyGenres: number;
+  topGenres: V4GenreObservability[];
+  trend?: Array<{
+    windowSize: number;
+    sampleCount: number;
+    feedbackSignal: number;
+    acceptRate: number;
+  }>;
+  alerts?: Array<{
+    code: string;
+    severity: 'info' | 'warning' | 'critical';
+    message: string;
+    value?: number;
+    threshold?: number;
+  }>;
+  alertCount?: number;
+  criticalAlertCount?: number;
+  alertRouting?: {
+    enabled: boolean;
+    routed: boolean;
+    reason: string;
+    criticalCount: number;
+    signature?: string;
+    cooldownSeconds?: number;
+  };
+  lastUpdated?: string | null;
+};
 
 export type DashboardResponse = {
   overview: OverviewResponse;
@@ -43,6 +86,7 @@ export type DashboardResponse = {
   recommendations: Recommendation[];
   feedbackNotes: FeedbackNote[];
   logs: LogEntry[];
+  v4Observability?: V4Observability;
 };
 
 export type TrainingSummary = {
@@ -177,6 +221,102 @@ export type NarrativeV2ContextQualityMetadata = {
   quality_notes?: string;
 };
 
+export type NarrativeV4WorkbenchCandidate = {
+  candidate_id: string;
+  predicted_action: string;
+  predicted_turning_point: string;
+  predicted_conflict_type: string;
+  predicted_payoff_type: string;
+  retention_score: number;
+  tension_score: number;
+  explanation?: string;
+  risk_flags?: string[];
+};
+
+export type NarrativeV4WorkbenchPreview = {
+  enabled: boolean;
+  fallback_reason?: string | null;
+  candidate_count: number;
+  retention_sort_key?: string;
+  memory_summary?: {
+    context_id?: string;
+    history_window?: number;
+    relationship_history_count: number;
+    feedback_history_count: number;
+    relationship_timeline_displacement_count?: number;
+    memory_strategy?: string;
+    relationship_merge_deduped_count?: number;
+    feedback_merge_deduped_count?: number;
+    relationship_collapsed_count?: number;
+    feedback_collapsed_count?: number;
+    relationship_clipped_count?: number;
+    feedback_clipped_count?: number;
+    relationship_decay_dropped_count?: number;
+    feedback_decay_dropped_count?: number;
+    candidate_timeline_count?: number;
+    genre_auto_learning_mode?: string;
+    genre_auto_learning_applied?: boolean;
+    genre_auto_learning_sample_count?: number;
+    genre_auto_learning_denoised_count?: number;
+    genre_auto_learning_feedback_signal?: number;
+    genre_auto_learning_bias_count?: number;
+    genre_auto_learning_guard_triggered?: boolean;
+    genre_auto_learning_guard_reason?: string;
+    genre_auto_learning_fallback_mode?: string;
+    genre_auto_learning_guard_profile?: {
+      min_samples?: number;
+      decay?: number;
+      bias_limit?: number;
+      max_volatility?: number;
+      max_signal_divergence?: number;
+      extreme_signal?: number;
+      extreme_min_samples?: number;
+      reversal_divergence_min?: number;
+    };
+  };
+  relationship_graph?: {
+    node_count: number;
+    edge_count: number;
+    displacement_count: number;
+    high_tension_edges?: Array<Record<string, unknown>>;
+  };
+  relationship_displacements?: Array<Record<string, unknown>>;
+  relationship_timeline?: Array<Record<string, unknown>>;
+  candidate_timeline?: Array<Record<string, unknown>>;
+  genre_calibration?: {
+    genre?: string;
+    learning_mode?: string;
+    applied?: boolean;
+    feedback_signal?: number;
+    sample_count?: number;
+    denoised_count?: number;
+    guard_triggered?: boolean;
+    guard_reason?: string;
+    fallback_mode?: string;
+    accept_rate?: number;
+    signal_recent?: number;
+    signal_long?: number;
+    signal_volatility?: number;
+    signal_divergence?: number;
+    guard_profile?: {
+      min_samples?: number;
+      decay?: number;
+      bias_limit?: number;
+      max_volatility?: number;
+      max_signal_divergence?: number;
+      extreme_signal?: number;
+      extreme_min_samples?: number;
+      reversal_divergence_min?: number;
+    };
+    bias_updates?: Record<string, number>;
+  };
+  retention_writeback?: Record<string, unknown>;
+  selected_candidate?: NarrativeV4WorkbenchCandidate | null;
+  top_candidates?: NarrativeV4WorkbenchCandidate[];
+  qc_summary?: Record<string, unknown>;
+  v4_input_profile?: Record<string, unknown>;
+};
+
 export type NarrativeV2DecisionCandidate = {
   action: string;
   score: number;
@@ -254,6 +394,12 @@ export type NarrativeV2WorkbenchContext = {
   stage: NarrativeV2StoryState['stage'];
   summary: string;
   state: NarrativeV2StoryState;
+  compare_baseline?: {
+    baseline_context_id?: string;
+    baseline_chapter_number?: number;
+    delta?: Record<string, number>;
+  };
+  v4_preview?: NarrativeV4WorkbenchPreview;
   quality?: NarrativeV2ContextQualityMetadata;
   admission?: string;
   primary_function?: string;
@@ -265,6 +411,19 @@ export type NarrativeV2WorkbenchContext = {
 
 export type NarrativeV2WorkbenchContextsResponse = {
   contexts: NarrativeV2WorkbenchContext[];
+  source?: string;
+  context_contract?: string;
+  fallback_reason?: string;
+  report_path?: string;
+  report_url?: string;
+  run_id?: string;
+  manifest_path?: string;
+  preferred_model?: string;
+  resolved_model?: string;
+  report_success_rate?: number;
+  report_timestamp?: string;
+  arbitration_strategy?: string;
+  source_diagnostics?: Record<string, unknown>;
 };
 
 export type HistoryTimelineItem = {
@@ -377,6 +536,40 @@ export async function fetchWorkbenchContextsV2(): Promise<NarrativeV2WorkbenchCo
     throw new Error(`v2 workbench contexts failed: ${response.status}`);
   }
   return (await response.json()) as NarrativeV2WorkbenchContextsResponse;
+}
+
+export async function refreshWorkbenchContextsV2(
+  options: { onlineOnly?: boolean } = {},
+): Promise<NarrativeV2WorkbenchContextsResponse> {
+  const params = new URLSearchParams();
+  if (options.onlineOnly) {
+    params.set('online_only', 'true');
+  }
+  const query = params.toString();
+  const response = await fetch(
+    `${DEFAULT_BASE_URL}/api/v2/workbench/contexts/refresh${query ? `?${query}` : ''}`,
+    { method: 'POST' },
+  );
+  if (!response.ok) {
+    throw new Error(`v2 workbench context refresh failed: ${response.status}`);
+  }
+  return (await response.json()) as NarrativeV2WorkbenchContextsResponse;
+}
+
+export async function fetchNarrativeV4WorkbenchPreview(
+  payload: { id?: string; state: NarrativeV2StoryState },
+): Promise<NarrativeV4WorkbenchPreview> {
+  const response = await fetch(`${DEFAULT_BASE_URL}/api/v4/workbench/preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`v4 workbench preview failed: ${response.status}`);
+  }
+  return (await response.json()) as NarrativeV4WorkbenchPreview;
 }
 
 export async function runTraining(): Promise<TrainingResponse> {

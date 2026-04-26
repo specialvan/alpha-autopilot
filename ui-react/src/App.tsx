@@ -13,6 +13,7 @@ import { VersionComparePanel } from './components/VersionComparePanel';
 import { HistoryPanel } from './components/HistoryPanel';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { LogsPanel } from './components/LogsPanel';
+import { V4ObservabilityPanel } from './components/V4ObservabilityPanel';
 import { exportHistory, fetchDashboard, fetchHistory, fetchRecommendationPreview, runTraining, submitFeedback, type DashboardResponse, type HistoryResponse, type Recommendation, type TrainingResponse, type TuningWeight } from './api';
 import { overview as fallbackOverview, narrativeSignals as fallbackSignals, matrixWeights as fallbackWeights, chapterSummary as fallbackSummary, tuningWeights as fallbackTuning, recommendations as fallbackRecommendations, feedbackNotes as fallbackFeedback, logs as fallbackLogs, trainingSnapshot as fallbackTraining } from './data';
 
@@ -85,6 +86,7 @@ export function App() {
   const chapterSummary = data?.chapterSummary ?? fallbackSummary;
   const feedbackNotes = data?.feedbackNotes ?? fallbackFeedback;
   const logs = data?.logs ?? fallbackLogs;
+  const v4Observability = data?.v4Observability;
 
   const handleAdjust = (label: string, delta: number) => {
     setTuning((current) =>
@@ -226,7 +228,10 @@ export function App() {
           <FeedbackPanel notes={feedbackNotes} onTrain={handleTrain} onFeedback={handleFeedback} summary={feedbackSummary} topActions={feedbackTopActions} />
         </section>
         <section className="content-grid two">
+          <V4ObservabilityPanel snapshot={v4Observability} />
           <LogsPanel logs={logs} />
+        </section>
+        <section className="content-grid two">
           <section className="panel glass">
             <div className="panel-head">
               <div>

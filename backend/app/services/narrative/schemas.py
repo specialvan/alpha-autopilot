@@ -34,3 +34,4 @@ class DashboardResponse(BaseModel):
     recommendations: list[dict]
     feedbackNotes: list[str]
     logs: list[dict]
+    v4Observability: dict = Field(default_factory=dict)
