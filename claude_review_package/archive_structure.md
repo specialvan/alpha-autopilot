@@ -15,12 +15,12 @@
 - `MASTER_ROADMAP.md`
 - `PROJECT_STATUS.md`
 - `README.md`
-- `frontend_PRD.md`
-- `frontend_PROJECT_STATUS.md`
-- `SECOND_PHASE_TASKS.md`
+- `V2/frontend_PRD.md`
+- `V2/frontend_PROJECT_STATUS.md`
+- `V2/SECOND_PHASE_TASKS.md`
 - `THIRD_PHASE_ROADMAP.md`
 - `THIRD_PHASE_TASKS.md`
-- `TECH_BOTTLENECKS.md`
+- `V2/TECH_BOTTLENECKS.md`
 
 ### 2.2 increment
 

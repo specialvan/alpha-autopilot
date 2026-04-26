@@ -6,6 +6,20 @@
 
 换句话说，项目现在不是“跑偏”，而是处于“主线正确，但文档层开始变厚、口径开始分叉”的状态。
 
+## 裁决规则
+
+本文件不是用来推翻方向评审结论的，而是用来补充**风险治理和整改输入**。因此，当它与 `DOCS_DIRECTION_REVIEW.md` 同时存在时，裁决顺序应当是：
+
+1. 先采信 `DOCS_DIRECTION_REVIEW.md` 的主结论，确认项目主方向是否偏离
+2. 再采信本文件的风险点清单，判断哪些地方需要收敛口径、补充边界、统一层级
+3. 将本文件中的风险点直接转写为整改行动项，优先进入后续审查、文档重写或状态统一任务
+
+也就是说：
+
+- `DOCS_DIRECTION_REVIEW.md` 负责回答“方向是否还对”
+- 本文件负责回答“哪些地方已经开始让人误读，并且需要马上修正”
+- 深审计优先作为整改输入，不优先作为方向否决
+
 ## 1. 审计范围
 
 本次重点比对了以下文档：
@@ -14,11 +28,11 @@
 - `MASTER_ROADMAP.md`
 - `THIRD_PHASE_ROADMAP.md`
 - `PROJECT_STATUS.md`
-- `frontend_PRD.md`
-- `frontend_PROJECT_STATUS.md`
-- `frontend_REVIEW_GUIDE.md`
-- `frontend_DELIVERY_CHECKLIST.md`
-- `TECH_BOTTLENECKS.md`
+- `V2/frontend_PRD.md`
+- `V2/frontend_PROJECT_STATUS.md`
+- `V2/frontend_REVIEW_GUIDE.md`
+- `V2/frontend_DELIVERY_CHECKLIST.md`
+- `V2/TECH_BOTTLENECKS.md`
 
 ## 2. 明确一致的部分
 
@@ -92,7 +106,7 @@
 
 ---
 
-### 3.2 `TECH_BOTTLENECKS.md` 中“暂时保持原型独立”与总体路线存在轻微张力
+### 3.2 `V2/TECH_BOTTLENECKS.md` 中“暂时保持原型独立”与总体路线存在轻微张力
 
 文档里写到：
 
@@ -113,7 +127,7 @@
 
 #### 建议
 
-在 `TECH_BOTTLENECKS.md` 和总路线图里补充一句：
+在 `V2/TECH_BOTTLENECKS.md` 和总路线图里补充一句：
 
 - “短期独立，长期耦合”
 
@@ -121,15 +135,15 @@
 
 ---
 
-### 3.3 `frontend_PRD.md` 与 `frontend_PROJECT_STATUS.md` 的产品定义边界存在轻微漂移
+### 3.3 `V2/frontend_PRD.md` 与 `V2/frontend_PROJECT_STATUS.md` 的产品定义边界存在轻微漂移
 
-`frontend_PRD.md` 强调的是：
+`V2/frontend_PRD.md` 强调的是：
 
 - 量化式工作台
 - 展示推荐、日志、版本、反馈、风险
 - 偏工程交付界面
 
-而 `frontend_PROJECT_STATUS.md` 已经把 `V2 Workbench` 定义为：
+而 `V2/frontend_PROJECT_STATUS.md` 已经把 `V2 Workbench` 定义为：
 
 - 独立路由
 - 决策驾驶舱
@@ -197,13 +211,13 @@
 
 - `ROADMAP.md`
 - `MASTER_ROADMAP.md`
-- `SECOND_PHASE_TASKS.md`
+- `V2/SECOND_PHASE_TASKS.md`
 - `THIRD_PHASE_TASKS.md`
 - `PROJECT_STATUS.md`
-- `frontend_PROJECT_STATUS.md`
-- `frontend_PRD.md`
-- `frontend_REVIEW_GUIDE.md`
-- `TECH_BOTTLENECKS.md`
+- `V2/frontend_PROJECT_STATUS.md`
+- `V2/frontend_PRD.md`
+- `V2/frontend_REVIEW_GUIDE.md`
+- `V2/TECH_BOTTLENECKS.md`
 - `PRD.md`
 - 大量 review / delivery / checklist 文档
 
@@ -291,11 +305,11 @@
 - 将“已完成”拆成“能力完成 / 主链路接入完成”两列
 - 避免把局部完成写成整体完成
 
-### 5.4 推荐补充到 `TECH_BOTTLENECKS.md`
+### 5.4 推荐补充到 `V2/TECH_BOTTLENECKS.md`
 
 - 加上“短期保持推荐原型独立，长期与生成链路耦合”的明确说明
 
-### 5.5 推荐补充到 `frontend_PRD.md`
+### 5.5 推荐补充到 `V2/frontend_PRD.md`
 
 - 明确 `dashboard` 和 `V2 Workbench` 的双层结构
 - 避免前端产品定位模糊

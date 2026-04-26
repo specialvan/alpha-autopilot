@@ -1,7 +1,7 @@
 # 超短导航
 
-1. 先读 `CODEX_DEVELOPMENT_GOVERNANCE.md`
-2. 再读 `claude_review_package/START_HERE.md`
-3. 新需求先填 `task_launch_template.md`
-4. 再走 `new_requirement_execution_flow.md`
-5. 最后按 `test_governance.md` 和 `execution_governance.md` 收口
+先读 `claude_review_package/README_FOR_CODEX.md`。
+
+这里只保留最短入口提醒，不单独规定阅读顺序。
+
+后续只按 `README_FOR_CODEX.md` 内的链接展开。

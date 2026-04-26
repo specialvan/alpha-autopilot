@@ -1,66 +1,35 @@
-# Codex 执行提示词
+# Codex 执行提示（历史简版）
 
-你现在需要作为 `alpha-autopilot` 项目的开发执行代理，严格按照本工程包内文档推进。
+本文件仅作为执行入口的简版说明和历史记录。若与 `codex_final_startup_prompt.md` 存在任何冲突，以 `codex_final_startup_prompt.md` 为准。
 
-## 首要约束
+## 规则顺序
 
-- `v1/v2` 作为稳定基线，默认不扩展新功能
-- `v3` 作为增量需求，所有新增功能优先归入此层
-- 实验性内容必须与主线隔离
-- 不允许在未定义门禁时直接改主线
-- 每次只处理一个清晰目标
-- 所有变更必须同步更新状态文档
+1. `v1/v2` 为 Baseline，只做收口和维护。
+2. `v3` 为 Increment，所有新功能优先进入这里。
+3. Experimental 必须隔离，不得污染主线。
+4. 每次只处理一个清晰目标。
+5. 变更后必须同步更新相关状态文档。
 
-## 推荐阅读顺序
+## 执行顺序
 
-1. `README.md`
-2. `package_manifest.md`
-3. `CODEX_DEVELOPMENT_GOVERNANCE.md`
-4. `MASTER_ROADMAP.md`
-5. `PROJECT_STATUS.md`
-6. `THIRD_PHASE_ROADMAP.md`
-7. `frontend_PRD.md`
-8. `frontend_PROJECT_STATUS.md`
-9. `TECH_BOTTLENECKS.md`
-10. `DOCS_DIRECTION_DRIFT_AUDIT_DEEP.md`
+1. 先读 `CODEX_DEVELOPMENT_GOVERNANCE.md`、`README_FOR_CODEX.md`、`codex_run_card.md`、`final_document_index.md`、`package_overview.md`、`new_requirement_intake_template.md`、`new_requirement_execution_flow.md`、`test_governance.md`、`execution_governance.md`、`MASTER_ROADMAP.md`、`PROJECT_STATUS.md`。
+2. 先填写 `new_requirement_intake_template.md`，再看 `new_requirement_execution_flow.md`。
+3. 判定需求属于 Baseline / Increment / Experimental。
+4. 确认是否进入开发，若进入则只做最小改动。
+5. 补测、更新文档、验证可回滚、收口。
 
-## 当前执行策略
+## 变更原则
 
-### 第一优先级
-收敛文档口径，使所有文档明确区分：
-
-- Baseline
-- Increment
-- Experimental
-
-### 第二优先级
-将 `v3` 的接入门禁写清楚，并确保它不会被误写成新主线。
-
-### 第三优先级
-确保状态文档和路线图一致，所有“已完成”必须说明是能力完成还是链路完成。
-
-## 判断原则
-
-当文档存在冲突时，按以下顺序裁决：
-
-1. Baseline 稳定性优先
-2. 主线可回滚优先
-3. 增量独立性优先
-4. 实验隔离优先
-5. 文档一致性优先
-
-## 需要特别注意的点
-
-- `v2` 工作台是主交互入口，不要被 `v3` 替代
-- `v3` 是质量层与推荐增强层，不是独立主线
-- 任何生成链路耦合都应先保持短期独立、长期可接入
-- 不要让文档数量增长掩盖路线图主次关系
+- 不改变主线边界时，只做局部更新。
+- 改变主线边界时，重写相关治理文档。
+- 仅做实验探索时，隔离到 Experimental。
+- 历史材料只归档，不直接拿来定义当前路线。
 
 ## 输出要求
 
-每次执行后，必须明确说明：
+执行结束后，说明以下内容：
 
-- 修改了哪些文档
-- 解决了什么口径问题
-- 还有哪些未完成的治理项
-- 下一步应该推进什么
+- 修改了哪些文档。
+- 解决了什么入口或路径问题。
+- 还有哪些未完成的治理项。
+- 下一步应该推进什么。
