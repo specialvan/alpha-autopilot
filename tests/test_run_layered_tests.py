@@ -104,7 +104,7 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
         test_path
         for layer in run_layered_tests.LAYER_DEFINITIONS.values()
         for test_path in layer.argv
-        if test_path.startswith("tests/")
+        if test_path.startswith("tests/") or test_path.startswith("backend/tests/")
     }
 
     assert "tests/test_alpha_autopilot_v3_build_script.py" in layer_tests
@@ -112,3 +112,5 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
     assert "tests/test_alpha_autopilot_v3_qc_report.py" in layer_tests
     assert "tests/test_narrative_v2_decision_contract.py" in layer_tests
     assert "tests/test_narrative_v2_workbench_quality_enrichment.py" in layer_tests
+    assert "tests/test_alpha_autopilot_v4_modules.py" in layer_tests
+    assert "backend/tests/test_narrative_v4_api.py" in layer_tests

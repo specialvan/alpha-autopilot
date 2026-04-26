@@ -90,6 +90,10 @@ def test_workbench_service_enriches_imported_contexts_with_sibling_v3_records(tm
     assert context["style_dna"]["pace"] == "brisk"
     assert context["checkpoints"][0]["status"] == "pass"
     assert "information-reveal" in context["quality_notes"]
+    assert context["v4_preview"]["enabled"] is True
+    assert context["v4_preview"]["candidate_count"] >= 2
+    assert context["v4_preview"]["selected_candidate"]["predicted_action"]
+    assert context["v4_preview"]["relationship_graph"]["edge_count"] >= 1
 
 
 def test_workbench_service_keeps_live_history_context_when_imported_source_missing(tmp_path) -> None:
@@ -105,6 +109,11 @@ def test_workbench_service_keeps_live_history_context_when_imported_source_missi
     assert context["state"]["chapter_index"] == 18
     assert "history" in context["summary"].lower()
     assert "primary_function" not in context
+    assert context["v4_preview"]["enabled"] is True
+    assert context["v4_preview"]["candidate_count"] >= 2
+    assert context["v4_preview"]["top_candidates"]
+    assert context["v4_preview"]["relationship_graph"]["edge_count"] >= 1
+    assert context["v4_preview"]["retention_writeback"]["feedback_count"] >= 1
 
 
 def test_workbench_service_keeps_imported_contexts_when_quality_jsonl_is_corrupted(tmp_path) -> None:
@@ -155,3 +164,6 @@ def test_workbench_service_keeps_imported_contexts_when_quality_jsonl_is_corrupt
     context = result["contexts"][0]
     assert context["id"] == "plotpilot-chapter-03"
     assert context["summary"] == "Imported PlotPilot context"
+    assert context["v4_preview"]["enabled"] is True
+    assert context["v4_preview"]["candidate_count"] >= 2
+    assert context["v4_preview"]["relationship_graph"]["edge_count"] >= 1

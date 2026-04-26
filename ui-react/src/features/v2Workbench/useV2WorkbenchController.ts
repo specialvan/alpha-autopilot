@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  fetchNarrativeV4WorkbenchPreview,
+  refreshWorkbenchContextsV2,
   fetchWorkbenchContextsV2,
   fetchRecommendationPreviewV2,
   type NarrativeV2PreviewResponse,
   type NarrativeV2StoryState,
+  type NarrativeV2WorkbenchContextsResponse,
 } from '../../api';
 import { buildNarrativeV2PreviewRequest, clampNarrativeV2Value } from '../../v2Preview';
 import { computeStateDiff, listChapterMappedContexts, resolveBaseState } from './contextMapping';
-import { normalizeWorkbenchContexts } from './backendContexts';
+import { normalizeV4Preview, normalizeWorkbenchContexts } from './backendContexts';
 import { appendRunEntry, buildComparisonDelta, buildSnapshotPayload } from './session';
-import type { ChapterMappedContext, V2ContextSource, WorkbenchRunEntry } from './types';
+import type { ChapterMappedContext, V2ContextSource, V4WorkbenchPreview, WorkbenchRunEntry } from './types';
 
 type UiStatus = 'loading_context' | 'ready' | 'dirty' | 'running' | 'error';
 
@@ -31,11 +34,28 @@ export function useV2WorkbenchController() {
   const [selectedChapter, setSelectedChapter] = useState<string>(fallbackContexts[0]?.id ?? '');
   const [overrides, setOverrides] = useState<Partial<NarrativeV2StoryState>>({});
   const [currentPreview, setCurrentPreview] = useState<NarrativeV2PreviewResponse | null>(null);
+  const [currentV4Preview, setCurrentV4Preview] = useState<V4WorkbenchPreview | null>(null);
   const [comparisonPreview, setComparisonPreview] = useState<NarrativeV2PreviewResponse | null>(null);
   const [runHistory, setRunHistory] = useState<WorkbenchRunEntry[]>([]);
   const [uiStatus, setUiStatus] = useState<UiStatus>('loading_context');
   const [error, setError] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState<string | null>(null);
+  const [isRefreshingContexts, setIsRefreshingContexts] = useState(false);
+  const [backendSourceMeta, setBackendSourceMeta] = useState<{
+    source?: string;
+    contextContract?: string;
+    fallbackReason?: string;
+    reportPath?: string;
+    reportUrl?: string;
+    runId?: string;
+    manifestPath?: string;
+    preferredModel?: string;
+    resolvedModel?: string;
+    reportSuccessRate?: number;
+    reportTimestamp?: string;
+    arbitrationStrategy?: string;
+  }>({});
+  const [sourceDiagnostics, setSourceDiagnostics] = useState<Record<string, unknown> | null>(null);
   const previewRequestTokenRef = useRef(0);
 
   const baseState = useMemo(
@@ -63,9 +83,15 @@ export function useV2WorkbenchController() {
     previewRequestTokenRef.current = requestToken;
     setUiStatus('running');
     try {
-      const preview = await fetchRecommendationPreviewV2(
-        buildNarrativeV2PreviewRequest(workingState),
-      );
+      const [preview, v4PreviewRaw] = await Promise.all([
+        fetchRecommendationPreviewV2(
+          buildNarrativeV2PreviewRequest(workingState),
+        ),
+        fetchNarrativeV4WorkbenchPreview({
+          id: selectedChapter || contextSource,
+          state: workingState,
+        }).catch(() => null),
+      ]);
       if (previewRequestTokenRef.current != requestToken) {
         return;
       }
@@ -73,6 +99,7 @@ export function useV2WorkbenchController() {
         setComparisonPreview(previous);
         return preview;
       });
+      setCurrentV4Preview(normalizeV4Preview(v4PreviewRaw) ?? null);
       setRunHistory((history) =>
         appendRunEntry(history, {
           source: contextSource,
@@ -101,21 +128,15 @@ export function useV2WorkbenchController() {
     void fetchWorkbenchContextsV2()
       .then((payload) => {
         if (cancelled) return;
-        const normalized = normalizeWorkbenchContexts(payload);
-        if (!normalized.length) {
-          setContextNotice('No backend contexts returned. Using mapped chapter fallback.');
-          setContexts(listChapterMappedContexts());
-          return;
-        }
-        setContexts(normalized);
-        setSelectedChapter((current) =>
-          normalized.some((item) => item.id === current) ? current : normalized[0].id,
-        );
-        setContextNotice(null);
+        applyWorkbenchContextsPayload(payload, {
+          fallbackToMappedOnEmpty: true,
+        });
       })
       .catch((err) => {
         if (cancelled) return;
         setContexts(listChapterMappedContexts());
+        setBackendSourceMeta({});
+        setSourceDiagnostics(null);
         setContextNotice(
           err instanceof Error
             ? `Failed to load backend contexts (${err.message}). Using mapped chapter fallback.`
@@ -127,6 +148,76 @@ export function useV2WorkbenchController() {
       cancelled = true;
     };
   }, []);
+
+  const applyWorkbenchContextsPayload = (
+    payload: NarrativeV2WorkbenchContextsResponse,
+    options: { fallbackToMappedOnEmpty: boolean },
+  ) => {
+    setBackendSourceMeta({
+      source: payload.source,
+      contextContract: payload.context_contract,
+      fallbackReason: payload.fallback_reason,
+      reportPath: payload.report_path,
+      reportUrl: payload.report_url,
+      runId: payload.run_id,
+      manifestPath: payload.manifest_path,
+      preferredModel: payload.preferred_model,
+      resolvedModel: payload.resolved_model,
+      reportSuccessRate: payload.report_success_rate,
+      reportTimestamp: payload.report_timestamp,
+      arbitrationStrategy: payload.arbitration_strategy,
+    });
+    setSourceDiagnostics(payload.source_diagnostics ?? null);
+
+    const normalized = normalizeWorkbenchContexts(payload);
+    if (!normalized.length) {
+      if (options.fallbackToMappedOnEmpty) {
+        const fallback = listChapterMappedContexts();
+        setContexts(fallback);
+        setSelectedChapter((current) =>
+          fallback.some((item) => item.id === current) ? current : fallback[0]?.id ?? '',
+        );
+      }
+      if (payload.fallback_reason) {
+        setContextNotice(`Context source fallback: ${payload.fallback_reason}.`);
+      } else {
+        setContextNotice(
+          options.fallbackToMappedOnEmpty
+            ? 'No backend contexts returned. Using mapped chapter fallback.'
+            : 'No backend contexts returned. Keeping current contexts.',
+        );
+      }
+      return;
+    }
+
+    setContexts(normalized);
+    setSelectedChapter((current) =>
+      normalized.some((item) => item.id === current) ? current : normalized[0].id,
+    );
+    if (payload.fallback_reason) {
+      setContextNotice(`Context source fallback: ${payload.fallback_reason}.`);
+    } else {
+      setContextNotice(null);
+    }
+  };
+
+  const refreshContexts = async (onlineOnly = false) => {
+    setIsRefreshingContexts(true);
+    try {
+      const payload = await refreshWorkbenchContextsV2({ onlineOnly });
+      applyWorkbenchContextsPayload(payload, {
+        fallbackToMappedOnEmpty: !onlineOnly,
+      });
+    } catch (err) {
+      setContextNotice(
+        err instanceof Error
+          ? `Failed to refresh backend contexts (${err.message}).`
+          : 'Failed to refresh backend contexts.',
+      );
+    } finally {
+      setIsRefreshingContexts(false);
+    }
+  };
 
   const setNumericOverride = (field: NumericStateField, value: number) => {
     setOverrides((current) => ({
@@ -162,16 +253,21 @@ export function useV2WorkbenchController() {
     workingState,
     stateDiff,
     currentPreview,
+    currentV4Preview,
     comparisonPreview,
     comparisonDelta,
     runHistory,
     uiStatus,
     error,
     contextNotice,
+    backendSourceMeta,
+    sourceDiagnostics,
+    isRefreshingContexts,
     setContextSource,
     setSelectedChapter,
     setNumericOverride,
     runPreview,
+    refreshContexts,
     selectComparisonRun,
     exportSnapshot,
   };

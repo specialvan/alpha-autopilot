@@ -4,6 +4,18 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+from .report_arbitration import resolve_plotpilot_report_candidate
+
+NUMERIC_STATE_FIELDS = (
+    "mainline_progress",
+    "sideplot_progress",
+    "conflict_intensity",
+    "emotional_temperature",
+    "pacing_speed",
+    "foreshadowing_load",
+    "payoff_pressure",
+)
+
 
 def _slug_to_title(raw: str) -> str:
     return raw.replace("_", " ").strip()
@@ -127,7 +139,11 @@ def _merge_quality_records(
 
 
 def _load_quality_records_for_contexts(path: Path) -> list[dict[str, object]]:
-    quality_dir = path.parent / "v3_records"
+    return load_quality_records_for_plotpilot_bundle(path.parent)
+
+
+def load_quality_records_for_plotpilot_bundle(bundle_root: Path) -> list[dict[str, object]]:
+    quality_dir = bundle_root / "v3_records"
     projection_records = _load_quality_records_from_json(quality_dir / "matrix_projection.json")
     reverse_outline_records = _load_quality_records_from_jsonl(
         quality_dir / "reverse_outline_records.jsonl"
@@ -273,7 +289,139 @@ def build_workbench_contexts_from_plotpilot_report(
             }
         )
 
-    return enrich_workbench_contexts_with_quality(contexts, quality_records)
+    return _attach_compare_baseline(
+        enrich_workbench_contexts_with_quality(contexts, quality_records)
+    )
+
+
+def _safe_float(value: object) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except Exception:
+        return None
+
+
+def _state_delta(
+    baseline_state: dict[str, object],
+    current_state: dict[str, object],
+) -> dict[str, float]:
+    delta: dict[str, float] = {}
+    for field in NUMERIC_STATE_FIELDS:
+        baseline_value = _safe_float(baseline_state.get(field))
+        current_value = _safe_float(current_state.get(field))
+        if baseline_value is None or current_value is None:
+            continue
+        delta[field] = round(current_value - baseline_value, 4)
+    return delta
+
+
+def _attach_compare_baseline(contexts: list[dict[str, object]]) -> list[dict[str, object]]:
+    if not contexts:
+        return []
+
+    enriched = [deepcopy(context) for context in contexts]
+    previous_context: dict[str, object] | None = None
+    for context in enriched:
+        state = context.get("state")
+        if not isinstance(state, dict):
+            previous_context = context
+            continue
+        if previous_context is None:
+            previous_context = context
+            continue
+
+        baseline_state = previous_context.get("state")
+        if not isinstance(baseline_state, dict):
+            previous_context = context
+            continue
+
+        context["compare_baseline"] = {
+            "baseline_context_id": previous_context.get("id"),
+            "baseline_chapter_number": previous_context.get("chapterNumber"),
+            "delta": _state_delta(baseline_state, state),
+        }
+        previous_context = context
+
+    return enriched
+
+
+def load_workbench_contexts_from_plotpilot_report(
+    report_path: Path,
+    *,
+    quality_records: list[dict[str, object]] | None = None,
+) -> dict[str, object] | None:
+    if not report_path.exists():
+        return None
+
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    contexts = build_workbench_contexts_from_plotpilot_report(
+        payload,
+        quality_records=quality_records,
+    )
+    if not contexts:
+        return None
+
+    return {
+        "contexts": contexts,
+        "source": "plotpilot_report",
+        "context_contract": "real_chapter_context_v1",
+        "report_path": str(report_path),
+    }
+
+
+def load_latest_plotpilot_report_contexts(
+    report_root: Path,
+    *,
+    quality_records: list[dict[str, object]] | None = None,
+    manifest_root: Path | None = None,
+    preferred_model: str | None = None,
+) -> dict[str, object] | None:
+    candidate = resolve_plotpilot_report_candidate(
+        report_root,
+        manifest_root=manifest_root,
+        preferred_model=preferred_model,
+    )
+    if candidate is None:
+        return None
+
+    loaded = load_workbench_contexts_from_plotpilot_report(
+        candidate.report_path,
+        quality_records=quality_records,
+    )
+    if loaded is None:
+        return None
+    payload = dict(loaded)
+    payload["context_contract"] = "real_chapter_context_v2"
+    payload["run_id"] = candidate.run_id
+    payload["manifest_path"] = str(candidate.manifest_path) if candidate.manifest_path else None
+    payload["preferred_model"] = preferred_model
+    payload["resolved_model"] = candidate.model
+    payload["report_success_rate"] = candidate.success_rate
+    payload["report_timestamp"] = candidate.timestamp
+    payload["arbitration_strategy"] = "manifest-model-success-rate-v1"
+    payload["source_diagnostics"] = {
+        "local_report": {
+            "status": "ok",
+            "report_path": str(candidate.report_path),
+            "run_id": candidate.run_id,
+            "manifest_path": (
+                str(candidate.manifest_path)
+                if candidate.manifest_path is not None
+                else None
+            ),
+            "preferred_model": preferred_model,
+            "resolved_model": candidate.model,
+            "report_success_rate": candidate.success_rate,
+            "arbitration_strategy": "manifest-model-success-rate-v1",
+        }
+    }
+    return payload
 
 
 def load_imported_workbench_contexts(path: Path) -> dict[str, object] | None:
@@ -296,6 +444,7 @@ def load_imported_workbench_contexts(path: Path) -> dict[str, object] | None:
                 contexts,
                 _load_quality_records_for_contexts(path),
             )
+            enriched_payload["contexts"] = _attach_compare_baseline(enriched_payload["contexts"])
         except Exception:
             # Quality enrichment must never break context loading.
             enriched_payload["contexts"] = contexts

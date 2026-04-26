@@ -43,6 +43,123 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
+.workbench-timeline-chart {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.workbench-timeline-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.workbench-timeline-label {
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.workbench-timeline-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.28);
+  overflow: hidden;
+}
+
+.workbench-timeline-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.9), rgba(45, 212, 191, 0.92));
+}
+
+.workbench-timeline-fill--positive {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.95));
+}
+
+.workbench-timeline-fill--negative {
+  background: linear-gradient(90deg, rgba(251, 113, 133, 0.9), rgba(248, 113, 113, 0.95));
+}
+
+.workbench-diagnostics {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(2, 8, 18, 0.45);
+  border-radius: 12px;
+}
+
+.workbench-diagnostics-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.workbench-control-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.workbench-control-item select {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  color: rgba(226, 232, 240, 0.92);
+  padding: 4px 8px;
+}
+
+.workbench-control-item--checkbox {
+  padding-left: 2px;
+}
+
+.workbench-diagnostics pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.workbench-attempt-history {
+  display: grid;
+  gap: 6px;
+}
+
+.workbench-attempt-history table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.workbench-attempt-history th,
+.workbench-attempt-history td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.workbench-attempt-history th {
+  color: rgba(226, 232, 240, 0.86);
+  font-weight: 600;
+}
+
+.workbench-attempt-row--error td {
+  background: rgba(127, 29, 29, 0.28);
+}
+
 @media (max-width: 1200px) {
   .v2-workbench-grid {
     grid-template-columns: 1fr;

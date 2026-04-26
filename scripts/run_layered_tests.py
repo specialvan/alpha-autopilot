@@ -94,6 +94,15 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
             "tests/test_narrative_v2_workbench_quality_enrichment.py",
         ),
     ),
+    "v4": LayerCommand(
+        name="v4",
+        cwd=REPO_ROOT,
+        argv=(
+            "pytest",
+            "tests/test_alpha_autopilot_v4_modules.py",
+            "backend/tests/test_narrative_v4_api.py",
+        ),
+    ),
 }
 
 
