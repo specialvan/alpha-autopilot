@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 import backend.app.api.routes.narrative_v4 as narrative_v4_route
 from backend.app.main import create_app
+from backend.app.services.narrative_v4.alert_channel import V4AlertChannel
 from backend.app.services.narrative_v4.memory_store import V4MemoryStore
 
 
@@ -64,6 +65,14 @@ def _isolated_memory_store(tmp_path) -> V4MemoryStore:  # noqa: ANN001
     return V4MemoryStore(
         relationship_path=tmp_path / "v4_relationship_memory.jsonl",
         feedback_path=tmp_path / "v4_feedback_memory.jsonl",
+    )
+
+
+def _isolated_alert_channel(tmp_path) -> V4AlertChannel:  # noqa: ANN001
+    return V4AlertChannel(
+        sink_path=tmp_path / "v4_observability_alerts.jsonl",
+        state_path=tmp_path / "v4_observability_alerts.state.json",
+        cooldown_seconds=600,
     )
 
 
@@ -245,3 +254,82 @@ def test_dashboard_endpoint_exposes_v4_observability_snapshot() -> None:
     assert isinstance(snapshot.get("alertCount"), int)
     assert isinstance(snapshot.get("criticalAlertCount"), int)
     assert isinstance(snapshot.get("alertRouting"), dict)
+
+
+def test_v4_observability_snapshot_endpoint_returns_snapshot_and_routing(tmp_path, monkeypatch) -> None:
+    memory_store = _isolated_memory_store(tmp_path)
+    monkeypatch.setattr(narrative_v4_route, "memory_store", memory_store)
+    monkeypatch.setattr(
+        narrative_v4_route,
+        "alert_channel",
+        _isolated_alert_channel(tmp_path),
+    )
+    client = TestClient(create_app())
+
+    # Seed memory rows so snapshot metrics are not empty.
+    seeded = client.post(
+        "/api/v4/plot/preview",
+        json={
+            **_payload(),
+            "genre": "power_fantasy",
+            "v3_feedback_history": [
+                {"accepted": True, "retention_delta": 0.08, "abandonment_delta": -0.02},
+                {"accepted": False, "retention_delta": -0.03, "abandonment_delta": 0.04},
+            ],
+            "chapter_index": 21,
+        },
+    )
+    assert seeded.status_code == 200
+
+    response = client.get("/api/v4/observability/snapshot?limit=200")
+    assert response.status_code == 200
+    snapshot = response.json()
+    assert isinstance(snapshot.get("enabled"), bool)
+    assert isinstance(snapshot.get("activeContexts"), int)
+    assert isinstance(snapshot.get("relationshipRows"), int)
+    assert isinstance(snapshot.get("feedbackRows"), int)
+    assert isinstance(snapshot.get("alerts"), list)
+    assert isinstance(snapshot.get("alertRouting"), dict)
+    assert "reason" in snapshot["alertRouting"]
+
+
+def test_v4_observability_alert_route_endpoint_applies_cooldown(tmp_path, monkeypatch) -> None:
+    memory_store = _isolated_memory_store(tmp_path)
+    monkeypatch.setattr(narrative_v4_route, "memory_store", memory_store)
+    monkeypatch.setattr(
+        narrative_v4_route,
+        "alert_channel",
+        _isolated_alert_channel(tmp_path),
+    )
+    client = TestClient(create_app())
+
+    # Seed critical condition: >= 12 feedback rows and low accept rate.
+    memory_store.append_feedback_history(
+        "ctx-alerts",
+        [
+            {
+                "accepted": False,
+                "retention_delta": -0.2,
+                "abandonment_delta": 0.3,
+                "chapter_index": 22,
+            }
+            for _ in range(12)
+        ],
+        source="test-critical",
+        chapter_index=22,
+        genre="power_fantasy",
+    )
+
+    first = client.post("/api/v4/observability/alerts/route?limit=200")
+    assert first.status_code == 200
+    first_body = first.json()
+    assert isinstance(first_body.get("snapshot"), dict)
+    assert isinstance(first_body.get("routing"), dict)
+    assert first_body["routing"]["routed"] is True
+    assert first_body["routing"]["reason"] == "routed-critical-alert"
+
+    second = client.post("/api/v4/observability/alerts/route?limit=200")
+    assert second.status_code == 200
+    second_body = second.json()
+    assert second_body["routing"]["routed"] is False
+    assert second_body["routing"]["reason"] == "cooldown-active"
