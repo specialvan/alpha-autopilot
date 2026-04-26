@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from .api.routes.dashboard import router as dashboard_router
 from .api.routes.feedback import router as feedback_router
 from .api.routes.history import router as history_router
+from .api.routes.narrative_v4 import router as narrative_v4_router
 from .api.routes.recommendation import router as recommendation_router
 from .api.routes.recommendation_v2 import router as recommendation_v2_router
 from .api.routes.training import router as training_router
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(training_router)
     app.include_router(feedback_router)
     app.include_router(history_router)
+    app.include_router(narrative_v4_router)
     return app
 
 

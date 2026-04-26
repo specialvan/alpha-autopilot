@@ -2,32 +2,40 @@
 
 ## 1. 目标
 
-本草案定义 `alpha-autopilot` 小说章节推荐原型迁移到 `novel-fusion-autopilot` 时的接口边界、数据契约和模块职责，用于后续工程接入与评审对齐。
+本草案定义 `alpha-autopilot` 向 `novel-fusion-autopilot` 迁移时的接口边界、数据契约和模块职责。它不是“旁路实验说明”，而是主链路接入前的对齐文档。
 
-核心原则：
+统一术语如下：
 
-- 保留可解释特征矩阵
-- 保留状态推演中枢
-- 保留训练日志与版本快照
-- 不强制依赖静态数据库
-- 允许与 `novel-fusion-autopilot` 的生成、检索、审稿模块并行工作
+- `rule layer`：规则约束、阶段门槛、质量边界。
+- `search layer`：候选生成、排序、局部探索。
+- `evaluation loop`：采纳、反馈、校准、再训练。
+- `quality layer`：分阶段接入主链路的质量能力。
 
-## 2. 总体接口分层
+## 2. 总体分层
 
 ### 2.1 状态层
-负责接收小说上下文，构建结构化故事状态。
 
-### 2.2 推演层
-根据状态和特征矩阵生成候选章节策略。
+状态层接收章节上下文，构建结构化故事状态。
 
-### 2.3 评分层
-对候选方案进行量化打分与排序。
+### 2.2 规则层
 
-### 2.4 反馈层
-接收实际写作结果、人工修正或读者反馈，更新权重。
+规则层把故事状态映射为可执行约束，决定哪些候选允许进入搜索。
 
-### 2.5 版本层
-管理矩阵快照、训练记录、样本版本。
+### 2.3 搜索层
+
+搜索层在规则约束下生成候选，并输出 Top-K 排序结果。
+
+### 2.4 评估层
+
+评估层记录推荐结果、实际采纳、人工反馈与版本差异，形成闭环。
+
+### 2.5 质量层
+
+质量层先作为旁路诊断模块存在，再逐步进入主链路。默认阶段口径如下：
+
+- `Q1`：只诊断，不影响推荐。
+- `Q2`：影响排序参考，不直接阻断输出。
+- `Q3`：进入主决策链路，但支持降级回退。
 
 ## 3. 数据契约
 
@@ -49,18 +57,16 @@ class StoryState:
     tags: List[str]
 ```
 
-#### 含义
-- `chapter_index`：当前章节序号
-- `stage`：叙事阶段，例如 `opening` / `middle` / `mid_late` / `late`
-- `mainline_progress`：主线推进程度
-- `sideplot_progress`：支线推进程度
-- `conflict_intensity`：冲突强度
-- `emotional_temperature`：情绪温度
-- `pacing_speed`：推进速度
-- `foreshadowing_load`：伏笔负载
-- `payoff_pressure`：回收压力
-- `characters`：角色状态映射
-- `tags`：题材、风格、平台标签
+含义：
+
+- `stage`：`opening` / `middle` / `late` 等阶段。
+- `mainline_progress`：主线推进程度。
+- `sideplot_progress`：支线推进程度。
+- `conflict_intensity`：冲突强度。
+- `emotional_temperature`：情绪温度。
+- `pacing_speed`：节奏速度。
+- `foreshadowing_load`：伏笔负载。
+- `payoff_pressure`：回收压力。
 
 ### 3.2 CharacterState
 
@@ -74,45 +80,30 @@ class CharacterState:
     arc_progress: float
 ```
 
-#### 含义
-- `presence`：角色存在感
-- `consistency_risk`：人设偏移风险
-- `relationship_tension`：关系张力
-- `arc_progress`：角色弧光推进进度
-
-### 3.3 NarrativeCandidate
+### 3.3 SearchCandidate
 
 ```python
 @dataclass(frozen=True)
-class NarrativeCandidate:
+class SearchCandidate:
     action: str
     delta: Dict[str, float]
     explanation: str
 ```
 
-#### 含义
-- `action`：推荐动作名
-- `delta`：该动作对状态变量的增量影响
-- `explanation`：推荐理由
-
-### 3.4 RecommendationResult
+### 3.4 EvaluationReport
 
 ```python
 @dataclass
-class RecommendationResult:
-    candidate: NarrativeCandidate
+class EvaluationReport:
+    candidate: SearchCandidate
     score: float
     details: Dict[str, float]
+    accepted: bool
 ```
 
-#### 含义
-- `candidate`：候选方案
-- `score`：综合得分
-- `details`：特征分布明细
+## 4. 接口草案
 
-## 4. 核心接口草案
-
-### 4.1 状态构建接口
+### 4.1 状态构建
 
 ```python
 class StoryStateBuilder:
@@ -120,82 +111,55 @@ class StoryStateBuilder:
         ...
 ```
 
-#### 输入
-- 章节文本摘要
-- 角色状态
-- 前文上下文
-- 标签信息
-
-#### 输出
-- 结构化 `StoryState`
-
-### 4.2 特征评分接口
+### 4.2 规则评估
 
 ```python
-class FeatureMatrixService:
-    def score(self, state: StoryState, features: dict) -> float:
-        ...
-
-    def update_from_feedback(self, features: dict, target: float, prediction: float) -> None:
+class RuleEngine:
+    def validate(self, state: StoryState) -> list[str]:
         ...
 ```
 
-#### 作用
-- 为候选方案打分
-- 根据反馈更新权重
+返回值说明：
 
-### 4.3 候选推演接口
+- 返回空列表表示没有硬性规则冲突。
+- 返回告警列表表示候选需要降权或限制。
+
+### 4.3 候选搜索
 
 ```python
-class ChapterPlannerService:
-    def recommend(self, state: StoryState) -> list[RecommendationResult]:
+class SearchService:
+    def recommend(self, state: StoryState) -> list[SearchCandidate]:
         ...
 ```
 
-#### 作用
-- 生成候选推进策略
-- 排序输出 Top-K 方案
-
-### 4.4 训练接口
+### 4.4 闭环更新
 
 ```python
-class TrainingService:
-    def fit(self, samples: Iterable[TrainingSample]) -> FeatureMatrix:
+class EvaluationService:
+    def record(
+        self,
+        stage: str,
+        action: str,
+        predicted: float,
+        target: float,
+        feedback: float,
+    ) -> None:
         ...
 ```
 
-#### 作用
-- 从拆解样本训练初版矩阵
-- 形成可追踪版本
-
-### 4.5 版本管理接口
+### 4.5 质量层接入
 
 ```python
-class VersionService:
-    def create_version(self, weights: dict, bias: float, sample_count: int, notes: str = "") -> MatrixSnapshot:
+class QualityLayerService:
+    def diagnose(self, state: StoryState, candidate: SearchCandidate) -> dict:
         ...
 ```
 
-#### 作用
-- 保存快照
-- 便于回滚与审查
-
-### 4.6 反馈接口
-
-```python
-class FeedbackService:
-    def record(self, stage: str, action: str, predicted: float, target: float, feedback: float) -> None:
-        ...
-```
-
-#### 作用
-- 记录训练或推荐后的效果
-- 作为下一轮更新依据
-
-## 5. 与 novel-fusion-autopilot 的对接方式
+## 5. 与 `novel-fusion-autopilot` 的对接方式
 
 ### 5.1 输入对接
-`novel-fusion-autopilot` 负责提供：
+
+`novel-fusion-autopilot` 提供：
 
 - 章节摘要
 - 人物设定
@@ -204,9 +168,10 @@ class FeedbackService:
 - 平台约束
 - 历史章节摘要
 
-然后由 `StoryStateBuilder` 转为 `StoryState`。
+然后通过 `StoryStateBuilder` 转为 `StoryState`。
 
 ### 5.2 输出对接
+
 推荐模块输出：
 
 - 推荐动作名
@@ -214,51 +179,55 @@ class FeedbackService:
 - 结构化解释
 - 状态变化增量
 
-`novel-fusion-autopilot` 再把这些结果映射到：
+下游再把结果映射为：
 
 - 章节规划
 - 大纲生成
-- 片段生成
+- 段落生成
 - 编辑审稿
 
 ### 5.3 反馈对接
-`novel-fusion-autopilot` 可回传：
+
+反馈对接包含：
 
 - 人工采纳情况
 - 文本质量评分
 - 章节连贯性评分
 - 读者反馈信号
 
-用于更新特征矩阵。
+这些信号进入 `evaluation loop`，再用于权重与阈值更新。
 
-## 6. 迁移边界
+## 6. 数据库替代边界
 
-### 保留
+保留的内容：
+
 - 特征矩阵思想
 - 状态推演思想
 - 训练日志
 - 版本快照
 - 反馈闭环
 
-### 重新实现
-- 真实 API 网关
-- 数据校验层
-- 异步任务调度
-- 持久化存储接口
-- UI 与交互层
+重新实现的内容：
 
-### 不建议直接迁移
-- 任何和象棋领域强耦合的命名
-- 只适用于棋盘的搜索逻辑
-- 与小说无关的评估维度
+- 真正的 API 网关
+- 持久化层
+- 异步任务调度
+- UI / workbench 集成
+
+不建议直接迁移的内容：
+
+- 强耦合于象棋 / 桌游领域的命名
+- 只适合 demo 的搜索逻辑
+- 无法解释或无法回放的临时规则
 
 ## 7. 工程建议
 
-- 先用当前原型作为 `novel-fusion-autopilot` 的参考子模块
-- 接口先统一，内部实现后续替换
-- 所有状态与评分结构均保留版本号
-- 先跑通“输入 -> 推演 -> 推荐 -> 反馈 -> 更新”最小闭环
+- 先统一术语，再替换实现。
+- 先跑通 `input -> rule -> search -> evaluation -> update` 最小闭环。
+- 所有状态与评分结构必须保留版本号。
+- 质量层先旁路，后接主链路。
+- 数据库替代先做验证口径，不先做一次性切换。
 
 ## 8. 结论
 
-该接口草案的目标是让小说章节推荐系统先以独立原型存在，再逐步接入 `novel-fusion-autopilot` 的正式工程链路，避免一开始就过度耦合。
+这个接口草案的核心目标是：让章节推荐系统先形成稳定的主链路，再逐步把 quality layer 和数据库替代能力纳入同一套工程约束，而不是把它们描述成独立的侧实验。
