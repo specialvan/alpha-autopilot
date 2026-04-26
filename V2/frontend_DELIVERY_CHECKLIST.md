@@ -10,21 +10,21 @@
 
 - `ui/index.html`
 - `ui/styles.css`
-- `frontend_PRD.md`
-- `frontend_PROJECT_STATUS.md`
-- `frontend_TECH_BOTTLENECKS.md`
-- `frontend_REVIEW_GUIDE.md`
-- `frontend_DELIVERY_CHECKLIST.md`
+- `V2/frontend_PRD.md`
+- `V2/frontend_PROJECT_STATUS.md`
+- `V2/frontend_TECH_BOTTLENECKS.md`
+- `V2/frontend_REVIEW_GUIDE.md`
+- `V2/frontend_DELIVERY_CHECKLIST.md`
 
 ## 交付内容说明
 
 - `index.html`：静态量化工作台原型
 - `styles.css`：现代化面板风格与响应式布局
-- `frontend_PRD.md`：前端工程需求说明
-- `frontend_PROJECT_STATUS.md`：前端进度表
-- `frontend_TECH_BOTTLENECKS.md`：前端瓶颈复盘
-- `frontend_REVIEW_GUIDE.md`：Codex 评审说明
-- `frontend_DELIVERY_CHECKLIST.md`：当前交付清单
+- `V2/frontend_PRD.md`：前端工程需求说明
+- `V2/frontend_PROJECT_STATUS.md`：前端进度表
+- `V2/frontend_TECH_BOTTLENECKS.md`：前端瓶颈复盘
+- `V2/frontend_REVIEW_GUIDE.md`：Codex 评审说明
+- `V2/frontend_DELIVERY_CHECKLIST.md`：当前交付清单
 
 ## 后续可扩展项
 

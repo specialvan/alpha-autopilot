@@ -33,14 +33,14 @@
 ### 文档
 - `PRD.md`
 - `PROJECT_STATUS.md`
-- `TECH_BOTTLENECKS.md`
-- `frontend_PRD.md`
-- `frontend_PROJECT_STATUS.md`
-- `frontend_TECH_BOTTLENECKS.md`
-- `frontend_REVIEW_GUIDE.md`
-- `frontend_DELIVERY_CHECKLIST.md`
-- `CODEx_REVIEW_PACKAGE.md`
-- `DELIVERY_TREE.md`
+- `V2/TECH_BOTTLENECKS.md`
+- `V2/frontend_PRD.md`
+- `V2/frontend_PROJECT_STATUS.md`
+- `V2/frontend_TECH_BOTTLENECKS.md`
+- `V2/frontend_REVIEW_GUIDE.md`
+- `V2/frontend_DELIVERY_CHECKLIST.md`
+- `V1/CODEx_REVIEW_PACKAGE.md`
+- `V1/DELIVERY_TREE.md`
 
 ## 核心检查项
 

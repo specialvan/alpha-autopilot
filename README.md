@@ -6,6 +6,8 @@ Research-oriented小说章节推荐与写作辅助系统。
 
 - `v1/v2` are the stable Baseline and should remain收口
 - `v3` is the Increment layer for quality, decomposition, QC, and recommendation enhancement
+- V1 phase docs are archived in `V1/`
+- V2 phase docs are archived in `V2/`
 - authoritative Phase-3 scope note: `PHASE3_SCOPE_ALIGNMENT_2026_04_24.md`
 - phase-3 closeout report: `V3_PHASE_CLOSEOUT_2026_04_24.md`
 - Experimental ideas must stay isolated from the mainline behavior
@@ -54,3 +56,7 @@ Research-oriented小说章节推荐与写作辅助系统。
 This repository focuses on narrative recommendation research. The feature matrix, state推演, preview flow, and training loop are kept explicit so they can be reviewed, adjusted, and expanded without relying on a large database.
 
 For development execution, treat `Dashboard` as the Baseline display layer and `V2 Workbench` as the Increment decision layer.
+
+API contract reference:
+
+- `docs/api/v2-workbench-real-chapter-context-contract.md`

@@ -39,12 +39,12 @@
 ### 文档
 - `PRD.md`
 - `PROJECT_STATUS.md`
-- `TECH_BOTTLENECKS.md`
-- `frontend_PRD.md`
-- `frontend_PROJECT_STATUS.md`
-- `frontend_TECH_BOTTLENECKS.md`
-- `frontend_REVIEW_GUIDE.md`
-- `frontend_DELIVERY_CHECKLIST.md`
+- `V2/TECH_BOTTLENECKS.md`
+- `V2/frontend_PRD.md`
+- `V2/frontend_PROJECT_STATUS.md`
+- `V2/frontend_TECH_BOTTLENECKS.md`
+- `V2/frontend_REVIEW_GUIDE.md`
+- `V2/frontend_DELIVERY_CHECKLIST.md`
 
 ## 4. 评审重点
 
