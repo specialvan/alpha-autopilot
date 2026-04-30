@@ -544,6 +544,15 @@
 - [x] 输出推荐动作（`run_auto_remediation_orchestrator/auto_prune_runs/observe`）
 - [x] 第47轮回归测试覆盖（orchestrator runs digest store/api）
 
+## 生产化增强清单（第四十八轮）
+
+- [x] 编排运行历史一键自愈编排能力：`auto_remediate_maintenance_alert_governance_escalation_remediation_auto_remediate_runs`
+- [x] 编排运行历史一键自愈接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate`
+- [x] 编排策略基于 runs-digest 推荐动作执行（`run_auto_remediation_orchestrator/auto_prune_runs/observe`）
+- [x] 支持 `dry_run/apply` 双路径，并输出 `digest_before/digest_after`
+- [x] 输出执行细节（`remediated_orchestrator/pruned_run_history/orchestrator_auto_remediate/run_history_auto_prune`）
+- [x] 第48轮回归测试覆盖（orchestrator runs auto-remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -554,5 +563,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`103 passed`
+- [x] 结果：`105 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

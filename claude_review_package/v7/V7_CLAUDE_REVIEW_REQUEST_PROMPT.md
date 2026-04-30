@@ -143,3 +143,16 @@ Please additionally review orchestrator-run digest behavior:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-prune
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate
+
+## Round-48 Additional Review Targets
+
+Please additionally review orchestrator-run auto-remediate behavior:
+
+- POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate
+  - Validate action routing based on run-history digest recommendation.
+  - Validate dry_run/apply semantics and executed flags.
+  - Validate nested execution payloads and digest_before/digest_after audit consistency.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/digest
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-prune
