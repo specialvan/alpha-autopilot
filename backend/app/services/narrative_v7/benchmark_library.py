@@ -6,6 +6,8 @@ from .schemas import (
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
     BenchmarkMaintenanceAlertResponse,
+    BenchmarkMaintenanceAlertEmitResponse,
+    BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkVersionAutoRemediateResponse,
     BenchmarkQueryRequest,
@@ -66,3 +68,9 @@ class BenchmarkLibrary:
 
     def build_maintenance_alert(self, *, limit: int = 50) -> BenchmarkMaintenanceAlertResponse:
         return self._store.build_maintenance_alert(limit=limit)
+
+    def emit_maintenance_alert(self, *, limit: int = 50) -> BenchmarkMaintenanceAlertEmitResponse:
+        return self._store.emit_maintenance_alert(limit=limit)
+
+    def list_maintenance_alerts(self, *, limit: int = 100) -> BenchmarkMaintenanceAlertListResponse:
+        return self._store.list_maintenance_alerts(limit=limit)

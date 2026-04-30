@@ -470,6 +470,26 @@ def test_benchmark_store_builds_maintenance_alert_with_sla(monkeypatch, tmp_path
     assert alert.breaches
 
 
+def test_benchmark_store_emits_and_lists_maintenance_alert_events(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-event",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.64},
+        )
+    )
+
+    emitted = store.emit_maintenance_alert(limit=20)
+    assert emitted.event.level in {"ok", "warn", "critical"}
+    assert emitted.event.event_id
+
+    listed = store.list_maintenance_alerts(limit=20)
+    assert listed.alerts
+    assert listed.alerts[0].event_id == emitted.event.event_id
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

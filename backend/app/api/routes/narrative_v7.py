@@ -30,6 +30,8 @@ from ...services.narrative_v7.schemas import (
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
     BenchmarkMaintenanceAlertResponse,
+    BenchmarkMaintenanceAlertEmitResponse,
+    BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkParameterSet,
     BenchmarkQueryRequest,
@@ -424,6 +426,24 @@ def benchmark_maintenance_alert(limit: int = Query(default=50, ge=1, le=500)) ->
         route="/api/narrative/v7/benchmark/maintenance/alert",
         feature_name="benchmark_maintenance_alert",
         operation=lambda: _benchmark_library.build_maintenance_alert(limit=limit),
+    )
+
+
+@router.post("/benchmark/maintenance/alert/emit", response_model=BenchmarkMaintenanceAlertEmitResponse)
+def benchmark_maintenance_alert_emit(limit: int = Query(default=50, ge=1, le=500)) -> BenchmarkMaintenanceAlertEmitResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alert/emit",
+        feature_name="benchmark_maintenance_alert_emit",
+        operation=lambda: _benchmark_library.emit_maintenance_alert(limit=limit),
+    )
+
+
+@router.get("/benchmark/maintenance/alerts", response_model=BenchmarkMaintenanceAlertListResponse)
+def benchmark_maintenance_alert_list(limit: int = Query(default=100, ge=1, le=2000)) -> BenchmarkMaintenanceAlertListResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts",
+        feature_name="benchmark_maintenance_alert_list",
+        operation=lambda: _benchmark_library.list_maintenance_alerts(limit=limit),
     )
 
 

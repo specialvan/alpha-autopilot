@@ -203,6 +203,15 @@
 - [x] 输出告警级别与动作建议（`level` / `should_page` / `should_ticket` / `breaches`）
 - [x] 第十轮回归测试覆盖（maintenance alert store/api）
 
+## 生产化增强清单（第十一轮）
+
+- [x] 告警事件持久化能力：`emit_maintenance_alert`
+- [x] 告警事件历史查询能力：`list_maintenance_alerts`
+- [x] 告警事件日志落盘：`_maintenance_alerts.jsonl`
+- [x] 告警事件写入接口：`POST /api/narrative/v7/benchmark/maintenance/alert/emit`
+- [x] 告警事件列表接口：`GET /api/narrative/v7/benchmark/maintenance/alerts`
+- [x] 第十一轮回归测试覆盖（maintenance alert emit/list store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -213,5 +222,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`36 passed`
+- [x] 结果：`38 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

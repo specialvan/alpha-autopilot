@@ -504,3 +504,28 @@ class BenchmarkMaintenanceAlertResponse(BaseModel):
     breaches: list[str] = Field(default_factory=list)
     policy: BenchmarkMaintenanceSlaPolicy
     report: BenchmarkMaintenanceReportResponse
+
+
+class BenchmarkMaintenanceAlertEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: str
+    generated_at: str
+    level: Literal["ok", "warn", "critical"] = "ok"
+    should_page: bool = False
+    should_ticket: bool = False
+    breaches: list[str] = Field(default_factory=list)
+    report_severity: Literal["ok", "warn", "critical"] = "ok"
+
+
+class BenchmarkMaintenanceAlertEmitResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    alert: BenchmarkMaintenanceAlertResponse
+    event: BenchmarkMaintenanceAlertEvent
+
+
+class BenchmarkMaintenanceAlertListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)

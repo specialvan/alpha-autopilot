@@ -454,6 +454,30 @@ def test_v7_api_supports_benchmark_maintenance_alert() -> None:
     assert "breaches" in body
 
 
+def test_v7_api_supports_maintenance_alert_emit_and_list() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-list-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.65},
+        },
+    )
+
+    emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+    assert emit_response.status_code == 200
+    event_id = emit_response.json()["event"]["event_id"]
+    assert event_id
+
+    list_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts?limit=20")
+    assert list_response.status_code == 200
+    alerts = list_response.json()["alerts"]
+    assert alerts
+    assert alerts[0]["event_id"] == event_id
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

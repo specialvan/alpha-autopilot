@@ -17,6 +17,9 @@ from .schemas import (
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
     BenchmarkMaintenanceAlertResponse,
+    BenchmarkMaintenanceAlertEmitResponse,
+    BenchmarkMaintenanceAlertEvent,
+    BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkMaintenanceSlaPolicy,
     BenchmarkParameterSet,
@@ -618,6 +621,52 @@ class V7BenchmarkStore:
             report=report,
         )
 
+    def emit_maintenance_alert(self, *, limit: int = 50) -> BenchmarkMaintenanceAlertEmitResponse:
+        alert = self.build_maintenance_alert(limit=limit)
+        event = BenchmarkMaintenanceAlertEvent(
+            event_id=f"bm-alert-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}",
+            generated_at=_now_iso(),
+            level=alert.level,
+            should_page=alert.should_page,
+            should_ticket=alert.should_ticket,
+            breaches=list(alert.breaches),
+            report_severity=alert.report.severity,
+        )
+
+        with self._lock:
+            path = self._alerts_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(event.model_dump(mode="json"), ensure_ascii=False))
+                handle.write("\n")
+
+        return BenchmarkMaintenanceAlertEmitResponse(alert=alert, event=event)
+
+    def list_maintenance_alerts(self, *, limit: int = 100) -> BenchmarkMaintenanceAlertListResponse:
+        with self._lock:
+            path = self._alerts_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertListResponse(alerts=[])
+            rows: list[BenchmarkMaintenanceAlertEvent] = []
+            for raw in path.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except Exception:
+                    continue
+                if not isinstance(payload, dict):
+                    continue
+                try:
+                    rows.append(BenchmarkMaintenanceAlertEvent.model_validate(payload))
+                except Exception:
+                    continue
+        rows.sort(key=lambda item: item.generated_at, reverse=True)
+        if limit > 0:
+            rows = rows[:limit]
+        return BenchmarkMaintenanceAlertListResponse(alerts=rows)
+
     def _state_version(self, rows: list[dict[str, object]]) -> str:
         active_count = self._active_count(rows)
         return f"v7-benchmark-{len(rows):05d}-a{active_count:05d}"
@@ -650,6 +699,9 @@ class V7BenchmarkStore:
 
     def _snapshot_file(self, version: str) -> Path:
         return self.version_root / f"{version}.json"
+
+    def _alerts_path(self) -> Path:
+        return self.version_root / "_maintenance_alerts.jsonl"
 
     def _load_maintenance_sla_policy(self) -> BenchmarkMaintenanceSlaPolicy:
         return BenchmarkMaintenanceSlaPolicy(
