@@ -1811,6 +1811,14 @@ def test_benchmark_store_auto_remediates_governance_escalations(monkeypatch, tmp
     assert applied_prune.auto_prune.prune.malformed_dropped_count >= 1
     assert applied_prune.message == "remediated"
 
+    history = store.list_maintenance_alert_governance_escalation_remediations(limit=20)
+    assert history.total_records == 3
+    assert history.records[0].action == "auto_prune_escalations"
+    assert history.records[0].pruned is True
+    assert history.records[1].action == "emit_escalation"
+    assert history.records[1].emitted is True
+    assert history.records[2].dry_run is True
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()

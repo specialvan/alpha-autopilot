@@ -2130,6 +2130,18 @@ def test_v7_api_supports_governance_escalations_auto_remediate(monkeypatch) -> N
     assert applied_prune["auto_prune"]["prune"]["malformed_dropped_count"] >= 1
     assert applied_prune["message"] == "remediated"
 
+    history_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations?limit=20"
+    )
+    assert history_response.status_code == 200
+    history = history_response.json()
+    assert history["total_records"] == 3
+    assert history["records"][0]["action"] == "auto_prune_escalations"
+    assert history["records"][0]["pruned"] is True
+    assert history["records"][1]["action"] == "emit_escalation"
+    assert history["records"][1]["emitted"] is True
+    assert history["records"][2]["dry_run"] is True
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
