@@ -58,6 +58,16 @@
 - `V2/frontend_DELIVERY_CHECKLIST.md`
 - `claude_review_package/V4/V4_ACCEPTANCE_HANDOFF_2026_04_25.md`
 - `claude_review_package/V4/V4_CLAUDE_ACCEPTANCE_REVIEW_TASK_2026_04_25.md`
+- `claude_review_package/V5/v5-pr.md`
+- `claude_review_package/V5/V5_CLAUDE_REVIEW_CHECKLIST.md`
+- `claude_review_package/V5/V5_CONDITION_CLOSURE_TASK_BOARD.md`
+- `claude_review_package/V6/V6_MIROFISH_PR_REQUIREMENTS.md`
+- `claude_review_package/V6/V6_REVIEW_DEV_TASK.md`
+- `claude_review_package/V6/V6_PR_SPLIT_PLAN.md`
+- `claude_review_package/V6/V6_IMPLEMENTATION_TASK_BOARD.md`
+- `claude_review_package/V6/V6_DEVELOPMENT_ACCEPTANCE_CHECKLIST.md`
+- `claude_review_package/V6/V6_ACCEPTANCE_HANDOFF_2026_04_28.md`
+- `claude_review_package/V6/V6_CLAUDE_ACCEPTANCE_REVIEW_TASK_2026_04_28.md`
 - `claude_review_package/mainline/README.md`
 - `claude_review_package/increment/README.md`
 

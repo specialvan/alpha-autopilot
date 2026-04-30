@@ -430,6 +430,15 @@
 - [x] 输出执行细节（`emitted/pruned/emitted_event/auto_prune`）便于值班审计
 - [x] 第35轮回归测试覆盖（governance escalations auto-remediate store/api）
 
+## 生产化增强清单（第三十六轮）
+
+- [x] 治理升级事件发射冷却策略（cooldown）与重复防抖
+- [x] 环境变量策略治理：`AA_V7_BENCH_GOVERNANCE_ESCALATIONS_EMIT_COOLDOWN_SECONDS`
+- [x] 升级发射接口支持冷却旁路参数：`ignore_cooldown`
+- [x] 发射响应新增抑制审计字段（`suppressed/suppression_reason/suppressed_by_event_id/cooldown_seconds`）
+- [x] 防止同源同签名升级事件在冷却窗口内重复写入，降低告警风暴风险
+- [x] 第36轮回归测试覆盖（governance escalation emit cooldown store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -440,5 +449,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`94 passed`
+- [x] 结果：`96 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

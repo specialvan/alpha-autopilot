@@ -12,6 +12,8 @@
 
 - `claude_review_package/V3/`：V3 相关文档
 - `claude_review_package/V4/`：V4 相关文档
+- `claude_review_package/V5/`：V5 相关文档
+- `claude_review_package/V6/`：V6 相关文档
 
 每个目录只放本阶段文档，避免阶段混用。
 
@@ -49,16 +51,27 @@
 30. `claude_review_package\V4\V4_RETENTION_IMPLEMENTATION_TEST_PLAN.md`
 31. `claude_review_package\V4\V4_ACCEPTANCE_HANDOFF_2026_04_25.md`
 32. `claude_review_package\V4\V4_CLAUDE_ACCEPTANCE_REVIEW_TASK_2026_04_25.md`
-33. `claude_review_package\REVIEW_EVIDENCE_RESPONSE.md`
-34. `MASTER_ROADMAP.md`
-35. `PROJECT_STATUS.md`
-36. `THIRD_PHASE_ROADMAP.md`
-37. `V2/SECOND_PHASE_TASKS.md`
-38. `THIRD_PHASE_TASKS.md`
-39. `V2/frontend_PRD.md`
-40. `V2/frontend_PROJECT_STATUS.md`
-41. `V2/TECH_BOTTLENECKS.md`
-42. `DOCS_DIRECTION_DRIFT_AUDIT_DEEP.md`
+33. `claude_review_package\V5\v5-pr.md`
+34. `claude_review_package\V5\V5_CLAUDE_REVIEW_CHECKLIST.md`
+35. `claude_review_package\V5\V5_CONDITION_CLOSURE_TASK_BOARD.md`
+36. `claude_review_package\V6\README.md`
+37. `claude_review_package\V6\V6_MIROFISH_PR_REQUIREMENTS.md`
+38. `claude_review_package\V6\V6_REVIEW_DEV_TASK.md`
+39. `claude_review_package\V6\V6_PR_SPLIT_PLAN.md`
+40. `claude_review_package\V6\V6_IMPLEMENTATION_TASK_BOARD.md`
+41. `claude_review_package\V6\V6_DEVELOPMENT_ACCEPTANCE_CHECKLIST.md`
+42. `claude_review_package\V6\V6_ACCEPTANCE_HANDOFF_2026_04_28.md`
+43. `claude_review_package\V6\V6_CLAUDE_ACCEPTANCE_REVIEW_TASK_2026_04_28.md`
+44. `claude_review_package\REVIEW_EVIDENCE_RESPONSE.md`
+45. `MASTER_ROADMAP.md`
+46. `PROJECT_STATUS.md`
+47. `THIRD_PHASE_ROADMAP.md`
+48. `V2/SECOND_PHASE_TASKS.md`
+49. `THIRD_PHASE_TASKS.md`
+50. `V2/frontend_PRD.md`
+51. `V2/frontend_PROJECT_STATUS.md`
+52. `V2/TECH_BOTTLENECKS.md`
+53. `DOCS_DIRECTION_DRIFT_AUDIT_DEEP.md`
 
 ## 变更原则
 
