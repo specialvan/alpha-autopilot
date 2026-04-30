@@ -320,6 +320,32 @@ def test_benchmark_store_prunes_old_versions(tmp_path) -> None:
     assert len(after) == 1
 
 
+def test_benchmark_store_health_scan_detects_tamper_and_malformed(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    accepted = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-health",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.78},
+        )
+    )
+    assert accepted.accepted is True
+
+    tampered_path = store.version_root / f"{accepted.version}.json"
+    payload = json.loads(tampered_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.11
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    malformed_path = store.version_root / "malformed.json"
+    malformed_path.write_text("{bad-json", encoding="utf-8")
+
+    health = store.scan_version_health()
+    assert health.total_files >= 2
+    assert health.failed_integrity_count >= 1
+    assert health.malformed_file_count >= 1
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

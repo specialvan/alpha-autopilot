@@ -20,6 +20,7 @@ from .schemas import (
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
+    BenchmarkVersionHealthResponse,
     BenchmarkVersionPruneResponse,
     BenchmarkVersionRecord,
 )
@@ -356,6 +357,56 @@ class V7BenchmarkStore:
             kept_versions=[item.version for item in kept],
             pruned_versions=pruned_versions,
             message="dry_run" if dry_run else "pruned",
+        )
+
+    def scan_version_health(self) -> BenchmarkVersionHealthResponse:
+        with self._lock:
+            if not self.version_root.exists():
+                return BenchmarkVersionHealthResponse(generated_at=_now_iso())
+
+            total_files = 0
+            valid_snapshot_count = 0
+            verified_count = 0
+            unverified_count = 0
+            failed_integrity_count = 0
+            malformed_file_count = 0
+            failed_versions: list[str] = []
+            malformed_files: list[str] = []
+
+            for file_path in sorted(self.version_root.glob("*.json"), key=lambda item: item.name):
+                total_files += 1
+                try:
+                    payload = json.loads(file_path.read_text(encoding="utf-8"))
+                except Exception:
+                    malformed_file_count += 1
+                    malformed_files.append(file_path.name)
+                    continue
+
+                detail, reason = self._snapshot_detail_from_payload(payload)
+                if detail is None or reason != "ok":
+                    malformed_file_count += 1
+                    malformed_files.append(file_path.name)
+                    continue
+
+                valid_snapshot_count += 1
+                if detail.integrity_status == "verified":
+                    verified_count += 1
+                elif detail.integrity_status == "unverified":
+                    unverified_count += 1
+                elif detail.integrity_status == "failed":
+                    failed_integrity_count += 1
+                    failed_versions.append(detail.version)
+
+        return BenchmarkVersionHealthResponse(
+            generated_at=_now_iso(),
+            total_files=total_files,
+            valid_snapshot_count=valid_snapshot_count,
+            verified_count=verified_count,
+            unverified_count=unverified_count,
+            failed_integrity_count=failed_integrity_count,
+            malformed_file_count=malformed_file_count,
+            failed_versions=failed_versions,
+            malformed_files=malformed_files,
         )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:

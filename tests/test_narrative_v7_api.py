@@ -315,6 +315,24 @@ def test_v7_api_supports_benchmark_version_prune() -> None:
     assert applied["pruned_count"] >= 2
 
 
+def test_v7_api_supports_benchmark_version_health_scan() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-health-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.73},
+        },
+    )
+    response = client.get("/api/narrative/v7/benchmark/versions/health")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_files"] >= 1
+    assert "generated_at" in body
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

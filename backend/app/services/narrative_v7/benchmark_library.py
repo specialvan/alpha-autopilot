@@ -9,6 +9,7 @@ from .schemas import (
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
+    BenchmarkVersionHealthResponse,
     BenchmarkVersionPruneResponse,
     BenchmarkVersionRecord,
 )
@@ -41,3 +42,6 @@ class BenchmarkLibrary:
 
     def prune_versions(self, *, keep_last: int, dry_run: bool = True) -> BenchmarkVersionPruneResponse:
         return self._store.prune_versions(keep_last=keep_last, dry_run=dry_run)
+
+    def scan_version_health(self) -> BenchmarkVersionHealthResponse:
+        return self._store.scan_version_health()

@@ -165,6 +165,13 @@
 - [x] 清理响应输出 kept/candidate/pruned 统计与版本列表
 - [x] 第五轮回归测试覆盖（prune store/api）
 
+## 生产化增强清单（第六轮）
+
+- [x] 版本仓健康扫描能力（integrity + malformed 检测）
+- [x] 健康扫描接口：`GET /api/narrative/v7/benchmark/versions/health`
+- [x] 输出 failed_integrity / malformed 文件清单与计数
+- [x] 第六轮回归测试覆盖（health scan store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -175,5 +182,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`26 passed`
+- [x] 结果：`28 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

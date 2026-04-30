@@ -427,3 +427,17 @@ class BenchmarkVersionPruneResponse(BaseModel):
     kept_versions: list[str] = Field(default_factory=list)
     pruned_versions: list[str] = Field(default_factory=list)
     message: str = ""
+
+
+class BenchmarkVersionHealthResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    total_files: int = Field(default=0, ge=0)
+    valid_snapshot_count: int = Field(default=0, ge=0)
+    verified_count: int = Field(default=0, ge=0)
+    unverified_count: int = Field(default=0, ge=0)
+    failed_integrity_count: int = Field(default=0, ge=0)
+    malformed_file_count: int = Field(default=0, ge=0)
+    failed_versions: list[str] = Field(default_factory=list)
+    malformed_files: list[str] = Field(default_factory=list)
