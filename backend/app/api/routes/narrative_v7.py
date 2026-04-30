@@ -583,6 +583,8 @@ def benchmark_maintenance_alert_governance_run(
                 raise HTTPException(status_code=404, detail=detail) from exc
             if detail == "retry_target_not_failed":
                 raise HTTPException(status_code=422, detail=detail) from exc
+            if detail == "retry_attempt_limit_exceeded":
+                raise HTTPException(status_code=422, detail=detail) from exc
             raise
 
     return _execute_with_metrics(

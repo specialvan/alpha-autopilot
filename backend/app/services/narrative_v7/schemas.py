@@ -696,6 +696,7 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
     archive_max_shard_files: int = Field(default=0, ge=0)
     governance_runs_prune_trigger_count: int = Field(default=0, ge=0)
     governance_runs_prune_keep_last: int = Field(default=0, ge=0)
+    governance_runs_max_retry_attempts: int = Field(default=0, ge=0)
     stale_threshold_seconds: int = Field(default=0, ge=0)
 
 
@@ -816,6 +817,9 @@ class BenchmarkMaintenanceAlertGovernanceRunDigestResponse(BaseModel):
     generated_at: str
     stale_threshold_seconds: int = Field(default=0, ge=0)
     latest_run_age_seconds: float = Field(default=-1.0, ge=-1.0)
+    retry_max_attempts: int = Field(default=0, ge=0)
+    latest_failed_attempt: int = Field(default=0, ge=0)
+    retry_exhausted: bool = False
     is_stale: bool = True
     recommended_action: str = "observe"
     summary: BenchmarkMaintenanceAlertGovernanceRunSummaryResponse
@@ -832,6 +836,8 @@ class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     archive_limit: int = Field(default=0, ge=0)
     action: str = "observe"
     executed: bool = False
+    escalation_required: bool = False
+    escalation_reason: str = ""
     governance_run: BenchmarkMaintenanceAlertGovernanceRunResponse | None = None
     auto_prune: BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse | None = None
     digest_before: BenchmarkMaintenanceAlertGovernanceRunDigestResponse

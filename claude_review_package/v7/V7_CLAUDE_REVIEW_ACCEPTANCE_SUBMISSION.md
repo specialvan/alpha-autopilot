@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第二十七轮生产化）
+# V7 Claude 评审验收提交清单（第二十八轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第二十七轮生产化增强进行验收（治理运行一键自愈）
+- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第二十八轮生产化增强进行验收（治理运行重试上限与升级联动）
 
 ## 1. 需求与计划文档
 
@@ -14,31 +14,29 @@
 
 1. `backend/app/services/narrative_v7/schemas.py`
 2. `backend/app/services/narrative_v7/benchmark_store.py`
-3. `backend/app/services/narrative_v7/benchmark_library.py`
-4. `backend/app/api/routes/narrative_v7.py`
-5. `tests/test_narrative_v7_modules.py`
-6. `tests/test_narrative_v7_api.py`
+3. `backend/app/api/routes/narrative_v7.py`
+4. `tests/test_narrative_v7_modules.py`
+5. `tests/test_narrative_v7_api.py`
 
-## 3. 第二十七轮能力增量
+## 3. 第二十八轮能力增量
 
-1. 新增治理运行一键自愈能力：`auto_remediate_maintenance_alert_governance_runs`。
-2. 新增一键自愈接口：
-   `POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate`
-3. 自愈策略基于 Digest 推荐动作执行，优先处理最新失败运行（`retry_latest_failed_run`）。
-4. 支持 `dry_run/apply` 双路径。
-5. 输出 `digest_before/digest_after`，便于比对自愈前后状态。
+1. 新增治理运行重试上限策略：`AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS`。
+2. 治理运行重试门禁：当 `retry_target.attempt >= max_retry_attempts` 时返回 `retry_attempt_limit_exceeded`。
+3. 治理运行 Digest 新增升级动作：`escalate_failed_run`，并输出 `retry_max_attempts/latest_failed_attempt/retry_exhausted`。
+4. auto-remediate 新增升级输出：`escalation_required/escalation_reason`，达到重试上限时不再执行重试。
+5. API 路由新增错误码映射：重试超限返回 `422`。
 
 ## 4. 测试清单
 
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`74 passed`
+4. 结果：`76 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 5. 建议评审重点
 
-1. 一键自愈动作选择是否与 Digest 推荐动作一致。
-2. 失败重试路径是否稳定（`retry_run_id` 正确绑定最新失败记录）。
-3. `dry_run` 与 `apply` 语义是否清晰且可解释。
-4. 自愈前后 Digest 对比是否满足值班复盘需求。
+1. 重试上限门禁是否严格生效（超限后拒绝重试且不污染运行日志）。
+2. Digest 在失败超限场景下是否稳定给出 `escalate_failed_run`。
+3. auto-remediate 在升级场景下是否输出清晰升级信号（`escalation_required/reason`）。
+4. 新增 422 错误码语义是否与测试证据一致。

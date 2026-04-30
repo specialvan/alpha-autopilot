@@ -1363,6 +1363,95 @@ def test_v7_api_supports_governance_runs_auto_remediate(monkeypatch) -> None:
     assert remediate["governance_run"]["retry_run_id"] == failed_run_id
 
 
+def test_v7_api_governance_retry_limit_escalates(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-retry-limit-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.59},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "3")
+    store = narrative_v7_route._benchmark_store
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_retry_limit_api_failure")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    seed_failed = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-retry-limit-seed-api"
+    )
+    assert seed_failed.status_code == 500
+
+    history_one = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
+    assert history_one.status_code == 200
+    failed_run_one = history_one.json()["records"][0]
+    assert failed_run_one["attempt"] == 1
+
+    retry_two = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        f"?dry_run=true&alert_limit=20&archive_limit=20&retry_run_id={failed_run_one['run_id']}&idempotency_key=governance-retry-limit-2-api"
+    )
+    assert retry_two.status_code == 500
+
+    history_two = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
+    assert history_two.status_code == 200
+    failed_run_two = history_two.json()["records"][0]
+    assert failed_run_two["attempt"] == 2
+
+    retry_three = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        f"?dry_run=true&alert_limit=20&archive_limit=20&retry_run_id={failed_run_two['run_id']}&idempotency_key=governance-retry-limit-3-api"
+    )
+    assert retry_three.status_code == 500
+
+    history_three = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
+    assert history_three.status_code == 200
+    failed_run_three = history_three.json()["records"][0]
+    assert failed_run_three["attempt"] == 3
+
+    retry_four = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        f"?dry_run=true&alert_limit=20&archive_limit=20&retry_run_id={failed_run_three['run_id']}&idempotency_key=governance-retry-limit-4-api"
+    )
+    assert retry_four.status_code == 422
+    assert retry_four.json()["detail"] == "retry_attempt_limit_exceeded"
+
+    digest_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/digest?limit=20"
+    )
+    assert digest_response.status_code == 200
+    digest = digest_response.json()
+    assert digest["recommended_action"] == "escalate_failed_run"
+    assert digest["retry_max_attempts"] == 3
+    assert digest["latest_failed_attempt"] == 3
+    assert digest["retry_exhausted"] is True
+
+    remediate_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate"
+        "?dry_run=false&limit=20&alert_limit=20&archive_limit=20"
+    )
+    assert remediate_response.status_code == 200
+    remediate = remediate_response.json()
+    assert remediate["action"] == "escalate_failed_run"
+    assert remediate["executed"] is False
+    assert remediate["escalation_required"] is True
+    assert remediate["escalation_reason"] == "retry_exhausted_at_attempt_3"
+    assert remediate["message"] == "escalation_required"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

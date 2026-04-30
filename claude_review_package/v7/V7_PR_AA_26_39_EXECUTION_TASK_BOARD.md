@@ -356,6 +356,16 @@
 - [x] 支持 `dry_run/apply` 双路径，并输出 `digest_before/digest_after`
 - [x] 第27轮回归测试覆盖（governance runs auto-remediate store/api）
 
+## 生产化增强清单（第二十八轮）
+
+- [x] 治理运行重试上限策略：`AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS`
+- [x] 重试上限门禁：超过最大 attempt 返回 `retry_attempt_limit_exceeded`
+- [x] 治理运行 Digest 升级动作：`escalate_failed_run`
+- [x] Digest 输出重试预算字段：`retry_max_attempts/latest_failed_attempt/retry_exhausted`
+- [x] auto-remediate 升级联动输出：`escalation_required/escalation_reason`
+- [x] 路由错误码映射：重试超限返回 `422`
+- [x] 第28轮回归测试覆盖（retry limit + escalation digest/remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -366,5 +376,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`74 passed`
+- [x] 结果：`76 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

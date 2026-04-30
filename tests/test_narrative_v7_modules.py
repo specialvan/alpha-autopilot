@@ -1219,6 +1219,96 @@ def test_benchmark_store_auto_remediates_governance_runs(monkeypatch, tmp_path) 
     assert remediated.digest_after.summary.total_records >= failed_history.total_records + 1
 
 
+def test_benchmark_store_governance_retry_limit_escalates(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-retry-limit",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.60},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "3")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_retry_limit_failure")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    with pytest.raises(RuntimeError, match="forced_governance_retry_limit_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key="governance-retry-limit-seed",
+        )
+
+    first_failed = store.list_maintenance_alert_governance_runs(limit=20).records[0]
+    assert first_failed.status == "failed"
+    assert first_failed.attempt == 1
+
+    with pytest.raises(RuntimeError, match="forced_governance_retry_limit_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            retry_run_id=first_failed.run_id,
+            idempotency_key="governance-retry-limit-2",
+        )
+
+    second_failed = store.list_maintenance_alert_governance_runs(limit=20).records[0]
+    assert second_failed.status == "failed"
+    assert second_failed.attempt == 2
+
+    with pytest.raises(RuntimeError, match="forced_governance_retry_limit_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            retry_run_id=second_failed.run_id,
+            idempotency_key="governance-retry-limit-3",
+        )
+
+    third_failed = store.list_maintenance_alert_governance_runs(limit=20).records[0]
+    assert third_failed.status == "failed"
+    assert third_failed.attempt == 3
+
+    with pytest.raises(ValueError, match="retry_attempt_limit_exceeded"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            retry_run_id=third_failed.run_id,
+            idempotency_key="governance-retry-limit-4",
+        )
+
+    history = store.list_maintenance_alert_governance_runs(limit=20)
+    assert history.total_records == 3
+    assert history.records[0].attempt == 3
+
+    digest = store.build_maintenance_alert_governance_runs_digest(limit=20)
+    assert digest.recommended_action == "escalate_failed_run"
+    assert digest.retry_max_attempts == 3
+    assert digest.latest_failed_attempt == 3
+    assert digest.retry_exhausted is True
+
+    remediated = store.auto_remediate_maintenance_alert_governance_runs(
+        dry_run=False,
+        limit=20,
+        alert_limit=20,
+        archive_limit=20,
+    )
+    assert remediated.action == "escalate_failed_run"
+    assert remediated.executed is False
+    assert remediated.escalation_required is True
+    assert remediated.escalation_reason == "retry_exhausted_at_attempt_3"
+    assert remediated.message == "escalation_required"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

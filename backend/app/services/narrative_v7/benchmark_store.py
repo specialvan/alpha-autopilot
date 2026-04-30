@@ -1161,6 +1161,7 @@ class V7BenchmarkStore:
                     reused.message = "idempotent_replay"
                     return reused
 
+        policy = self._load_alert_governance_policy()
         attempt = 1
         if normalized_retry_run_id:
             retry_target = next((item for item in reversed(records) if item.run_id == normalized_retry_run_id), None)
@@ -1168,12 +1169,12 @@ class V7BenchmarkStore:
                 raise ValueError("retry_target_not_found")
             if retry_target.status != "failed":
                 raise ValueError("retry_target_not_failed")
+            if retry_target.attempt >= policy.governance_runs_max_retry_attempts:
+                raise ValueError("retry_attempt_limit_exceeded")
             attempt = retry_target.attempt + 1
 
         run_id = self._next_governance_run_id()
         started_at = _now_iso()
-
-        policy = self._load_alert_governance_policy()
 
         try:
             active_summary_before = self.summarize_maintenance_alerts(limit=limit_alert)
@@ -1395,9 +1396,16 @@ class V7BenchmarkStore:
     ) -> BenchmarkMaintenanceAlertGovernanceRunDigestResponse:
         summary = self.summarize_maintenance_alert_governance_runs(limit=limit)
         stale_threshold_seconds = _env_int("AA_V7_BENCH_GOVERNANCE_RUNS_STALE_SECONDS", 900, low=0)
+        policy = self._load_alert_governance_policy()
+        retry_max_attempts = max(1, int(policy.governance_runs_max_retry_attempts))
 
         latest_run_age_seconds = -1.0
         is_stale = True
+        latest_failed_attempt = summary.latest_failed_run.attempt if summary.latest_failed_run is not None else 0
+        if summary.latest_run is not None and summary.latest_run.status == "failed":
+            latest_failed_attempt = max(latest_failed_attempt, summary.latest_run.attempt)
+        retry_exhausted = latest_failed_attempt >= retry_max_attempts and latest_failed_attempt > 0
+
         if summary.latest_run is not None:
             parsed_latest = _parse_iso_utc(summary.latest_run.generated_at)
             if parsed_latest is not None:
@@ -1410,12 +1418,16 @@ class V7BenchmarkStore:
             recommended_action = "execute_governance_run"
             message = "no_runs"
         elif summary.latest_run.status == "failed":
-            recommended_action = "retry_latest_failed_run"
-            message = "failed_latest_run"
+            if retry_exhausted:
+                recommended_action = "escalate_failed_run"
+                message = "retry_exhausted"
+            else:
+                recommended_action = "retry_latest_failed_run"
+                message = "failed_latest_run"
         elif summary.malformed_line_count > 0:
             recommended_action = "auto_prune_runs"
             message = "malformed_detected"
-        elif summary.total_records > self._load_alert_governance_policy().governance_runs_prune_trigger_count:
+        elif summary.total_records > policy.governance_runs_prune_trigger_count:
             recommended_action = "auto_prune_runs"
             message = "above_prune_threshold"
         elif is_stale:
@@ -1429,6 +1441,9 @@ class V7BenchmarkStore:
             generated_at=_now_iso(),
             stale_threshold_seconds=stale_threshold_seconds,
             latest_run_age_seconds=latest_run_age_seconds,
+            retry_max_attempts=retry_max_attempts,
+            latest_failed_attempt=latest_failed_attempt,
+            retry_exhausted=retry_exhausted,
             is_stale=is_stale,
             recommended_action=recommended_action,
             summary=summary,
@@ -1451,6 +1466,8 @@ class V7BenchmarkStore:
         action = str(digest_before.recommended_action or "observe")
 
         executed = False
+        escalation_required = False
+        escalation_reason = ""
         governance_run: BenchmarkMaintenanceAlertGovernanceRunResponse | None = None
         auto_prune: BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse | None = None
 
@@ -1475,10 +1492,20 @@ class V7BenchmarkStore:
                     archive_limit=resolved_archive_limit,
                 )
                 executed = True
+        elif action == "escalate_failed_run":
+            escalation_required = True
+            if digest_before.summary.latest_failed_run is not None:
+                escalation_reason = (
+                    f"retry_exhausted_at_attempt_{digest_before.summary.latest_failed_run.attempt}"
+                )
+            else:
+                escalation_reason = "retry_exhausted"
 
         digest_after = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
         if dry_run:
             message = "dry_run"
+        elif escalation_required:
+            message = "escalation_required"
         elif executed:
             message = "remediated"
         else:
@@ -1492,6 +1519,8 @@ class V7BenchmarkStore:
             archive_limit=resolved_archive_limit,
             action=action,
             executed=executed,
+            escalation_required=escalation_required,
+            escalation_reason=escalation_reason,
             governance_run=governance_run,
             auto_prune=auto_prune,
             digest_before=digest_before,
@@ -1762,6 +1791,7 @@ class V7BenchmarkStore:
             archive_max_shard_files=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", 5000, low=0),
             governance_runs_prune_trigger_count=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", 10000, low=0),
             governance_runs_prune_keep_last=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_KEEP_LAST", 5000, low=0),
+            governance_runs_max_retry_attempts=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", 3, low=1),
             stale_threshold_seconds=_env_int("AA_V7_BENCH_ALERT_STALE_SECONDS", 900, low=0),
         )
 
