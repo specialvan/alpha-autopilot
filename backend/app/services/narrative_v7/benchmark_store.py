@@ -25,6 +25,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertArchiveFileRecord,
     BenchmarkMaintenanceAlertArchiveListResponse,
     BenchmarkMaintenanceAlertArchiveReadResponse,
+    BenchmarkMaintenanceAlertArchiveCleanupResponse,
     BenchmarkMaintenanceAlertAutoArchiveResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -1001,6 +1002,84 @@ class V7BenchmarkStore:
             should_archive=True,
             archive=archive,
             message="archived" if not dry_run else "dry_run",
+        )
+
+    def cleanup_maintenance_alert_archives(self, *, dry_run: bool = True) -> BenchmarkMaintenanceAlertArchiveCleanupResponse:
+        ttl_days = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", 30, low=0)
+        max_shard_files = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", 5000, low=0)
+        ttl_seconds = float(ttl_days) * 86400.0
+        now_ts = datetime.now(timezone.utc).timestamp()
+
+        with self._lock:
+            archive_dir = self._alerts_archive_dir()
+            if not archive_dir.exists():
+                return BenchmarkMaintenanceAlertArchiveCleanupResponse(
+                    generated_at=_now_iso(),
+                    dry_run=bool(dry_run),
+                    ttl_days=ttl_days,
+                    max_shard_files=max_shard_files,
+                    archive_dir=str(archive_dir),
+                    message="no_archive",
+                )
+
+            files = sorted(archive_dir.glob("*.jsonl"), key=lambda item: item.name)
+            if not files:
+                return BenchmarkMaintenanceAlertArchiveCleanupResponse(
+                    generated_at=_now_iso(),
+                    dry_run=bool(dry_run),
+                    ttl_days=ttl_days,
+                    max_shard_files=max_shard_files,
+                    archive_dir=str(archive_dir),
+                    message="no_archive",
+                )
+
+            metas: list[tuple[Path, float]] = []
+            for path in files:
+                try:
+                    mtime = float(path.stat().st_mtime)
+                except Exception:
+                    mtime = 0.0
+                metas.append((path, mtime))
+
+            sorted_by_newest = sorted(metas, key=lambda item: (item[1], item[0].name), reverse=True)
+            ttl_candidates = {
+                path
+                for path, mtime in metas
+                if ttl_seconds <= 0.0 or (now_ts - mtime) > ttl_seconds
+            }
+            max_candidates = {
+                path for path, _mtime in sorted_by_newest[max_shard_files:]
+            }
+            candidates = sorted(ttl_candidates | max_candidates, key=lambda item: item.name)
+
+            removed_files: list[str] = []
+            if not dry_run:
+                for path in candidates:
+                    try:
+                        path.unlink()
+                        removed_files.append(path.name)
+                    except Exception:
+                        continue
+
+        total_files = len(files)
+        candidate_count = len(candidates)
+        removed_count = len(removed_files)
+        kept_count = total_files - (removed_count if not dry_run else candidate_count)
+        return BenchmarkMaintenanceAlertArchiveCleanupResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            ttl_days=ttl_days,
+            max_shard_files=max_shard_files,
+            total_files=total_files,
+            kept_count=max(0, kept_count),
+            candidate_count=candidate_count,
+            removed_count=removed_count,
+            ttl_candidate_count=len(ttl_candidates),
+            max_shard_candidate_count=len(max_candidates),
+            archive_dir=str(self._alerts_archive_dir()),
+            candidate_files=[path.name for path in candidates],
+            removed_files=removed_files,
+            message="dry_run" if dry_run else "cleaned",
         )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:

@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第十八轮生产化）
+# V7 Claude 评审验收提交清单（第十九轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十八轮生产化增强做验收（维护告警自动归档策略治理）
+- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十九轮生产化增强做验收（维护告警归档清理策略治理）
 
 ## 1. 需求与计划文档
 
@@ -24,13 +24,13 @@
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`54 passed`
+4. 结果：`56 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 4. 评审重点建议
 
-- `POST /benchmark/maintenance/alerts/auto-archive` 的策略判定（trigger/keep_last/shard_size）是否正确
-- `auto-archive` 的 `dry_run/apply` 两条路径输出是否一致可追踪
-- `should_archive=false` 与 `should_archive=true` 条件切换是否可预期
-- 自动归档与归档分片/归档读取接口间的一致性是否成立
+- `POST /benchmark/maintenance/alerts/archive/cleanup` 的策略判定（ttl/max shard）是否正确
+- `archive cleanup` 的 `dry_run/apply` 两条路径输出是否一致可追踪
+- `ttl_candidate_count` 与 `max_shard_candidate_count` 统计口径是否可解释
+- 清理后归档文件数量是否收敛到策略阈值（与 `archive/files` 结果一致）
 - 接口契约、异常路径与测试证据是否一致

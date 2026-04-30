@@ -652,6 +652,25 @@ class BenchmarkMaintenanceAlertArchiveReadResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertArchiveCleanupResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    ttl_days: int = Field(default=0, ge=0)
+    max_shard_files: int = Field(default=0, ge=0)
+    total_files: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    removed_count: int = Field(default=0, ge=0)
+    ttl_candidate_count: int = Field(default=0, ge=0)
+    max_shard_candidate_count: int = Field(default=0, ge=0)
+    archive_dir: str = ""
+    candidate_files: list[str] = Field(default_factory=list)
+    removed_files: list[str] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertAutoArchiveResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

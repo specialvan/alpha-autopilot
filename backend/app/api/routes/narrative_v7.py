@@ -33,6 +33,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertArchiveResponse,
     BenchmarkMaintenanceAlertArchiveListResponse,
     BenchmarkMaintenanceAlertArchiveReadResponse,
+    BenchmarkMaintenanceAlertArchiveCleanupResponse,
     BenchmarkMaintenanceAlertAutoArchiveResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertEmitResponse,
@@ -521,6 +522,15 @@ def benchmark_maintenance_alert_auto_archive(dry_run: bool = Query(default=True)
         route="/api/narrative/v7/benchmark/maintenance/alerts/auto-archive",
         feature_name="benchmark_maintenance_alert_auto_archive",
         operation=lambda: _benchmark_library.auto_archive_maintenance_alerts(dry_run=dry_run),
+    )
+
+
+@router.post("/benchmark/maintenance/alerts/archive/cleanup", response_model=BenchmarkMaintenanceAlertArchiveCleanupResponse)
+def benchmark_maintenance_alert_archive_cleanup(dry_run: bool = Query(default=True)) -> BenchmarkMaintenanceAlertArchiveCleanupResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/archive/cleanup",
+        feature_name="benchmark_maintenance_alert_archive_cleanup",
+        operation=lambda: _benchmark_library.cleanup_maintenance_alert_archives(dry_run=dry_run),
     )
 
 

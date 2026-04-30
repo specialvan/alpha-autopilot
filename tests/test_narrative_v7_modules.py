@@ -732,6 +732,39 @@ def test_benchmark_store_auto_archives_alerts_by_policy(monkeypatch, tmp_path) -
     assert len(listed_after.alerts) == 1
 
 
+def test_benchmark_store_cleans_up_alert_archive_by_policy(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-archive-cleanup",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.61},
+        )
+    )
+    for _ in range(6):
+        _ = store.emit_maintenance_alert(limit=20)
+    _ = store.archive_maintenance_alerts(keep_last=1, shard_size=1, dry_run=False)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "2")
+
+    dry_run = store.cleanup_maintenance_alert_archives(dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.total_files >= 5
+    assert dry_run.candidate_count >= 3
+    assert dry_run.max_shard_candidate_count >= 3
+    assert dry_run.removed_count == 0
+
+    applied = store.cleanup_maintenance_alert_archives(dry_run=False)
+    assert applied.dry_run is False
+    assert applied.removed_count >= 3
+    assert applied.kept_count <= 2
+
+    archive_list = store.list_maintenance_alert_archive_files(limit=20)
+    assert archive_list.total_files <= 2
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

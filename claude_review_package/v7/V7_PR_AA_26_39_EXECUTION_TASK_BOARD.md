@@ -276,6 +276,15 @@
 - [x] 自动归档响应输出 `should_archive` 与 `archive` 明细，便于运维联动
 - [x] 第十八轮回归测试覆盖（alert auto-archive store/api）
 
+## 生产化增强清单（第十九轮）
+
+- [x] 归档清理策略能力：`cleanup_maintenance_alert_archives`
+- [x] 归档清理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/archive/cleanup`
+- [x] 环境变量清理治理：`AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS / AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES`
+- [x] 清理策略支持 `dry_run/apply` 双路径
+- [x] 清理输出 `candidate_count / removed_count / ttl_candidate_count / max_shard_candidate_count`
+- [x] 第十九轮回归测试覆盖（archive cleanup policy store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -286,5 +295,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`54 passed`
+- [x] 结果：`56 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

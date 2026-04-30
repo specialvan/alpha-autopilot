@@ -777,6 +777,50 @@ def test_v7_api_supports_maintenance_alert_auto_archive(monkeypatch) -> None:
     assert len(list_response.json()["alerts"]) == 1
 
 
+def test_v7_api_supports_maintenance_alert_archive_cleanup(monkeypatch) -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-archive-cleanup-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.62},
+        },
+    )
+
+    for _ in range(6):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    archive_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/archive?keep_last=1&shard_size=1&dry_run=false"
+    )
+    assert archive_response.status_code == 200
+    assert archive_response.json()["archive_shard_count"] >= 5
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "2")
+
+    dry_run_response = client.post("/api/narrative/v7/benchmark/maintenance/alerts/archive/cleanup?dry_run=true")
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["candidate_count"] >= 3
+    assert dry_run["max_shard_candidate_count"] >= 3
+
+    apply_response = client.post("/api/narrative/v7/benchmark/maintenance/alerts/archive/cleanup?dry_run=false")
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["removed_count"] >= 3
+    assert applied["kept_count"] <= 2
+
+    files_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/archive/files?limit=20")
+    assert files_response.status_code == 200
+    assert files_response.json()["total_files"] <= 2
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {
