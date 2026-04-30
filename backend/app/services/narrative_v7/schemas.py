@@ -467,3 +467,16 @@ class BenchmarkMaintenanceReportResponse(BaseModel):
     recommendations: list[str] = Field(default_factory=list)
     audit: BenchmarkAuditExportResponse
     health: BenchmarkVersionHealthResponse
+
+
+class BenchmarkVersionAutoRemediateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    keep_last: int = Field(default=0, ge=0)
+    health_before: BenchmarkVersionHealthResponse
+    repair: BenchmarkVersionRepairResponse
+    prune: BenchmarkVersionPruneResponse
+    health_after: BenchmarkVersionHealthResponse
+    message: str = ""

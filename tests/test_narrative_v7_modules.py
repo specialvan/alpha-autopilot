@@ -397,6 +397,52 @@ def test_benchmark_store_builds_maintenance_report(tmp_path) -> None:
     assert report.severity in {"ok", "warn", "critical"}
 
 
+def test_benchmark_store_auto_remediate_versions(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    first = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-auto-a",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.61},
+        )
+    )
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-auto-b",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.71},
+        )
+    )
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-auto-c",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.81},
+        )
+    )
+    tampered_path = store.version_root / f"{first.version}.json"
+    payload = json.loads(tampered_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.05
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    (store.version_root / "auto-malformed.json").write_text("{bad-json", encoding="utf-8")
+
+    dry_run = store.auto_remediate_versions(dry_run=True, keep_last=1)
+    assert dry_run.dry_run is True
+    assert dry_run.repair.candidate_failed_count >= 1
+    assert dry_run.repair.candidate_malformed_count >= 1
+    assert dry_run.prune.candidate_count >= 2
+    assert dry_run.health_after.failed_integrity_count >= 1
+
+    applied = store.auto_remediate_versions(dry_run=False, keep_last=1)
+    assert applied.dry_run is False
+    assert applied.repair.moved_count >= 2
+    assert applied.health_after.failed_integrity_count == 0
+    assert applied.health_after.malformed_file_count == 0
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

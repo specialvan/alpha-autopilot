@@ -389,6 +389,42 @@ def test_v7_api_supports_benchmark_maintenance_report() -> None:
     assert body["severity"] in {"ok", "warn", "critical"}
 
 
+def test_v7_api_supports_benchmark_auto_remediate() -> None:
+    client = _create_v7_only_client()
+    ingest = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-auto-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.67},
+        },
+    )
+    assert ingest.status_code == 200
+    version = ingest.json()["version"]
+
+    store = narrative_v7_route._benchmark_store
+    tampered_path = store.version_root / f"{version}.json"
+    payload = json.loads(tampered_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.03
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    (store.version_root / "auto-api-malformed.json").write_text("{bad-json", encoding="utf-8")
+
+    dry_run_response = client.post("/api/narrative/v7/benchmark/versions/auto-remediate?dry_run=true&keep_last=1")
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["repair"]["candidate_failed_count"] >= 1
+    assert dry_run["repair"]["candidate_malformed_count"] >= 1
+
+    apply_response = client.post("/api/narrative/v7/benchmark/versions/auto-remediate?dry_run=false&keep_last=1")
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["repair"]["moved_count"] >= 2
+    assert applied["health_after"]["failed_integrity_count"] == 0
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

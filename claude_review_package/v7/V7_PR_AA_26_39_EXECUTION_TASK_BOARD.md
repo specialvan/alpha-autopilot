@@ -187,6 +187,14 @@
 - [x] 输出 severity 分级（ok/warn/critical）与建议动作
 - [x] 第八轮回归测试覆盖（maintenance report store/api）
 
+## 生产化增强清单（第九轮）
+
+- [x] 一键治理能力：`auto-remediate`（health -> repair -> prune）
+- [x] 一键治理接口：`POST /api/narrative/v7/benchmark/versions/auto-remediate`
+- [x] 支持 dry_run + keep_last 策略联动
+- [x] 输出治理前后健康快照与步骤执行结果
+- [x] 第九轮回归测试覆盖（auto-remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -197,5 +205,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`32 passed`
+- [x] 结果：`34 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

@@ -35,6 +35,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
+    BenchmarkVersionAutoRemediateResponse,
     BenchmarkVersionHealthResponse,
     BenchmarkVersionListResponse,
     BenchmarkVersionPruneResponse,
@@ -413,6 +414,18 @@ def benchmark_maintenance_report(limit: int = Query(default=50, ge=1, le=500)) -
         route="/api/narrative/v7/benchmark/maintenance/report",
         feature_name="benchmark_maintenance_report",
         operation=lambda: _benchmark_library.build_maintenance_report(limit=limit),
+    )
+
+
+@router.post("/benchmark/versions/auto-remediate", response_model=BenchmarkVersionAutoRemediateResponse)
+def benchmark_versions_auto_remediate(
+    dry_run: bool = Query(default=True),
+    keep_last: int = Query(default=50, ge=0, le=10000),
+) -> BenchmarkVersionAutoRemediateResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/versions/auto-remediate",
+        feature_name="benchmark_versions_auto_remediate",
+        operation=lambda: _benchmark_library.auto_remediate_versions(dry_run=dry_run, keep_last=keep_last),
     )
 
 

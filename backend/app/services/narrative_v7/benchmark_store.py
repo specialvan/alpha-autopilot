@@ -21,6 +21,7 @@ from .schemas import (
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
+    BenchmarkVersionAutoRemediateResponse,
     BenchmarkVersionHealthResponse,
     BenchmarkVersionPruneResponse,
     BenchmarkVersionRepairResponse,
@@ -521,6 +522,30 @@ class V7BenchmarkStore:
             recommendations=recommendations,
             audit=audit,
             health=health,
+        )
+
+    def auto_remediate_versions(self, *, dry_run: bool = True, keep_last: int = 50) -> BenchmarkVersionAutoRemediateResponse:
+        health_before = self.scan_version_health()
+        repair = self.repair_versions(dry_run=dry_run)
+        prune = self.prune_versions(keep_last=keep_last, dry_run=dry_run)
+        health_after = self.scan_version_health()
+
+        if dry_run:
+            message = "dry_run"
+        elif repair.moved_count > 0 or prune.pruned_count > 0:
+            message = "remediated"
+        else:
+            message = "no_action"
+
+        return BenchmarkVersionAutoRemediateResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            keep_last=max(0, int(keep_last)),
+            health_before=health_before,
+            repair=repair,
+            prune=prune,
+            health_after=health_after,
+            message=message,
         )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:
