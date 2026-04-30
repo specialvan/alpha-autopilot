@@ -195,6 +195,14 @@
 - [x] 输出治理前后健康快照与步骤执行结果
 - [x] 第九轮回归测试覆盖（auto-remediate store/api）
 
+## 生产化增强清单（第十轮）
+
+- [x] SLA 阈值治理（failed/malformed/unverified/version count）支持环境变量配置
+- [x] 告警摘要能力：`build_maintenance_alert`
+- [x] 告警接口：`GET /api/narrative/v7/benchmark/maintenance/alert`
+- [x] 输出告警级别与动作建议（`level` / `should_page` / `should_ticket` / `breaches`）
+- [x] 第十轮回归测试覆盖（maintenance alert store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -205,5 +213,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`34 passed`
+- [x] 结果：`36 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

@@ -480,3 +480,27 @@ class BenchmarkVersionAutoRemediateResponse(BaseModel):
     prune: BenchmarkVersionPruneResponse
     health_after: BenchmarkVersionHealthResponse
     message: str = ""
+
+
+class BenchmarkMaintenanceSlaPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    max_failed_integrity: int = Field(default=0, ge=0)
+    max_malformed_files: int = Field(default=0, ge=0)
+    max_unverified: int = Field(default=0, ge=0)
+    max_version_count_warn: int = Field(default=500, ge=0)
+    max_version_count_critical: int = Field(default=2000, ge=0)
+    page_on_critical: bool = True
+    ticket_on_warn: bool = True
+
+
+class BenchmarkMaintenanceAlertResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    level: Literal["ok", "warn", "critical"] = "ok"
+    should_page: bool = False
+    should_ticket: bool = False
+    breaches: list[str] = Field(default_factory=list)
+    policy: BenchmarkMaintenanceSlaPolicy
+    report: BenchmarkMaintenanceReportResponse

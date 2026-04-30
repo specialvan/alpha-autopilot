@@ -443,6 +443,33 @@ def test_benchmark_store_auto_remediate_versions(tmp_path) -> None:
     assert applied.health_after.malformed_file_count == 0
 
 
+def test_benchmark_store_builds_maintenance_alert_with_sla(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    accepted = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-a",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.62},
+        )
+    )
+    assert accepted.accepted is True
+
+    tampered_path = store.version_root / f"{accepted.version}.json"
+    payload = json.loads(tampered_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.01
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    monkeypatch.setenv("AA_V7_BENCH_SLA_MAX_FAILED_INTEGRITY", "0")
+    monkeypatch.setenv("AA_V7_BENCH_SLA_MAX_MALFORMED_FILES", "0")
+    monkeypatch.setenv("AA_V7_BENCH_SLA_MAX_UNVERIFIED", "0")
+
+    alert = store.build_maintenance_alert(limit=20)
+    assert alert.level == "critical"
+    assert alert.should_page is True
+    assert alert.breaches
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

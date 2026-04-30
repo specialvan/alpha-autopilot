@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import RLock
@@ -15,7 +16,9 @@ from .schemas import (
     BenchmarkAuditExportResponse,
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
+    BenchmarkMaintenanceAlertResponse,
     BenchmarkMaintenanceReportResponse,
+    BenchmarkMaintenanceSlaPolicy,
     BenchmarkParameterSet,
     BenchmarkQueryRequest,
     BenchmarkQueryResponse,
@@ -33,6 +36,27 @@ MIN_CORRIDOR_SAMPLES = 5
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _env_int(name: str, default: int, *, low: int = 0) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return max(low, int(default))
+    try:
+        return max(low, int(raw))
+    except Exception:
+        return max(low, int(default))
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    if not raw:
+        return bool(default)
+    if raw in {"1", "true", "yes", "y", "on"}:
+        return True
+    if raw in {"0", "false", "no", "n", "off"}:
+        return False
+    return bool(default)
 
 
 @dataclass
@@ -548,6 +572,52 @@ class V7BenchmarkStore:
             message=message,
         )
 
+    def build_maintenance_alert(self, *, limit: int = 50) -> BenchmarkMaintenanceAlertResponse:
+        report = self.build_maintenance_report(limit=limit)
+        policy = self._load_maintenance_sla_policy()
+
+        breaches: list[str] = []
+        if report.health.failed_integrity_count > policy.max_failed_integrity:
+            breaches.append(
+                f"failed_integrity_exceeded:{report.health.failed_integrity_count}>{policy.max_failed_integrity}"
+            )
+        if report.health.malformed_file_count > policy.max_malformed_files:
+            breaches.append(
+                f"malformed_files_exceeded:{report.health.malformed_file_count}>{policy.max_malformed_files}"
+            )
+        if report.health.unverified_count > policy.max_unverified:
+            breaches.append(f"unverified_exceeded:{report.health.unverified_count}>{policy.max_unverified}")
+        if report.audit.version_count > policy.max_version_count_critical:
+            breaches.append(
+                f"version_count_critical_exceeded:{report.audit.version_count}>{policy.max_version_count_critical}"
+            )
+        elif report.audit.version_count > policy.max_version_count_warn:
+            breaches.append(f"version_count_warn_exceeded:{report.audit.version_count}>{policy.max_version_count_warn}")
+
+        level = "ok"
+        if any(
+            item.startswith("failed_integrity_exceeded:")
+            or item.startswith("malformed_files_exceeded:")
+            or item.startswith("version_count_critical_exceeded:")
+            for item in breaches
+        ):
+            level = "critical"
+        elif breaches:
+            level = "warn"
+
+        should_page = bool(policy.page_on_critical and level == "critical")
+        should_ticket = bool(should_page or (policy.ticket_on_warn and level == "warn"))
+
+        return BenchmarkMaintenanceAlertResponse(
+            generated_at=_now_iso(),
+            level=level,
+            should_page=should_page,
+            should_ticket=should_ticket,
+            breaches=breaches,
+            policy=policy,
+            report=report,
+        )
+
     def _state_version(self, rows: list[dict[str, object]]) -> str:
         active_count = self._active_count(rows)
         return f"v7-benchmark-{len(rows):05d}-a{active_count:05d}"
@@ -580,6 +650,17 @@ class V7BenchmarkStore:
 
     def _snapshot_file(self, version: str) -> Path:
         return self.version_root / f"{version}.json"
+
+    def _load_maintenance_sla_policy(self) -> BenchmarkMaintenanceSlaPolicy:
+        return BenchmarkMaintenanceSlaPolicy(
+            max_failed_integrity=_env_int("AA_V7_BENCH_SLA_MAX_FAILED_INTEGRITY", 0, low=0),
+            max_malformed_files=_env_int("AA_V7_BENCH_SLA_MAX_MALFORMED_FILES", 0, low=0),
+            max_unverified=_env_int("AA_V7_BENCH_SLA_MAX_UNVERIFIED", 0, low=0),
+            max_version_count_warn=_env_int("AA_V7_BENCH_SLA_MAX_VERSION_COUNT_WARN", 500, low=0),
+            max_version_count_critical=_env_int("AA_V7_BENCH_SLA_MAX_VERSION_COUNT_CRITICAL", 2000, low=0),
+            page_on_critical=_env_bool("AA_V7_BENCH_SLA_PAGE_ON_CRITICAL", True),
+            ticket_on_warn=_env_bool("AA_V7_BENCH_SLA_TICKET_ON_WARN", True),
+        )
 
     def _persist_rows(self, rows: list[dict[str, object]], *, trigger: str) -> str:
         self._write_rows(rows)

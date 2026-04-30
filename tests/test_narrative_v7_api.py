@@ -425,6 +425,35 @@ def test_v7_api_supports_benchmark_auto_remediate() -> None:
     assert applied["health_after"]["failed_integrity_count"] == 0
 
 
+def test_v7_api_supports_benchmark_maintenance_alert() -> None:
+    client = _create_v7_only_client()
+    ingest = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.66},
+        },
+    )
+    assert ingest.status_code == 200
+    version = ingest.json()["version"]
+
+    store = narrative_v7_route._benchmark_store
+    tampered_path = store.version_root / f"{version}.json"
+    payload = json.loads(tampered_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.02
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    response = client.get("/api/narrative/v7/benchmark/maintenance/alert?limit=20")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["level"] in {"ok", "warn", "critical"}
+    assert "policy" in body
+    assert "report" in body
+    assert "breaches" in body
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

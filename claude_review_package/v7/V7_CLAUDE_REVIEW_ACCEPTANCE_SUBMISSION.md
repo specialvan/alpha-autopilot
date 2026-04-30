@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第九轮生产化）
+# V7 Claude 评审验收提交清单（第十轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第九轮生产化增强做验收（一键治理 auto-remediate）
+- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十轮生产化增强做验收（维护告警策略 + SLA 阈值治理）
 
 ## 1. 需求与计划文档
 
@@ -24,12 +24,12 @@
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`34 passed`
+4. 结果：`36 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 4. 评审重点建议
 
-- `auto-remediate` 流程是否正确串联 health/repair/prune
-- dry-run 与真实执行结果差异是否合理可解释
-- 治理前后健康快照是否可用于验收追溯
-- 接口契约、错误路径与测试证据是否一致
+- `maintenance/alert` 的 SLA 阈值判定是否正确
+- `should_page / should_ticket` 动作建议是否符合分级策略
+- 环境变量阈值治理是否可用于线上调参
+- 接口契约、异常路径与测试证据是否一致

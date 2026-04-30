@@ -5,6 +5,7 @@ from .schemas import (
     BenchmarkAuditExportResponse,
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
+    BenchmarkMaintenanceAlertResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkVersionAutoRemediateResponse,
     BenchmarkQueryRequest,
@@ -62,3 +63,6 @@ class BenchmarkLibrary:
         keep_last: int = 50,
     ) -> BenchmarkVersionAutoRemediateResponse:
         return self._store.auto_remediate_versions(dry_run=dry_run, keep_last=keep_last)
+
+    def build_maintenance_alert(self, *, limit: int = 50) -> BenchmarkMaintenanceAlertResponse:
+        return self._store.build_maintenance_alert(limit=limit)
