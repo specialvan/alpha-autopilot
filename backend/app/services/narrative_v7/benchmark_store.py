@@ -20,6 +20,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertEvent,
     BenchmarkMaintenanceAlertListResponse,
+    BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkMaintenanceSlaPolicy,
     BenchmarkParameterSet,
@@ -647,25 +648,62 @@ class V7BenchmarkStore:
             path = self._alerts_path()
             if not path.exists():
                 return BenchmarkMaintenanceAlertListResponse(alerts=[])
-            rows: list[BenchmarkMaintenanceAlertEvent] = []
-            for raw in path.read_text(encoding="utf-8").splitlines():
-                line = raw.strip()
-                if not line:
-                    continue
-                try:
-                    payload = json.loads(line)
-                except Exception:
-                    continue
-                if not isinstance(payload, dict):
-                    continue
-                try:
-                    rows.append(BenchmarkMaintenanceAlertEvent.model_validate(payload))
-                except Exception:
-                    continue
+            rows, _ = self._read_alert_events(path=path)
         rows.sort(key=lambda item: item.generated_at, reverse=True)
         if limit > 0:
             rows = rows[:limit]
         return BenchmarkMaintenanceAlertListResponse(alerts=rows)
+
+    def prune_maintenance_alerts(
+        self,
+        *,
+        keep_last: int,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertPruneResponse:
+        keep_count = max(0, int(keep_last))
+        with self._lock:
+            path = self._alerts_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertPruneResponse(
+                    dry_run=bool(dry_run),
+                    keep_last=keep_count,
+                    message="no_alerts",
+                )
+
+            rows, malformed_candidate_count = self._read_alert_events(path=path)
+            rows.sort(key=lambda item: item.generated_at, reverse=True)
+            kept = rows[:keep_count]
+            candidates = rows[keep_count:]
+
+            pruned_event_ids: list[str] = []
+            malformed_dropped_count = 0
+            if not dry_run:
+                serialized = [
+                    json.dumps(item.model_dump(mode="json"), ensure_ascii=False)
+                    for item in kept
+                ]
+                temp_path = path.with_suffix(f"{path.suffix}.tmp")
+                payload = "\n".join(serialized)
+                if payload:
+                    payload += "\n"
+                temp_path.write_text(payload, encoding="utf-8")
+                temp_path.replace(path)
+                pruned_event_ids = [item.event_id for item in candidates]
+                malformed_dropped_count = malformed_candidate_count
+
+        return BenchmarkMaintenanceAlertPruneResponse(
+            dry_run=bool(dry_run),
+            keep_last=keep_count,
+            total_alerts_before=len(rows),
+            kept_count=len(kept),
+            candidate_count=len(candidates),
+            pruned_count=len(pruned_event_ids),
+            malformed_candidate_count=malformed_candidate_count,
+            malformed_dropped_count=malformed_dropped_count,
+            kept_event_ids=[item.event_id for item in kept],
+            pruned_event_ids=pruned_event_ids,
+            message="dry_run" if dry_run else "pruned",
+        )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:
         active_count = self._active_count(rows)
@@ -702,6 +740,27 @@ class V7BenchmarkStore:
 
     def _alerts_path(self) -> Path:
         return self.version_root / "_maintenance_alerts.jsonl"
+
+    def _read_alert_events(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertEvent], int]:
+        rows: list[BenchmarkMaintenanceAlertEvent] = []
+        malformed_count = 0
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except Exception:
+                malformed_count += 1
+                continue
+            if not isinstance(payload, dict):
+                malformed_count += 1
+                continue
+            try:
+                rows.append(BenchmarkMaintenanceAlertEvent.model_validate(payload))
+            except Exception:
+                malformed_count += 1
+        return rows, malformed_count
 
     def _load_maintenance_sla_policy(self) -> BenchmarkMaintenanceSlaPolicy:
         return BenchmarkMaintenanceSlaPolicy(

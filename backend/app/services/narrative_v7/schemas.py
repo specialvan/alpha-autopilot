@@ -529,3 +529,19 @@ class BenchmarkMaintenanceAlertListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)
+
+
+class BenchmarkMaintenanceAlertPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dry_run: bool
+    keep_last: int = Field(default=0, ge=0)
+    total_alerts_before: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    pruned_count: int = Field(default=0, ge=0)
+    malformed_candidate_count: int = Field(default=0, ge=0)
+    malformed_dropped_count: int = Field(default=0, ge=0)
+    kept_event_ids: list[str] = Field(default_factory=list)
+    pruned_event_ids: list[str] = Field(default_factory=list)
+    message: str = ""

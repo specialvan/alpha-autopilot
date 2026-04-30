@@ -212,6 +212,15 @@
 - [x] 告警事件列表接口：`GET /api/narrative/v7/benchmark/maintenance/alerts`
 - [x] 第十一轮回归测试覆盖（maintenance alert emit/list store/api）
 
+## 生产化增强清单（第十二轮）
+
+- [x] 告警日志生命周期治理：`prune_maintenance_alerts`
+- [x] 告警日志清理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/prune`
+- [x] 支持 `dry_run` 预演（候选统计，不落盘删除）
+- [x] 支持 `keep_last` 保留最近 N 条告警事件
+- [x] 支持脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）
+- [x] 第十二轮回归测试覆盖（maintenance alert prune store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -222,5 +231,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`38 passed`
+- [x] 结果：`40 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

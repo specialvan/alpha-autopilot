@@ -478,6 +478,47 @@ def test_v7_api_supports_maintenance_alert_emit_and_list() -> None:
     assert alerts[0]["event_id"] == event_id
 
 
+def test_v7_api_supports_maintenance_alert_prune() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-prune-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.69},
+        },
+    )
+
+    for _ in range(3):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    store = narrative_v7_route._benchmark_store
+    with (store.version_root / "_maintenance_alerts.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    dry_run_response = client.post("/api/narrative/v7/benchmark/maintenance/alerts/prune?keep_last=1&dry_run=true")
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["candidate_count"] >= 2
+    assert dry_run["pruned_count"] == 0
+    assert dry_run["malformed_candidate_count"] >= 1
+
+    apply_response = client.post("/api/narrative/v7/benchmark/maintenance/alerts/prune?keep_last=1&dry_run=false")
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["kept_count"] == 1
+    assert applied["pruned_count"] >= 2
+    assert applied["malformed_dropped_count"] >= 1
+
+    list_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts?limit=20")
+    assert list_response.status_code == 200
+    assert len(list_response.json()["alerts"]) == 1
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

@@ -490,6 +490,44 @@ def test_benchmark_store_emits_and_lists_maintenance_alert_events(tmp_path) -> N
     assert listed.alerts[0].event_id == emitted.event.event_id
 
 
+def test_benchmark_store_prunes_maintenance_alert_events(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-prune",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.68},
+        )
+    )
+
+    emitted_ids: list[str] = []
+    for _ in range(3):
+        emitted = store.emit_maintenance_alert(limit=20)
+        emitted_ids.append(emitted.event.event_id)
+
+    alerts_path = store.version_root / "_maintenance_alerts.jsonl"
+    with alerts_path.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    dry_run = store.prune_maintenance_alerts(keep_last=1, dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.total_alerts_before >= 3
+    assert dry_run.candidate_count >= 2
+    assert dry_run.pruned_count == 0
+    assert dry_run.malformed_candidate_count >= 1
+
+    applied = store.prune_maintenance_alerts(keep_last=1, dry_run=False)
+    assert applied.dry_run is False
+    assert applied.kept_count == 1
+    assert applied.pruned_count >= 2
+    assert applied.malformed_dropped_count >= 1
+
+    listed_after = store.list_maintenance_alerts(limit=20)
+    assert len(listed_after.alerts) == 1
+    assert listed_after.alerts[0].event_id in emitted_ids
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

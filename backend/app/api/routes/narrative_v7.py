@@ -32,6 +32,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertListResponse,
+    BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkParameterSet,
     BenchmarkQueryRequest,
@@ -444,6 +445,18 @@ def benchmark_maintenance_alert_list(limit: int = Query(default=100, ge=1, le=20
         route="/api/narrative/v7/benchmark/maintenance/alerts",
         feature_name="benchmark_maintenance_alert_list",
         operation=lambda: _benchmark_library.list_maintenance_alerts(limit=limit),
+    )
+
+
+@router.post("/benchmark/maintenance/alerts/prune", response_model=BenchmarkMaintenanceAlertPruneResponse)
+def benchmark_maintenance_alert_prune(
+    keep_last: int = Query(default=500, ge=0, le=200000),
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/prune",
+        feature_name="benchmark_maintenance_alert_prune",
+        operation=lambda: _benchmark_library.prune_maintenance_alerts(keep_last=keep_last, dry_run=dry_run),
     )
 
 

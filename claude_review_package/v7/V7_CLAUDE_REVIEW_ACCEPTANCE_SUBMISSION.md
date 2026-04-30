@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第十一轮生产化）
+# V7 Claude 评审验收提交清单（第十二轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十一轮生产化增强做验收（维护告警事件持久化 + 历史查询）
+- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十二轮生产化增强做验收（维护告警日志生命周期治理 + prune）
 
 ## 1. 需求与计划文档
 
@@ -24,12 +24,13 @@
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`38 passed`
+4. 结果：`40 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 4. 评审重点建议
 
-- `POST /benchmark/maintenance/alert/emit` 是否稳定写入告警事件并返回事件元数据
-- `GET /benchmark/maintenance/alerts` 是否按时间倒序返回、并在脏行场景下保持健壮
-- 告警事件与实时告警摘要（`maintenance/alert`）之间字段语义是否一致
+- `POST /benchmark/maintenance/alerts/prune` 是否按 `keep_last` 正确执行告警日志清理
+- `dry_run` 与 `apply` 两条路径的统计口径（kept/candidate/pruned）是否一致
+- 脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）是否符合预期
+- 清理后 `GET /benchmark/maintenance/alerts` 查询结果是否与保留策略一致
 - 接口契约、异常路径与测试证据是否一致

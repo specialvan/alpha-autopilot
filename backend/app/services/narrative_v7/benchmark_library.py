@@ -8,6 +8,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertListResponse,
+    BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkVersionAutoRemediateResponse,
     BenchmarkQueryRequest,
@@ -74,3 +75,11 @@ class BenchmarkLibrary:
 
     def list_maintenance_alerts(self, *, limit: int = 100) -> BenchmarkMaintenanceAlertListResponse:
         return self._store.list_maintenance_alerts(limit=limit)
+
+    def prune_maintenance_alerts(
+        self,
+        *,
+        keep_last: int,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertPruneResponse:
+        return self._store.prune_maintenance_alerts(keep_last=keep_last, dry_run=dry_run)
