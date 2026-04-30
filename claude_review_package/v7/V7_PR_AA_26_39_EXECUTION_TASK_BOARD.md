@@ -156,6 +156,15 @@
 - [x] 审计导出接口：`GET /api/narrative/v7/benchmark/audit/export`
 - [x] 第四轮回归测试覆盖（diff/audit/integrity/restore-guard）
 
+## 生产化增强清单（第五轮）
+
+- [x] 版本生命周期治理：支持版本保留策略与清理
+- [x] 版本清理接口：`POST /api/narrative/v7/benchmark/versions/prune`
+- [x] 支持 `dry_run` 预演（先看候选，不执行删除）
+- [x] 支持 `keep_last` 保留最近 N 个版本
+- [x] 清理响应输出 kept/candidate/pruned 统计与版本列表
+- [x] 第五轮回归测试覆盖（prune store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -166,5 +175,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`24 passed`
+- [x] 结果：`26 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

@@ -20,6 +20,7 @@ from .schemas import (
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
+    BenchmarkVersionPruneResponse,
     BenchmarkVersionRecord,
 )
 
@@ -323,6 +324,38 @@ class V7BenchmarkStore:
             integrity_unverified_count=unverified,
             integrity_failed_count=failed,
             versions=versions,
+        )
+
+    def prune_versions(self, *, keep_last: int, dry_run: bool = True) -> BenchmarkVersionPruneResponse:
+        keep_count = max(0, int(keep_last))
+        with self._lock:
+            entries = self._read_version_entries()
+            entries.sort(key=lambda item: item.created_at, reverse=True)
+            kept = entries[:keep_count]
+            candidates = entries[keep_count:]
+
+            pruned_versions: list[str] = []
+            if not dry_run:
+                for entry in candidates:
+                    path = self._snapshot_file(entry.version)
+                    if not path.exists():
+                        continue
+                    try:
+                        path.unlink()
+                        pruned_versions.append(entry.version)
+                    except Exception:
+                        continue
+
+        return BenchmarkVersionPruneResponse(
+            dry_run=bool(dry_run),
+            keep_last=keep_count,
+            version_count_before=len(entries),
+            kept_count=len(kept),
+            candidate_count=len(candidates),
+            pruned_count=len(pruned_versions),
+            kept_versions=[item.version for item in kept],
+            pruned_versions=pruned_versions,
+            message="dry_run" if dry_run else "pruned",
         )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:

@@ -35,6 +35,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
     BenchmarkVersionListResponse,
+    BenchmarkVersionPruneResponse,
     DeadlockCheckRequest,
     DeadlockCheckResponse,
     DecisionRequest,
@@ -370,6 +371,18 @@ def benchmark_audit_export(limit: int = Query(default=50, ge=1, le=200)) -> Benc
         route="/api/narrative/v7/benchmark/audit/export",
         feature_name="benchmark_audit_export",
         operation=lambda: _benchmark_library.export_audit(limit=limit),
+    )
+
+
+@router.post("/benchmark/versions/prune", response_model=BenchmarkVersionPruneResponse)
+def benchmark_versions_prune(
+    keep_last: int = Query(default=50, ge=0, le=10000),
+    dry_run: bool = Query(default=True),
+) -> BenchmarkVersionPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/versions/prune",
+        feature_name="benchmark_versions_prune",
+        operation=lambda: _benchmark_library.prune_versions(keep_last=keep_last, dry_run=dry_run),
     )
 
 

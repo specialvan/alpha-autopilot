@@ -413,3 +413,17 @@ class BenchmarkAuditExportResponse(BaseModel):
     integrity_unverified_count: int = Field(default=0, ge=0)
     integrity_failed_count: int = Field(default=0, ge=0)
     versions: list[BenchmarkVersionRecord] = Field(default_factory=list)
+
+
+class BenchmarkVersionPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dry_run: bool
+    keep_last: int = Field(default=0, ge=0)
+    version_count_before: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    pruned_count: int = Field(default=0, ge=0)
+    kept_versions: list[str] = Field(default_factory=list)
+    pruned_versions: list[str] = Field(default_factory=list)
+    message: str = ""

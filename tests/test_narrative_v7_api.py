@@ -288,6 +288,33 @@ def test_v7_api_returns_404_for_missing_benchmark_diff_version() -> None:
     assert response.status_code == 404
 
 
+def test_v7_api_supports_benchmark_version_prune() -> None:
+    client = _create_v7_only_client()
+    for index in range(3):
+        _ = client.post(
+            "/api/narrative/v7/benchmark/ingest",
+            json={
+                "book_id": f"book-prune-{index}",
+                "channel": "fantasy",
+                "genre_track": "fast",
+                "sample_payload": {"nqm_mean": 0.60 + index * 0.1},
+            },
+        )
+
+    dry_run_response = client.post("/api/narrative/v7/benchmark/versions/prune?keep_last=1&dry_run=true")
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["pruned_count"] == 0
+    assert dry_run["candidate_count"] >= 2
+
+    apply_response = client.post("/api/narrative/v7/benchmark/versions/prune?keep_last=1&dry_run=false")
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["pruned_count"] >= 2
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

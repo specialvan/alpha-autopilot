@@ -278,6 +278,48 @@ def test_benchmark_store_restore_rejects_tampered_snapshot(tmp_path) -> None:
     assert restored.message == "snapshot_integrity_failed"
 
 
+def test_benchmark_store_prunes_old_versions(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-prune-a",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.61},
+        )
+    )
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-prune-b",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.71},
+        )
+    )
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-prune-c",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.81},
+        )
+    )
+    before = store.list_versions(limit=20)
+    assert len(before) >= 3
+
+    dry_run = store.prune_versions(keep_last=1, dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.pruned_count == 0
+    assert dry_run.candidate_count >= 2
+
+    applied = store.prune_versions(keep_last=1, dry_run=False)
+    assert applied.dry_run is False
+    assert applied.pruned_count >= 2
+
+    after = store.list_versions(limit=20)
+    assert len(after) == 1
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

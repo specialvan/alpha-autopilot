@@ -9,6 +9,7 @@ from .schemas import (
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
     BenchmarkVersionDiffResponse,
+    BenchmarkVersionPruneResponse,
     BenchmarkVersionRecord,
 )
 
@@ -37,3 +38,6 @@ class BenchmarkLibrary:
 
     def export_audit(self, *, limit: int = 50) -> BenchmarkAuditExportResponse:
         return self._store.export_audit(limit=limit)
+
+    def prune_versions(self, *, keep_last: int, dry_run: bool = True) -> BenchmarkVersionPruneResponse:
+        return self._store.prune_versions(keep_last=keep_last, dry_run=dry_run)
