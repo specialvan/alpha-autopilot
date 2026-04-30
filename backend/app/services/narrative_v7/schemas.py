@@ -779,6 +779,21 @@ class BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceRunExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    summary: BenchmarkMaintenanceAlertGovernanceRunSummaryResponse
+    records: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

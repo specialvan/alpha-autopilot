@@ -1025,6 +1025,48 @@ def test_benchmark_store_summarizes_governance_runs(monkeypatch, tmp_path) -> No
     assert summary.latest_failed_run.status == "failed"
 
 
+def test_benchmark_store_exports_governance_runs(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-export",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.69},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    for index in range(3):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key=f"governance-export-{index}",
+        )
+
+    export_first = store.export_maintenance_alert_governance_runs(limit=2)
+    assert export_first.limit == 2
+    assert export_first.summary.total_records == 3
+    assert len(export_first.records) == 2
+    assert export_first.has_more is True
+    assert export_first.next_cursor
+
+    export_second = store.export_maintenance_alert_governance_runs(limit=2, cursor=export_first.next_cursor)
+    assert export_second.limit == 2
+    assert len(export_second.records) == 1
+    assert export_second.has_more is False
+    assert export_second.cursor == export_first.next_cursor
+    assert export_second.summary.total_records == 3
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

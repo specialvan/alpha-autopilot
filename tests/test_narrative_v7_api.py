@@ -1137,6 +1137,57 @@ def test_v7_api_supports_governance_runs_summary(monkeypatch) -> None:
     assert summary["latest_failed_run"]["status"] == "failed"
 
 
+def test_v7_api_supports_governance_runs_export(monkeypatch) -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-export-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.68},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    for index in range(3):
+        run_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-export-api-{index}"
+        )
+        assert run_response.status_code == 200
+
+    export_first_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/export?limit=2"
+    )
+    assert export_first_response.status_code == 200
+    export_first = export_first_response.json()
+    assert export_first["limit"] == 2
+    assert export_first["summary"]["total_records"] == 3
+    assert len(export_first["records"]) == 2
+    assert export_first["has_more"] is True
+    assert export_first["next_cursor"]
+
+    export_second_response = client.get(
+        f"/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/export?limit=2&cursor={export_first['next_cursor']}"
+    )
+    assert export_second_response.status_code == 200
+    export_second = export_second_response.json()
+    assert export_second["limit"] == 2
+    assert len(export_second["records"]) == 1
+    assert export_second["has_more"] is False
+    assert export_second["cursor"] == export_first["next_cursor"]
+    assert export_second["summary"]["total_records"] == 3
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

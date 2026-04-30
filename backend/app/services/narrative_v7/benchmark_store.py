@@ -30,6 +30,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernancePolicy,
     BenchmarkMaintenanceAlertGovernanceReportResponse,
     BenchmarkMaintenanceAlertGovernanceRunListResponse,
+    BenchmarkMaintenanceAlertGovernanceRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
     BenchmarkMaintenanceAlertGovernanceRunSummaryResponse,
@@ -1314,6 +1315,28 @@ class V7BenchmarkStore:
             failed_count=sum(1 for item in window if item.status == "failed"),
             latest_run=records[0] if records else None,
             latest_failed_run=latest_failed_run,
+            message="ok",
+        )
+
+    def export_maintenance_alert_governance_runs(
+        self,
+        *,
+        limit: int = 200,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceRunExportResponse:
+        query_limit = max(0, int(limit))
+        summary = self.summarize_maintenance_alert_governance_runs(limit=query_limit)
+        page = self.list_maintenance_alert_governance_runs(limit=query_limit, cursor=cursor)
+        return BenchmarkMaintenanceAlertGovernanceRunExportResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            cursor=page.cursor,
+            next_cursor=page.next_cursor,
+            has_more=page.has_more,
+            total_records=page.total_records,
+            malformed_line_count=page.malformed_line_count,
+            summary=summary,
+            records=page.records,
             message="ok",
         )
 

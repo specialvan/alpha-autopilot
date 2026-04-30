@@ -323,6 +323,14 @@
 - [x] 摘要输出 `latest_run` 与 `latest_failed_run`，便于值班排障
 - [x] 第23轮回归测试覆盖（governance runs summary store/api）
 
+## 生产化增强清单（第二十四轮）
+
+- [x] 治理运行导出能力：`export_maintenance_alert_governance_runs`
+- [x] 治理运行导出接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/export`
+- [x] 导出结构：`summary + paged records`（单请求拉取评审与运维所需上下文）
+- [x] 支持 `limit/cursor` 分页导出，兼容长窗口治理日志消费
+- [x] 第24轮回归测试覆盖（governance runs export store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -333,5 +341,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`66 passed`
+- [x] 结果：`68 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
