@@ -40,6 +40,8 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -663,6 +665,38 @@ def benchmark_maintenance_alert_governance_runs_digest(
         route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/digest",
         feature_name="benchmark_maintenance_alert_governance_runs_digest",
         operation=lambda: _benchmark_library.build_maintenance_alert_governance_runs_digest(limit=limit),
+    )
+
+
+@router.post(
+    "/benchmark/maintenance/alerts/governance/runs/escalation/emit",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalation_emit(
+    limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalation_emit",
+        operation=lambda: _benchmark_library.emit_maintenance_alert_governance_escalation(limit=limit),
+    )
+
+
+@router.get(
+    "/benchmark/maintenance/alerts/governance/runs/escalations",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations(
+    limit: int = Query(default=100, ge=1, le=20000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationListResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations",
+        operation=lambda: _benchmark_library.list_maintenance_alert_governance_escalations(
+            limit=limit,
+            cursor=cursor,
+        ),
     )
 
 

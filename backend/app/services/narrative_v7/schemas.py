@@ -830,6 +830,49 @@ class BenchmarkMaintenanceAlertGovernanceRunDigestResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: str
+    generated_at: str
+    source: Literal["manual_emit", "auto_remediate"] = "manual_emit"
+    recommended_action: str = "observe"
+    escalation_reason: str = ""
+    digest_message: str = ""
+    latest_run_id: str = ""
+    latest_failed_run_id: str = ""
+    consecutive_failed_runs: int = Field(default=0, ge=0)
+    latest_failed_attempt: int = Field(default=0, ge=0)
+    retry_max_attempts: int = Field(default=0, ge=0)
+    escalation_failure_streak_limit: int = Field(default=0, ge=0)
+    retry_exhausted: bool = False
+    failure_streak_exhausted: bool = False
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    emitted: bool = False
+    digest: BenchmarkMaintenanceAlertGovernanceRunDigestResponse
+    event: BenchmarkMaintenanceAlertGovernanceEscalationEvent | None = None
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    events: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -842,6 +885,7 @@ class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     executed: bool = False
     escalation_required: bool = False
     escalation_reason: str = ""
+    escalation_event: BenchmarkMaintenanceAlertGovernanceEscalationEvent | None = None
     governance_run: BenchmarkMaintenanceAlertGovernanceRunResponse | None = None
     auto_prune: BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse | None = None
     digest_before: BenchmarkMaintenanceAlertGovernanceRunDigestResponse

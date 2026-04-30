@@ -33,6 +33,9 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationEvent,
+    BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1270,11 +1273,11 @@ class V7BenchmarkStore:
                 )
             records, malformed_line_count = self._read_governance_run_records(path=path)
 
-        records.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
-        total = len(records)
+        ordered_records = self._order_governance_run_records(records)
+        total = len(ordered_records)
         start = min(offset, total)
         end = min(total, start + query_limit) if query_limit > 0 else total
-        window = records[start:end]
+        window = ordered_records[start:end]
         has_more = end < total
         next_cursor = str(end) if has_more else ""
 
@@ -1305,11 +1308,11 @@ class V7BenchmarkStore:
                 )
             records, malformed_line_count = self._read_governance_run_records(path=path)
 
-        records.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
-        window = records[:query_limit] if query_limit > 0 else records
-        latest_failed_run = next((item for item in records if item.status == "failed"), None)
+        ordered_records = self._order_governance_run_records(records)
+        window = ordered_records[:query_limit] if query_limit > 0 else ordered_records
+        latest_failed_run = next((item for item in ordered_records if item.status == "failed"), None)
         consecutive_failed_runs = 0
-        for item in records:
+        for item in ordered_records:
             if item.status == "failed":
                 consecutive_failed_runs += 1
             else:
@@ -1318,13 +1321,13 @@ class V7BenchmarkStore:
         return BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(
             generated_at=_now_iso(),
             limit=query_limit,
-            total_records=len(records),
+            total_records=len(ordered_records),
             window_record_count=len(window),
             malformed_line_count=malformed_line_count,
             succeeded_count=sum(1 for item in window if item.status == "succeeded"),
             failed_count=sum(1 for item in window if item.status == "failed"),
             consecutive_failed_runs=consecutive_failed_runs,
-            latest_run=records[0] if records else None,
+            latest_run=ordered_records[0] if ordered_records else None,
             latest_failed_run=latest_failed_run,
             message="ok",
         )
@@ -1464,6 +1467,98 @@ class V7BenchmarkStore:
             message=message,
         )
 
+    def emit_maintenance_alert_governance_escalation(
+        self,
+        *,
+        limit: int = 200,
+        source: str = "manual_emit",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse:
+        query_limit = max(0, int(limit))
+        digest = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
+        source_tag = "auto_remediate" if str(source or "").strip() == "auto_remediate" else "manual_emit"
+
+        if digest.recommended_action != "escalate_failed_run":
+            return BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse(
+                generated_at=_now_iso(),
+                limit=query_limit,
+                emitted=False,
+                digest=digest,
+                event=None,
+                message="no_escalation_needed",
+            )
+
+        escalation_reason = self._resolve_governance_escalation_reason(digest=digest)
+        latest_run_id = digest.summary.latest_run.run_id if digest.summary.latest_run is not None else ""
+        latest_failed_run_id = (
+            digest.summary.latest_failed_run.run_id if digest.summary.latest_failed_run is not None else ""
+        )
+        event = BenchmarkMaintenanceAlertGovernanceEscalationEvent(
+            event_id=f"bm-governance-escalation-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}",
+            generated_at=_now_iso(),
+            source=source_tag,
+            recommended_action=digest.recommended_action,
+            escalation_reason=escalation_reason,
+            digest_message=digest.message,
+            latest_run_id=latest_run_id,
+            latest_failed_run_id=latest_failed_run_id,
+            consecutive_failed_runs=digest.summary.consecutive_failed_runs,
+            latest_failed_attempt=digest.latest_failed_attempt,
+            retry_max_attempts=digest.retry_max_attempts,
+            escalation_failure_streak_limit=digest.escalation_failure_streak_limit,
+            retry_exhausted=digest.retry_exhausted,
+            failure_streak_exhausted=digest.failure_streak_exhausted,
+        )
+        with self._lock:
+            path = self._governance_escalations_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(event.model_dump(mode="json"), ensure_ascii=False))
+                handle.write("\n")
+        return BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            emitted=True,
+            digest=digest,
+            event=event,
+            message="escalation_emitted",
+        )
+
+    def list_maintenance_alert_governance_escalations(
+        self,
+        *,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationListResponse:
+        query_limit = max(0, int(limit))
+        offset = _parse_cursor_offset(cursor)
+        with self._lock:
+            path = self._governance_escalations_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceEscalationListResponse(
+                    limit=query_limit,
+                    cursor=str(offset),
+                    events=[],
+                    message="no_escalations",
+                )
+            rows, malformed_line_count = self._read_governance_escalation_events(path=path)
+        rows.sort(key=lambda item: item.generated_at, reverse=True)
+        total = len(rows)
+        start = min(offset, total)
+        end = min(total, start + query_limit) if query_limit > 0 else total
+        window = rows[start:end]
+        has_more = end < total
+        next_cursor = str(end) if has_more else ""
+        return BenchmarkMaintenanceAlertGovernanceEscalationListResponse(
+            limit=query_limit,
+            cursor=str(start),
+            next_cursor=next_cursor,
+            has_more=has_more,
+            total_events=total,
+            malformed_line_count=malformed_line_count,
+            events=window,
+            message="ok",
+        )
+
     def auto_remediate_maintenance_alert_governance_runs(
         self,
         *,
@@ -1482,6 +1577,7 @@ class V7BenchmarkStore:
         executed = False
         escalation_required = False
         escalation_reason = ""
+        escalation_event: BenchmarkMaintenanceAlertGovernanceEscalationEvent | None = None
         governance_run: BenchmarkMaintenanceAlertGovernanceRunResponse | None = None
         auto_prune: BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse | None = None
 
@@ -1508,17 +1604,10 @@ class V7BenchmarkStore:
                 executed = True
         elif action == "escalate_failed_run":
             escalation_required = True
-            if digest_before.message == "consecutive_failure_streak_exhausted":
-                escalation_reason = (
-                    f"consecutive_failures_{digest_before.summary.consecutive_failed_runs}"
-                    f"_reached_limit_{digest_before.escalation_failure_streak_limit}"
-                )
-            elif digest_before.summary.latest_failed_run is not None:
-                escalation_reason = (
-                    f"retry_exhausted_at_attempt_{digest_before.summary.latest_failed_run.attempt}"
-                )
-            else:
-                escalation_reason = "retry_exhausted"
+            escalation_reason = self._resolve_governance_escalation_reason(digest=digest_before)
+            if not dry_run:
+                emitted = self.emit_maintenance_alert_governance_escalation(limit=query_limit, source="auto_remediate")
+                escalation_event = emitted.event
 
         digest_after = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
         if dry_run:
@@ -1540,6 +1629,7 @@ class V7BenchmarkStore:
             executed=executed,
             escalation_required=escalation_required,
             escalation_reason=escalation_reason,
+            escalation_event=escalation_event,
             governance_run=governance_run,
             auto_prune=auto_prune,
             digest_before=digest_before,
@@ -1565,9 +1655,9 @@ class V7BenchmarkStore:
                 )
 
             rows, malformed_candidate_count = self._read_governance_run_records(path=path)
-            rows.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
-            kept = rows[:keep_count]
-            candidates = rows[keep_count:]
+            ordered_rows = self._order_governance_run_records(rows)
+            kept = ordered_rows[:keep_count]
+            candidates = ordered_rows[keep_count:]
 
             pruned_run_ids: list[str] = []
             malformed_dropped_count = 0
@@ -1692,6 +1782,9 @@ class V7BenchmarkStore:
     def _governance_runs_path(self) -> Path:
         return self.version_root / "_maintenance_alert_governance_runs.jsonl"
 
+    def _governance_escalations_path(self) -> Path:
+        return self.version_root / "_maintenance_alert_governance_escalations.jsonl"
+
     def _next_governance_run_id(self) -> str:
         return f"bm-governance-run-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
 
@@ -1759,6 +1852,22 @@ class V7BenchmarkStore:
                 malformed_count += 1
         return rows, malformed_count
 
+    def _order_governance_run_records(
+        self,
+        records: list[BenchmarkMaintenanceAlertGovernanceRunRecord],
+    ) -> list[BenchmarkMaintenanceAlertGovernanceRunRecord]:
+        indexed = list(enumerate(records))
+        indexed.sort(
+            key=lambda item: (
+                item[1].generated_at,
+                item[1].completed_at,
+                item[1].run_id,
+                item[0],
+            ),
+            reverse=True,
+        )
+        return [item[1] for item in indexed]
+
     def _write_alert_events(self, *, path: Path, events: list[BenchmarkMaintenanceAlertEvent]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = path.with_suffix(f"{path.suffix}.tmp")
@@ -1789,6 +1898,45 @@ class V7BenchmarkStore:
             except Exception:
                 malformed_count += 1
         return rows, malformed_count
+
+    def _read_governance_escalation_events(
+        self,
+        *,
+        path: Path,
+    ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationEvent], int]:
+        rows: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent] = []
+        malformed_count = 0
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except Exception:
+                malformed_count += 1
+                continue
+            if not isinstance(payload, dict):
+                malformed_count += 1
+                continue
+            try:
+                rows.append(BenchmarkMaintenanceAlertGovernanceEscalationEvent.model_validate(payload))
+            except Exception:
+                malformed_count += 1
+        return rows, malformed_count
+
+    def _resolve_governance_escalation_reason(
+        self,
+        *,
+        digest: BenchmarkMaintenanceAlertGovernanceRunDigestResponse,
+    ) -> str:
+        if digest.message == "consecutive_failure_streak_exhausted":
+            return (
+                f"consecutive_failures_{digest.summary.consecutive_failed_runs}"
+                f"_reached_limit_{digest.escalation_failure_streak_limit}"
+            )
+        if digest.summary.latest_failed_run is not None:
+            return f"retry_exhausted_at_attempt_{digest.summary.latest_failed_run.attempt}"
+        return "retry_exhausted"
 
     def _load_maintenance_sla_policy(self) -> BenchmarkMaintenanceSlaPolicy:
         return BenchmarkMaintenanceSlaPolicy(

@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第二十九轮生产化）
+# V7 Claude 评审验收提交清单（第三十轮生产化）
 
 - 日期：2026-05-01
-- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第二十九轮生产化增强进行验收（治理运行连续失败熔断升级）
+- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第三十轮生产化增强进行验收（治理升级事件落盘与查询）
 
 ## 1. 需求与计划文档
 
@@ -14,28 +14,32 @@
 
 1. `backend/app/services/narrative_v7/schemas.py`
 2. `backend/app/services/narrative_v7/benchmark_store.py`
-3. `tests/test_narrative_v7_modules.py`
-4. `tests/test_narrative_v7_api.py`
+3. `backend/app/services/narrative_v7/benchmark_library.py`
+4. `backend/app/api/routes/narrative_v7.py`
+5. `tests/test_narrative_v7_modules.py`
+6. `tests/test_narrative_v7_api.py`
 
-## 3. 第二十九轮能力增量
+## 3. 第三十轮能力增量
 
-1. 新增治理运行连续失败升级阈值策略：`AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK`。
-2. 治理运行摘要新增连续失败计数：`consecutive_failed_runs`。
-3. 治理运行 Digest 新增失败熔断字段：`escalation_failure_streak_limit/failure_streak_exhausted`。
-4. 当连续失败达到阈值时，Digest 推荐动作升级为 `escalate_failed_run`（message: `consecutive_failure_streak_exhausted`）。
-5. auto-remediate 新增连续失败升级原因输出：`consecutive_failures_{n}_reached_limit_{limit}`。
+1. 新增治理升级事件落盘能力：`emit_maintenance_alert_governance_escalation`。
+2. 新增治理升级事件分页查询能力：`list_maintenance_alert_governance_escalations`。
+3. 新增升级事件 API：
+   - `POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit`
+   - `GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations`
+4. auto-remediate 升级路径新增自动事件发射（`source=auto_remediate`）。
+5. 新增升级事件日志文件：`_maintenance_alert_governance_escalations.jsonl`。
 
 ## 4. 测试清单
 
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`78 passed`
+4. 结果：`80 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 5. 建议评审重点
 
-1. 连续失败计数 `consecutive_failed_runs` 是否准确反映最新连续失败窗口。
-2. Digest 在连续失败超阈值场景下是否稳定给出 `escalate_failed_run`。
-3. 重试预算充足但连续失败超阈值时，是否正确触发熔断升级而非继续重试。
-4. auto-remediate 在连续失败升级场景下的 `escalation_reason` 是否可用于值班处置。
+1. 升级事件发射门禁是否准确（非升级动作时不误发，返回 `no_escalation_needed`）。
+2. 升级事件字段是否满足值班追踪需求（`reason/source/latest_run/latest_failed_run`）。
+3. auto-remediate 升级场景是否自动落盘并回填 `escalation_event`。
+4. 升级事件分页查询（`cursor/next_cursor/has_more`）语义是否稳定。

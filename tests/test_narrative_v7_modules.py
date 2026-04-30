@@ -1362,7 +1362,64 @@ def test_benchmark_store_governance_failure_streak_escalates(monkeypatch, tmp_pa
     assert remediated.executed is False
     assert remediated.escalation_required is True
     assert remediated.escalation_reason == "consecutive_failures_2_reached_limit_2"
+    assert remediated.escalation_event is not None
+    assert remediated.escalation_event.source == "auto_remediate"
     assert remediated.message == "escalation_required"
+
+    escalation_events = store.list_maintenance_alert_governance_escalations(limit=20)
+    assert escalation_events.total_events == 1
+    assert escalation_events.events[0].source == "auto_remediate"
+    assert escalation_events.events[0].escalation_reason == "consecutive_failures_2_reached_limit_2"
+
+
+def test_benchmark_store_emits_and_lists_governance_escalation_events(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-escalation-events",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.56},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_events")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_escalation_events"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-escalation-events-{index}",
+            )
+
+    emitted = store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert emitted.emitted is True
+    assert emitted.event is not None
+    assert emitted.event.source == "manual_emit"
+    assert emitted.event.recommended_action == "escalate_failed_run"
+    assert emitted.event.failure_streak_exhausted is True
+    assert emitted.message == "escalation_emitted"
+
+    listed = store.list_maintenance_alert_governance_escalations(limit=20)
+    assert listed.total_events == 1
+    assert listed.events[0].event_id == emitted.event.event_id
+    assert listed.events[0].source == "manual_emit"
+
+    clean_store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store_clean.jsonl")
+    no_escalation = clean_store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert no_escalation.emitted is False
+    assert no_escalation.event is None
+    assert no_escalation.message == "no_escalation_needed"
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:

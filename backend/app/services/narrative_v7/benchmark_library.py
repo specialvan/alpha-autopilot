@@ -18,6 +18,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -200,6 +202,21 @@ class BenchmarkLibrary:
         limit: int = 200,
     ) -> BenchmarkMaintenanceAlertGovernanceRunDigestResponse:
         return self._store.build_maintenance_alert_governance_runs_digest(limit=limit)
+
+    def emit_maintenance_alert_governance_escalation(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse:
+        return self._store.emit_maintenance_alert_governance_escalation(limit=limit)
+
+    def list_maintenance_alert_governance_escalations(
+        self,
+        *,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationListResponse:
+        return self._store.list_maintenance_alert_governance_escalations(limit=limit, cursor=cursor)
 
     def auto_remediate_maintenance_alert_governance_runs(
         self,
