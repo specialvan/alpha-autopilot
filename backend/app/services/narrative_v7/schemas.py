@@ -1139,6 +1139,35 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRespo
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    generated_at: str
+    dry_run: bool
+    limit: int = Field(default=0, ge=0)
+    action: str = "observe"
+    executed: bool = False
+    remediated_escalations: bool = False
+    pruned_remediation_history: bool = False
+    digest_before_message: str = ""
+    digest_after_message: str = ""
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    records: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunRecord] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

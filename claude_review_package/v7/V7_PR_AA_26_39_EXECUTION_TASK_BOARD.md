@@ -496,6 +496,15 @@
 - [x] 输出执行细节（`remediated_escalations/pruned_remediation_history/escalation_auto_remediate/remediation_auto_prune`）
 - [x] 第42轮回归测试覆盖（governance escalation auto-remediation orchestrator store/api）
 
+## 生产化增强清单（第四十三轮）
+
+- [x] 治理升级事件自愈历史编排运行记录落盘能力（orchestrator runs）
+- [x] 编排运行历史查询接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs`
+- [x] 历史字段输出：`action/executed/remediated_escalations/pruned_remediation_history/digest_before_message/digest_after_message`
+- [x] 支持 `limit/cursor` 分页消费与脏行计数（`malformed_line_count`）
+- [x] 将 dry-run 与 apply 编排轨迹统一纳入审计闭环
+- [x] 第43轮回归测试覆盖（governance escalation auto-remediation orchestrator runs store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

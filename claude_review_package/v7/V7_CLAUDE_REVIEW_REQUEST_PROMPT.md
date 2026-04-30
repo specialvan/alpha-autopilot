@@ -82,3 +82,15 @@ Please additionally review remediation-history orchestrator behavior:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/digest
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediate
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune
+
+## Round-43 Additional Review Targets
+
+Please additionally review remediation-orchestrator run history behavior:
+
+- GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs
+  - Validate record ordering and pagination continuity.
+  - Validate action/executed/remediated/pruned flags and digest-message trace fields.
+  - Validate dry_run/apply tracks are both persisted and queryable.
+- Correlate with:
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/digest
