@@ -1478,16 +1478,23 @@ class V7BenchmarkStore:
         *,
         limit: int = 200,
         source: str = "manual_emit",
+        ignore_cooldown: bool = False,
     ) -> BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse:
         query_limit = max(0, int(limit))
         digest = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
         source_tag = "auto_remediate" if str(source or "").strip() == "auto_remediate" else "manual_emit"
+        policy = self._load_alert_governance_policy()
+        cooldown_seconds = max(0, int(policy.governance_escalations_emit_cooldown_seconds))
 
         if digest.recommended_action != "escalate_failed_run":
             return BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse(
                 generated_at=_now_iso(),
                 limit=query_limit,
                 emitted=False,
+                suppressed=False,
+                suppression_reason="",
+                suppressed_by_event_id="",
+                cooldown_seconds=cooldown_seconds,
                 digest=digest,
                 event=None,
                 message="no_escalation_needed",
@@ -1514,6 +1521,42 @@ class V7BenchmarkStore:
             retry_exhausted=digest.retry_exhausted,
             failure_streak_exhausted=digest.failure_streak_exhausted,
         )
+
+        if not bool(ignore_cooldown) and cooldown_seconds > 0:
+            with self._lock:
+                path = self._governance_escalations_path()
+                if path.exists():
+                    rows, _ = self._read_governance_escalation_events(path=path)
+                    ordered_rows = self._order_governance_escalation_events(rows)
+                else:
+                    ordered_rows = []
+            if ordered_rows:
+                latest = ordered_rows[0]
+                latest_time = _parse_iso_utc(latest.generated_at)
+                latest_age_seconds = -1.0
+                if latest_time is not None:
+                    latest_age_seconds = max(0.0, (datetime.now(timezone.utc) - latest_time).total_seconds())
+                same_signature = (
+                    latest.source == source_tag
+                    and latest.escalation_reason == escalation_reason
+                    and latest.latest_failed_run_id == latest_failed_run_id
+                    and latest.retry_exhausted == digest.retry_exhausted
+                    and latest.failure_streak_exhausted == digest.failure_streak_exhausted
+                )
+                if same_signature and 0.0 <= latest_age_seconds <= float(cooldown_seconds):
+                    return BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse(
+                        generated_at=_now_iso(),
+                        limit=query_limit,
+                        emitted=False,
+                        suppressed=True,
+                        suppression_reason="cooldown_active",
+                        suppressed_by_event_id=latest.event_id,
+                        cooldown_seconds=cooldown_seconds,
+                        digest=digest,
+                        event=latest,
+                        message="escalation_suppressed_cooldown",
+                    )
+
         with self._lock:
             path = self._governance_escalations_path()
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -1524,6 +1567,10 @@ class V7BenchmarkStore:
             generated_at=_now_iso(),
             limit=query_limit,
             emitted=True,
+            suppressed=False,
+            suppression_reason="",
+            suppressed_by_event_id="",
+            cooldown_seconds=cooldown_seconds,
             digest=digest,
             event=event,
             message="escalation_emitted",
@@ -2248,6 +2295,11 @@ class V7BenchmarkStore:
             governance_escalations_prune_keep_last=_env_int(
                 "AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST",
                 5000,
+                low=0,
+            ),
+            governance_escalations_emit_cooldown_seconds=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_ESCALATIONS_EMIT_COOLDOWN_SECONDS",
+                300,
                 low=0,
             ),
             governance_runs_max_retry_attempts=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", 3, low=1),

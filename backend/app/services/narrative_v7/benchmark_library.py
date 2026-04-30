@@ -213,8 +213,12 @@ class BenchmarkLibrary:
         self,
         *,
         limit: int = 200,
+        ignore_cooldown: bool = False,
     ) -> BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse:
-        return self._store.emit_maintenance_alert_governance_escalation(limit=limit)
+        return self._store.emit_maintenance_alert_governance_escalation(
+            limit=limit,
+            ignore_cooldown=ignore_cooldown,
+        )
 
     def list_maintenance_alert_governance_escalations(
         self,

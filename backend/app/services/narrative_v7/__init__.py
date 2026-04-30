@@ -9,6 +9,7 @@ from .decision_controller import DecisionFeedbackController
 from .emotion_satisfaction import EmotionSatisfactionScorer
 from .expectation_debt import ExpectationDebtManager
 from .loop_structure import LoopStructureAnalyzer
+from .market_state_adapter import StoryStateMarketAdapter
 from .nqm_sampler import NQMSampler
 from .opening_gate import OpeningGate
 from .observability import (
@@ -29,6 +30,7 @@ __all__ = [
     "EmotionSatisfactionScorer",
     "ExpectationDebtManager",
     "LoopStructureAnalyzer",
+    "StoryStateMarketAdapter",
     "NQMSampler",
     "OpeningGate",
     "V7RuntimeMetricsStore",

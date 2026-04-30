@@ -10,6 +10,7 @@ from threading import RLock
 from alpha_autopilot import ArtifactStore
 
 from ...core.config import settings
+from ..observability_envelope import build_unified_observability_envelope
 
 
 def _now_iso() -> str:
@@ -106,7 +107,7 @@ def build_v7_observability_snapshot(
     min_samples = max(1, _env_int("AA_V7_OBS_MIN_SAMPLES", 8))
 
     if count == 0:
-        return {
+        snapshot = {
             "enabled": False,
             "windowLimit": limit,
             "runtimeRows": 0,
@@ -127,6 +128,11 @@ def build_v7_observability_snapshot(
             },
             "lastUpdated": "",
         }
+        snapshot["unifiedEnvelope"] = build_unified_observability_envelope(
+            layer="v7",
+            snapshot=snapshot,
+        )
+        return snapshot
 
     latencies = [max(0.0, float(item.get("latency_ms", 0.0))) for item in rows]
     errors = sum(1 for item in rows if str(item.get("status", "")).lower() == "error")
@@ -175,7 +181,7 @@ def build_v7_observability_snapshot(
             }
         )
 
-    return {
+    snapshot = {
         "enabled": True,
         "windowLimit": limit,
         "runtimeRows": count,
@@ -190,6 +196,11 @@ def build_v7_observability_snapshot(
         },
         "lastUpdated": str(rows[-1].get("timestamp", "")),
     }
+    snapshot["unifiedEnvelope"] = build_unified_observability_envelope(
+        layer="v7",
+        snapshot=snapshot,
+    )
+    return snapshot
 
 
 def _percentile(values: list[float], *, percentile: float) -> float:

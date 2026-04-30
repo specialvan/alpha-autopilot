@@ -1450,6 +1450,57 @@ def test_benchmark_store_emits_and_lists_governance_escalation_events(monkeypatc
     assert no_escalation.message == "no_escalation_needed"
 
 
+def test_benchmark_store_suppresses_duplicate_escalation_emit_with_cooldown(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-escalation-cooldown",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.55},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_EMIT_COOLDOWN_SECONDS", "3600")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_cooldown")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_escalation_cooldown"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-escalation-cooldown-{index}",
+            )
+
+    first = store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert first.emitted is True
+    assert first.suppressed is False
+    assert first.event is not None
+
+    second = store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert second.emitted is False
+    assert second.suppressed is True
+    assert second.suppression_reason == "cooldown_active"
+    assert second.suppressed_by_event_id == first.event.event_id
+    assert second.cooldown_seconds == 3600
+    assert second.message == "escalation_suppressed_cooldown"
+
+    forced = store.emit_maintenance_alert_governance_escalation(limit=20, ignore_cooldown=True)
+    assert forced.emitted is True
+    assert forced.suppressed is False
+    assert forced.event is not None
+    assert forced.event.event_id != first.event.event_id
+
+
 def test_benchmark_store_summarizes_and_exports_governance_escalations(monkeypatch, tmp_path) -> None:
     store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
     _ = store.ingest(

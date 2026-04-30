@@ -448,6 +448,7 @@ describe('V2WorkbenchPage', () => {
     expect(screen.getByRole('button', { name: 'Show Diagnostics' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy Diagnostics' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy Online Diagnostics' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run V6/V7 Decision Preview' })).toBeInTheDocument();
     expect(await screen.findByText('Current Live Chapter')).toBeInTheDocument();
     expect(screen.getByText('approved')).toBeInTheDocument();
     expect(screen.getByText('brisk')).toBeInTheDocument();
@@ -900,5 +901,24 @@ describe('V2WorkbenchPage', () => {
 
     expect(await screen.findByText('accepted-from-decision')).toBeInTheDocument();
     expect(screen.getByText('blocked-from-decision')).toBeInTheDocument();
+  });
+
+  it('sends macro_structure through existing preview route payload without adding new API', async () => {
+    const user = userEvent.setup();
+    render(<V2WorkbenchPage />);
+
+    expect(await screen.findByRole('heading', { name: 'V2 Workbench' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Macro Structure'), 'anthology');
+    await user.click(screen.getByRole('button', { name: 'Run Preview' }));
+
+    await waitFor(() =>
+      expect(fetchRecommendationPreviewV2).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          state: expect.objectContaining({
+            macro_structure: 'anthology',
+          }),
+        }),
+      ),
+    );
   });
 });

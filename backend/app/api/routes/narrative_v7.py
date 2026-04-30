@@ -739,11 +739,15 @@ def benchmark_maintenance_alert_governance_runs_digest(
 )
 def benchmark_maintenance_alert_governance_runs_escalation_emit(
     limit: int = Query(default=200, ge=1, le=20000),
+    ignore_cooldown: bool = Query(default=False),
 ) -> BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse:
     return _execute_with_metrics(
         route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit",
         feature_name="benchmark_maintenance_alert_governance_runs_escalation_emit",
-        operation=lambda: _benchmark_library.emit_maintenance_alert_governance_escalation(limit=limit),
+        operation=lambda: _benchmark_library.emit_maintenance_alert_governance_escalation(
+            limit=limit,
+            ignore_cooldown=ignore_cooldown,
+        ),
     )
 
 

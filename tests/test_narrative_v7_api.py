@@ -1675,6 +1675,73 @@ def test_v7_api_supports_governance_escalation_emit_and_list(monkeypatch) -> Non
     assert len(exported["events"]) == 1
 
 
+def test_v7_api_suppresses_duplicate_governance_escalation_emit_with_cooldown(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-escalation-cooldown-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.54},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_EMIT_COOLDOWN_SECONDS", "3600")
+    store = narrative_v7_route._benchmark_store
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_cooldown_api")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        failed_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-escalation-cooldown-api-{index}"
+        )
+        assert failed_response.status_code == 500
+
+    first_emit_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit?limit=20"
+    )
+    assert first_emit_response.status_code == 200
+    first_emit = first_emit_response.json()
+    assert first_emit["emitted"] is True
+    assert first_emit["suppressed"] is False
+    assert first_emit["event"] is not None
+
+    second_emit_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit?limit=20"
+    )
+    assert second_emit_response.status_code == 200
+    second_emit = second_emit_response.json()
+    assert second_emit["emitted"] is False
+    assert second_emit["suppressed"] is True
+    assert second_emit["suppression_reason"] == "cooldown_active"
+    assert second_emit["suppressed_by_event_id"] == first_emit["event"]["event_id"]
+    assert second_emit["cooldown_seconds"] == 3600
+    assert second_emit["message"] == "escalation_suppressed_cooldown"
+
+    force_emit_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit?limit=20&ignore_cooldown=true"
+    )
+    assert force_emit_response.status_code == 200
+    force_emit = force_emit_response.json()
+    assert force_emit["emitted"] is True
+    assert force_emit["suppressed"] is False
+    assert force_emit["event"] is not None
+    assert force_emit["event"]["event_id"] != first_emit["event"]["event_id"]
+
+
 def test_v7_api_supports_governance_escalation_export_pagination(monkeypatch) -> None:
     app = FastAPI()
     app.include_router(narrative_v7_router)

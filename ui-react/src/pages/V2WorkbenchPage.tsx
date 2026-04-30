@@ -1,4 +1,5 @@
 import '../features/v2Workbench/workbench.css';
+import { CharacterInterviewPanel } from '../features/v2Workbench/components/CharacterInterviewPanel';
 import { ContextRail } from '../features/v2Workbench/components/ContextRail';
 import { DecisionSurface } from '../features/v2Workbench/components/DecisionSurface';
 import { ValidationRail } from '../features/v2Workbench/components/ValidationRail';
@@ -15,6 +16,9 @@ export function V2WorkbenchPage() {
         <ContextRail controller={controller} />
         <DecisionSurface controller={controller} />
         <ValidationRail controller={controller} />
+      </section>
+      <section style={{ marginTop: 16 }}>
+        <CharacterInterviewPanel controller={controller} />
       </section>
     </main>
   );

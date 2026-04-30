@@ -170,11 +170,35 @@ export type NarrativeV2StoryState = {
   payoff_pressure: number;
   characters: Record<string, NarrativeV2CharacterState>;
   tags: string[];
+  retention_desire?: {
+    primal_desire: number;
+    value_recognition: number;
+    knowledge_curiosity: number;
+    information_gap: number;
+    dominant?: 'primal_desire' | 'value_recognition' | 'knowledge_curiosity' | 'information_gap';
+    dominant_override?: 'primal_desire' | 'value_recognition' | 'knowledge_curiosity' | 'information_gap';
+  };
+  macro_structure?: 'progressive' | 'hub_and_spoke' | 'anthology';
+};
+
+export type PlotTurnType = 'obstacle_shift' | 'goal_inversion' | 'character_contrast';
+
+export type PlotUnitScaffold = {
+  encounter_event: string;
+  desire_goal: string;
+  obstacle: string;
+  solution_method: string;
+  action_climax: {
+    node: string;
+    turn_type: PlotTurnType;
+  };
+  resolution: string;
 };
 
 export type NarrativeV2PreviewRequest = {
   case_id: string;
   state: NarrativeV2StoryState;
+  plot_unit_scaffold?: PlotUnitScaffold;
 };
 
 export type NarrativeV2RuleCheck = {
@@ -311,6 +335,11 @@ export type NarrativeV4WorkbenchPreview = {
     bias_updates?: Record<string, number>;
   };
   retention_writeback?: Record<string, unknown>;
+  character_behavior_constraints?: Array<Record<string, unknown>>;
+  character_validation?: Record<string, unknown>;
+  relationship_graph_constraints?: Record<string, unknown>;
+  prompt_documents?: Record<string, string>;
+  prompt_compression_logs?: Array<Record<string, unknown>>;
   selected_candidate?: NarrativeV4WorkbenchCandidate | null;
   top_candidates?: NarrativeV4WorkbenchCandidate[];
   qc_summary?: Record<string, unknown>;
@@ -424,6 +453,75 @@ export type NarrativeV2WorkbenchContextsResponse = {
   report_timestamp?: string;
   arbitration_strategy?: string;
   source_diagnostics?: Record<string, unknown>;
+};
+
+export type NarrativeV6InterviewMode =
+  | 'voice_test'
+  | 'scene_reaction'
+  | 'secret_probe'
+  | 'free_chat';
+
+export type NarrativeV6CharacterInterviewRequest = {
+  profile: Record<string, unknown>;
+  chapter_memory?: string[];
+  relationship_graph_input?: Record<string, unknown>;
+  group_memory_graph?: Record<string, unknown>;
+  user_message: string;
+  mode?: NarrativeV6InterviewMode;
+  allow_hidden_info?: boolean;
+};
+
+export type NarrativeV6CharacterInterviewResponse = {
+  character_id: string;
+  reply: string;
+  memory_evidence: string[];
+  emotion_state_shift: string;
+  ooc_risk_flags: string[];
+  hidden_info_risk_flags: string[];
+  transcript: Array<{ role: string; content: string }>;
+  plot_foreshadow_candidates: string[];
+};
+
+export type NarrativeV7DecisionPreviewRequest = {
+  text: string;
+  story_state: Record<string, unknown>;
+  character_states?: Array<Record<string, unknown>>;
+  project_state?: {
+    project_id: string;
+    platform: string;
+    genre_track: string;
+    reader_profile: string;
+    ip_flavor_tag: string;
+    selling_point_contract: string;
+  };
+  benchmark_state?: Record<string, unknown>;
+  metric_overrides?: Record<string, number>;
+  decision_state?: Record<string, unknown>;
+  override_confirmed?: boolean;
+};
+
+export type NarrativeV7DecisionPreviewResponse = {
+  market_state: Record<string, unknown>;
+  vector: {
+    metrics: Record<string, number>;
+    composite: number;
+  };
+  ohlcv: {
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  };
+  decision: {
+    decision_type: string;
+    risk_level: string;
+    route_id: string;
+    reasons: string[];
+    suggested_actions: string[];
+    observe_next_metrics: string[];
+  };
+  defaults_applied: string[];
 };
 
 export type HistoryTimelineItem = {
@@ -570,6 +668,39 @@ export async function fetchNarrativeV4WorkbenchPreview(
     throw new Error(`v4 workbench preview failed: ${response.status}`);
   }
   return (await response.json()) as NarrativeV4WorkbenchPreview;
+}
+
+export async function fetchNarrativeV6CharacterInterview(
+  characterId: string,
+  payload: NarrativeV6CharacterInterviewRequest,
+): Promise<NarrativeV6CharacterInterviewResponse> {
+  const response = await fetch(`${DEFAULT_BASE_URL}/api/narrative/v6/characters/${characterId}/interview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`v6 character interview failed: ${response.status}`);
+  }
+  return (await response.json()) as NarrativeV6CharacterInterviewResponse;
+}
+
+export async function fetchNarrativeV7DecisionPreview(
+  payload: NarrativeV7DecisionPreviewRequest,
+): Promise<NarrativeV7DecisionPreviewResponse> {
+  const response = await fetch(`${DEFAULT_BASE_URL}/api/narrative/v7/decision/preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`v7 decision preview failed: ${response.status}`);
+  }
+  return (await response.json()) as NarrativeV7DecisionPreviewResponse;
 }
 
 export async function runTraining(): Promise<TrainingResponse> {
