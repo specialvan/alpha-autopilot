@@ -40,6 +40,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1704,6 +1705,57 @@ class V7BenchmarkStore:
             should_prune=True,
             prune=prune,
             message="pruned" if not dry_run else "dry_run",
+        )
+
+    def build_maintenance_alert_governance_escalations_digest(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse:
+        query_limit = max(0, int(limit))
+        summary = self.summarize_maintenance_alert_governance_escalations(limit=query_limit)
+        run_digest = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
+        policy = self._load_alert_governance_policy()
+        stale_threshold_seconds = _env_int("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_STALE_SECONDS", 900, low=0)
+
+        latest_event_age_seconds = -1.0
+        is_stale = True
+        if summary.latest_event is not None:
+            parsed_latest = _parse_iso_utc(summary.latest_event.generated_at)
+            if parsed_latest is not None:
+                latest_event_age_seconds = max(0.0, (datetime.now(timezone.utc) - parsed_latest).total_seconds())
+                is_stale = latest_event_age_seconds > stale_threshold_seconds
+            else:
+                is_stale = True
+
+        if summary.malformed_line_count > 0:
+            recommended_action = "auto_prune_escalations"
+            message = "malformed_detected"
+        elif summary.total_events > policy.governance_escalations_prune_trigger_count:
+            recommended_action = "auto_prune_escalations"
+            message = "above_prune_threshold"
+        elif run_digest.recommended_action == "escalate_failed_run" and (summary.latest_event is None or is_stale):
+            recommended_action = "emit_escalation"
+            message = "escalation_needed"
+        elif summary.latest_event is None:
+            recommended_action = "observe"
+            message = "no_escalations"
+        elif is_stale:
+            recommended_action = "observe"
+            message = "stale"
+        else:
+            recommended_action = "observe"
+            message = "ok"
+
+        return BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse(
+            generated_at=_now_iso(),
+            stale_threshold_seconds=stale_threshold_seconds,
+            latest_event_age_seconds=latest_event_age_seconds,
+            is_stale=is_stale,
+            recommended_action=recommended_action,
+            summary=summary,
+            run_digest=run_digest,
+            message=message,
         )
 
     def auto_remediate_maintenance_alert_governance_runs(

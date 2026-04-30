@@ -977,6 +977,19 @@ class BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    stale_threshold_seconds: int = Field(default=0, ge=0)
+    latest_event_age_seconds: float = Field(default=-1.0, ge=-1.0)
+    is_stale: bool = True
+    recommended_action: str = "observe"
+    summary: BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse
+    run_digest: BenchmarkMaintenanceAlertGovernanceRunDigestResponse
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

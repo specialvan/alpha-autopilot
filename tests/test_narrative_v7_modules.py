@@ -1648,6 +1648,60 @@ def test_benchmark_store_auto_prunes_governance_escalations(monkeypatch, tmp_pat
     assert not_needed.message == "below_threshold"
 
 
+def test_benchmark_store_builds_governance_escalations_digest(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-escalation-digest",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.57},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_STALE_SECONDS", "3600")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_digest")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_escalation_digest"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-escalation-digest-{index}",
+            )
+
+    digest_before = store.build_maintenance_alert_governance_escalations_digest(limit=20)
+    assert digest_before.summary.total_events == 0
+    assert digest_before.run_digest.recommended_action == "escalate_failed_run"
+    assert digest_before.recommended_action == "emit_escalation"
+    assert digest_before.message == "escalation_needed"
+
+    emitted = store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert emitted.emitted is True
+
+    digest_after = store.build_maintenance_alert_governance_escalations_digest(limit=20)
+    assert digest_after.summary.total_events == 1
+    assert digest_after.recommended_action == "observe"
+    assert digest_after.message == "ok"
+
+    escalation_log = store.version_root / "_maintenance_alert_governance_escalations.jsonl"
+    with escalation_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    digest_malformed = store.build_maintenance_alert_governance_escalations_digest(limit=20)
+    assert digest_malformed.recommended_action == "auto_prune_escalations"
+    assert digest_malformed.message == "malformed_detected"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)
