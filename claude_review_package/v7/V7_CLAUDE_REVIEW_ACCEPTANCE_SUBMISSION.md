@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第三十轮生产化）
+# V7 Claude 评审验收提交清单（第三十一轮生产化）
 
 - 日期：2026-05-01
-- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第三十轮生产化增强进行验收（治理升级事件落盘与查询）
+- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第三十一轮生产化增强进行验收（治理升级事件摘要与导出）
 
 ## 1. 需求与计划文档
 
@@ -19,27 +19,25 @@
 5. `tests/test_narrative_v7_modules.py`
 6. `tests/test_narrative_v7_api.py`
 
-## 3. 第三十轮能力增量
+## 3. 第三十一轮能力增量
 
-1. 新增治理升级事件落盘能力：`emit_maintenance_alert_governance_escalation`。
-2. 新增治理升级事件分页查询能力：`list_maintenance_alert_governance_escalations`。
-3. 新增升级事件 API：
-   - `POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit`
-   - `GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations`
-4. auto-remediate 升级路径新增自动事件发射（`source=auto_remediate`）。
-5. 新增升级事件日志文件：`_maintenance_alert_governance_escalations.jsonl`。
+1. 新增治理升级事件摘要能力：`summarize_maintenance_alert_governance_escalations`。
+2. 新增治理升级事件导出能力：`export_maintenance_alert_governance_escalations`。
+3. 新增摘要 API：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/summary`。
+4. 新增导出 API：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/export`。
+5. 升级事件新增 source/触发类型统计字段与稳定排序增强，便于值班看板消费。
 
 ## 4. 测试清单
 
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`80 passed`
+4. 结果：`82 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 5. 建议评审重点
 
-1. 升级事件发射门禁是否准确（非升级动作时不误发，返回 `no_escalation_needed`）。
-2. 升级事件字段是否满足值班追踪需求（`reason/source/latest_run/latest_failed_run`）。
-3. auto-remediate 升级场景是否自动落盘并回填 `escalation_event`。
-4. 升级事件分页查询（`cursor/next_cursor/has_more`）语义是否稳定。
+1. 升级事件摘要统计是否准确（`manual_emit/auto_remediate/retry_exhausted/failure_streak_exhausted`）。
+2. 升级事件导出结构是否满足单请求验收（`summary + paged events`）。
+3. 摘要与导出的 `total_events/malformed_line_count` 口径是否一致。
+4. 同秒多事件场景下排序与分页是否稳定可复现。

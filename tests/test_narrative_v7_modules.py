@@ -1422,6 +1422,69 @@ def test_benchmark_store_emits_and_lists_governance_escalation_events(monkeypatc
     assert no_escalation.message == "no_escalation_needed"
 
 
+def test_benchmark_store_summarizes_and_exports_governance_escalations(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-escalation-export",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.54},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_export")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_escalation_export"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-escalation-export-{index}",
+            )
+
+    manual_emit = store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert manual_emit.emitted is True
+    auto_emit = store.auto_remediate_maintenance_alert_governance_runs(
+        dry_run=False,
+        limit=20,
+        alert_limit=20,
+        archive_limit=20,
+    )
+    assert auto_emit.escalation_event is not None
+
+    summary = store.summarize_maintenance_alert_governance_escalations(limit=20)
+    assert summary.total_events == 2
+    assert summary.window_event_count == 2
+    assert summary.manual_emit_count == 1
+    assert summary.auto_remediate_count == 1
+    assert summary.failure_streak_exhausted_count == 2
+    assert summary.retry_exhausted_count == 0
+    assert summary.latest_event is not None
+
+    export_first = store.export_maintenance_alert_governance_escalations(limit=1)
+    assert export_first.limit == 1
+    assert export_first.summary.total_events == 2
+    assert len(export_first.events) == 1
+    assert export_first.has_more is True
+    assert export_first.next_cursor
+
+    export_second = store.export_maintenance_alert_governance_escalations(limit=1, cursor=export_first.next_cursor)
+    assert export_second.limit == 1
+    assert len(export_second.events) == 1
+    assert export_second.has_more is False
+    assert export_second.cursor == export_first.next_cursor
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

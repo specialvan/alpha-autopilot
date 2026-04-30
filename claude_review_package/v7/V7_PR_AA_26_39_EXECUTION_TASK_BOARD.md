@@ -384,6 +384,16 @@
 - [x] 新增升级事件 API：`POST /governance/runs/escalation/emit`、`GET /governance/runs/escalations`
 - [x] 第30轮回归测试覆盖（escalation emit/list + auto-remediate event store/api）
 
+## 生产化增强清单（第三十一轮）
+
+- [x] 治理升级事件摘要能力：`summarize_maintenance_alert_governance_escalations`
+- [x] 治理升级事件导出能力：`export_maintenance_alert_governance_escalations`
+- [x] 摘要输出 source/触发类型统计（`manual_emit/auto_remediate/retry_exhausted/failure_streak_exhausted`）
+- [x] 新增升级事件摘要 API：`GET /governance/runs/escalations/summary`
+- [x] 新增升级事件导出 API：`GET /governance/runs/escalations/export`
+- [x] 升级事件排序稳定性增强（同秒事件稳定排序）
+- [x] 第31轮回归测试覆盖（escalation summary/export store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -394,5 +404,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`80 passed`
+- [x] 结果：`82 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

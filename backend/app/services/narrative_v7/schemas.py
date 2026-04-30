@@ -873,6 +873,37 @@ class BenchmarkMaintenanceAlertGovernanceEscalationListResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    total_events: int = Field(default=0, ge=0)
+    window_event_count: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    manual_emit_count: int = Field(default=0, ge=0)
+    auto_remediate_count: int = Field(default=0, ge=0)
+    retry_exhausted_count: int = Field(default=0, ge=0)
+    failure_streak_exhausted_count: int = Field(default=0, ge=0)
+    latest_event: BenchmarkMaintenanceAlertGovernanceEscalationEvent | None = None
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    summary: BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse
+    events: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

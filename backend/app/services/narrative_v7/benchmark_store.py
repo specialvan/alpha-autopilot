@@ -36,6 +36,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationEvent,
     BenchmarkMaintenanceAlertGovernanceEscalationEmitResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1541,11 +1543,11 @@ class V7BenchmarkStore:
                     message="no_escalations",
                 )
             rows, malformed_line_count = self._read_governance_escalation_events(path=path)
-        rows.sort(key=lambda item: item.generated_at, reverse=True)
-        total = len(rows)
+        ordered_rows = self._order_governance_escalation_events(rows)
+        total = len(ordered_rows)
         start = min(offset, total)
         end = min(total, start + query_limit) if query_limit > 0 else total
-        window = rows[start:end]
+        window = ordered_rows[start:end]
         has_more = end < total
         next_cursor = str(end) if has_more else ""
         return BenchmarkMaintenanceAlertGovernanceEscalationListResponse(
@@ -1556,6 +1558,60 @@ class V7BenchmarkStore:
             total_events=total,
             malformed_line_count=malformed_line_count,
             events=window,
+            message="ok",
+        )
+
+    def summarize_maintenance_alert_governance_escalations(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse:
+        query_limit = max(0, int(limit))
+        with self._lock:
+            path = self._governance_escalations_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse(
+                    generated_at=_now_iso(),
+                    limit=query_limit,
+                    message="no_escalations",
+                )
+            rows, malformed_line_count = self._read_governance_escalation_events(path=path)
+
+        ordered_rows = self._order_governance_escalation_events(rows)
+        window = ordered_rows[:query_limit] if query_limit > 0 else ordered_rows
+        return BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            total_events=len(ordered_rows),
+            window_event_count=len(window),
+            malformed_line_count=malformed_line_count,
+            manual_emit_count=sum(1 for item in window if item.source == "manual_emit"),
+            auto_remediate_count=sum(1 for item in window if item.source == "auto_remediate"),
+            retry_exhausted_count=sum(1 for item in window if item.retry_exhausted),
+            failure_streak_exhausted_count=sum(1 for item in window if item.failure_streak_exhausted),
+            latest_event=ordered_rows[0] if ordered_rows else None,
+            message="ok",
+        )
+
+    def export_maintenance_alert_governance_escalations(
+        self,
+        *,
+        limit: int = 200,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationExportResponse:
+        query_limit = max(0, int(limit))
+        summary = self.summarize_maintenance_alert_governance_escalations(limit=query_limit)
+        page = self.list_maintenance_alert_governance_escalations(limit=query_limit, cursor=cursor)
+        return BenchmarkMaintenanceAlertGovernanceEscalationExportResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            cursor=page.cursor,
+            next_cursor=page.next_cursor,
+            has_more=page.has_more,
+            total_events=page.total_events,
+            malformed_line_count=page.malformed_line_count,
+            summary=summary,
+            events=page.events,
             message="ok",
         )
 
@@ -1862,6 +1918,21 @@ class V7BenchmarkStore:
                 item[1].generated_at,
                 item[1].completed_at,
                 item[1].run_id,
+                item[0],
+            ),
+            reverse=True,
+        )
+        return [item[1] for item in indexed]
+
+    def _order_governance_escalation_events(
+        self,
+        events: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent],
+    ) -> list[BenchmarkMaintenanceAlertGovernanceEscalationEvent]:
+        indexed = list(enumerate(events))
+        indexed.sort(
+            key=lambda item: (
+                item[1].generated_at,
+                item[1].event_id,
                 item[0],
             ),
             reverse=True,

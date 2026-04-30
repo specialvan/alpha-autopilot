@@ -1576,6 +1576,90 @@ def test_v7_api_supports_governance_escalation_emit_and_list(monkeypatch) -> Non
     assert listed["total_events"] == 1
     assert listed["events"][0]["event_id"] == emitted["event"]["event_id"]
 
+    summary_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/summary?limit=20"
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["total_events"] == 1
+    assert summary["manual_emit_count"] == 1
+    assert summary["auto_remediate_count"] == 0
+
+    export_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/export?limit=20"
+    )
+    assert export_response.status_code == 200
+    exported = export_response.json()
+    assert exported["summary"]["total_events"] == 1
+    assert len(exported["events"]) == 1
+
+
+def test_v7_api_supports_governance_escalation_export_pagination(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-escalation-export-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.53},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    store = narrative_v7_route._benchmark_store
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_export_api")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        failed_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-escalation-export-api-{index}"
+        )
+        assert failed_response.status_code == 500
+
+    manual_emit = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit?limit=20"
+    )
+    assert manual_emit.status_code == 200
+    assert manual_emit.json()["emitted"] is True
+
+    auto_emit = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate"
+        "?dry_run=false&limit=20&alert_limit=20&archive_limit=20"
+    )
+    assert auto_emit.status_code == 200
+    assert auto_emit.json()["escalation_event"] is not None
+
+    export_first_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/export?limit=1"
+    )
+    assert export_first_response.status_code == 200
+    export_first = export_first_response.json()
+    assert export_first["summary"]["total_events"] == 2
+    assert len(export_first["events"]) == 1
+    assert export_first["has_more"] is True
+    assert export_first["next_cursor"]
+
+    export_second_response = client.get(
+        f"/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/export?limit=1&cursor={export_first['next_cursor']}"
+    )
+    assert export_second_response.status_code == 200
+    export_second = export_second_response.json()
+    assert len(export_second["events"]) == 1
+    assert export_second["has_more"] is False
+    assert export_second["cursor"] == export_first["next_cursor"]
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
