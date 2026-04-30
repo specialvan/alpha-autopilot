@@ -33,6 +33,7 @@ def test_resolve_layers_returns_path_based_commands_in_order() -> None:
     assert commands[1].cwd == repo_root / "ui-react"
     assert commands[1].argv[:3] == ("npm", "test", "--")
     assert "src/pages/V2WorkbenchPage.test.tsx" in commands[1].argv
+    assert "src/features/v2Workbench/characterInterviewPanel.test.tsx" in commands[1].argv
 
 
 def test_run_layers_prints_and_executes_selected_commands(monkeypatch, capsys) -> None:
@@ -114,3 +115,16 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
     assert "tests/test_narrative_v2_workbench_quality_enrichment.py" in layer_tests
     assert "tests/test_alpha_autopilot_v4_modules.py" in layer_tests
     assert "backend/tests/test_narrative_v4_api.py" in layer_tests
+    assert "tests/test_narrative_seed_extractor.py" in layer_tests
+    assert "tests/test_character_parameterizer.py" in layer_tests
+    assert "tests/test_parallel_plot_simulation.py" in layer_tests
+    assert "tests/test_emergent_conflict_probe.py" in layer_tests
+    assert "tests/test_event_injection_checkpoint.py" in layer_tests
+    assert "tests/test_character_interview.py" in layer_tests
+    assert "tests/test_group_memory_layer.py" in layer_tests
+    assert "tests/test_graph_rag_retrieval.py" in layer_tests
+    assert "tests/test_v6_graph_memory_store.py" in layer_tests
+    assert "tests/test_v6_state_store.py" in layer_tests
+    assert "tests/test_narrative_v6_observability.py" in layer_tests
+    assert "tests/test_narrative_v6_api.py" in layer_tests
+    assert "tests/test_run_v6_acceptance_review.py" in layer_tests
