@@ -441,3 +441,19 @@ class BenchmarkVersionHealthResponse(BaseModel):
     malformed_file_count: int = Field(default=0, ge=0)
     failed_versions: list[str] = Field(default_factory=list)
     malformed_files: list[str] = Field(default_factory=list)
+
+
+class BenchmarkVersionRepairResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    total_files: int = Field(default=0, ge=0)
+    candidate_failed_count: int = Field(default=0, ge=0)
+    candidate_malformed_count: int = Field(default=0, ge=0)
+    moved_count: int = Field(default=0, ge=0)
+    moved_failed_count: int = Field(default=0, ge=0)
+    moved_malformed_count: int = Field(default=0, ge=0)
+    quarantine_dir: str = ""
+    moved_files: list[str] = Field(default_factory=list)
+    message: str = ""

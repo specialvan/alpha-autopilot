@@ -346,6 +346,41 @@ def test_benchmark_store_health_scan_detects_tamper_and_malformed(tmp_path) -> N
     assert health.malformed_file_count >= 1
 
 
+def test_benchmark_store_repairs_failed_and_malformed_snapshots(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    accepted = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-repair",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.69},
+        )
+    )
+    assert accepted.accepted is True
+
+    tampered_path = store.version_root / f"{accepted.version}.json"
+    payload = json.loads(tampered_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.09
+    tampered_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    malformed_path = store.version_root / "repair-malformed.json"
+    malformed_path.write_text("{bad-json", encoding="utf-8")
+
+    dry_run = store.repair_versions(dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.candidate_failed_count >= 1
+    assert dry_run.candidate_malformed_count >= 1
+    assert dry_run.moved_count == 0
+
+    applied = store.repair_versions(dry_run=False)
+    assert applied.dry_run is False
+    assert applied.moved_count >= 2
+
+    health_after = store.scan_version_health()
+    assert health_after.failed_integrity_count == 0
+    assert health_after.malformed_file_count == 0
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

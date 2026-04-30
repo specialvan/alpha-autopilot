@@ -37,6 +37,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkVersionHealthResponse,
     BenchmarkVersionListResponse,
     BenchmarkVersionPruneResponse,
+    BenchmarkVersionRepairResponse,
     DeadlockCheckRequest,
     DeadlockCheckResponse,
     DecisionRequest,
@@ -393,6 +394,15 @@ def benchmark_versions_health() -> BenchmarkVersionHealthResponse:
         route="/api/narrative/v7/benchmark/versions/health",
         feature_name="benchmark_versions_health",
         operation=lambda: _benchmark_library.scan_version_health(),
+    )
+
+
+@router.post("/benchmark/versions/repair", response_model=BenchmarkVersionRepairResponse)
+def benchmark_versions_repair(dry_run: bool = Query(default=True)) -> BenchmarkVersionRepairResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/versions/repair",
+        feature_name="benchmark_versions_repair",
+        operation=lambda: _benchmark_library.repair_versions(dry_run=dry_run),
     )
 
 

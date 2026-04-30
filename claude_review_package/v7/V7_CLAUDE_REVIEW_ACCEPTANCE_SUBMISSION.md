@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第六轮生产化）
+# V7 Claude 评审验收提交清单（第七轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第六轮生产化增强做验收（版本仓健康扫描 + 生命周期治理闭环）
+- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第七轮生产化增强做验收（健康扫描 + 自修复 + 生命周期治理）
 
 ## 1. 需求与计划文档
 
@@ -24,12 +24,12 @@
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`28 passed`
+4. 结果：`30 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 4. 评审重点建议
 
-- `versions/health` 能否准确识别 tampered snapshot 与 malformed 文件
-- `versions/prune` + `versions/health` 组合是否满足生产巡检与治理
-- 审计导出/差异对比/恢复回滚三者是否与健康扫描形成闭环
-- 接口契约、错误路径、测试证据是否一致
+- `versions/repair` 是否可安全隔离 failed/malformed 快照
+- `versions/health + versions/repair + versions/prune` 是否形成运维闭环
+- 自修复 dry-run 与实际执行行为是否一致
+- 新增接口契约、异常路径与测试证据是否一致

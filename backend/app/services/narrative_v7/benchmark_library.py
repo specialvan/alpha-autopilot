@@ -11,6 +11,7 @@ from .schemas import (
     BenchmarkVersionDiffResponse,
     BenchmarkVersionHealthResponse,
     BenchmarkVersionPruneResponse,
+    BenchmarkVersionRepairResponse,
     BenchmarkVersionRecord,
 )
 
@@ -45,3 +46,6 @@ class BenchmarkLibrary:
 
     def scan_version_health(self) -> BenchmarkVersionHealthResponse:
         return self._store.scan_version_health()
+
+    def repair_versions(self, *, dry_run: bool = True) -> BenchmarkVersionRepairResponse:
+        return self._store.repair_versions(dry_run=dry_run)

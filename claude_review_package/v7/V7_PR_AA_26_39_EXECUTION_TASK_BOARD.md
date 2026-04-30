@@ -172,6 +172,14 @@
 - [x] 输出 failed_integrity / malformed 文件清单与计数
 - [x] 第六轮回归测试覆盖（health scan store/api）
 
+## 生产化增强清单（第七轮）
+
+- [x] 版本仓自修复能力（repair）支持 failed/malformed 隔离
+- [x] 自修复接口：`POST /api/narrative/v7/benchmark/versions/repair`
+- [x] 支持 `dry_run` 预演与隔离目录输出
+- [x] 输出 moved/candidate 统计与文件列表
+- [x] 第七轮回归测试覆盖（repair store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -182,5 +190,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`28 passed`
+- [x] 结果：`30 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

@@ -22,6 +22,7 @@ from .schemas import (
     BenchmarkVersionDiffResponse,
     BenchmarkVersionHealthResponse,
     BenchmarkVersionPruneResponse,
+    BenchmarkVersionRepairResponse,
     BenchmarkVersionRecord,
 )
 
@@ -409,6 +410,89 @@ class V7BenchmarkStore:
             malformed_files=malformed_files,
         )
 
+    def repair_versions(self, *, dry_run: bool = True) -> BenchmarkVersionRepairResponse:
+        with self._lock:
+            if not self.version_root.exists():
+                return BenchmarkVersionRepairResponse(
+                    generated_at=_now_iso(),
+                    dry_run=bool(dry_run),
+                    message="empty_version_root",
+                )
+
+            failed_files: list[tuple[Path, str]] = []
+            malformed_files: list[Path] = []
+            total_files = 0
+
+            for file_path in sorted(self.version_root.glob("*.json"), key=lambda item: item.name):
+                total_files += 1
+                try:
+                    payload = json.loads(file_path.read_text(encoding="utf-8"))
+                except Exception:
+                    malformed_files.append(file_path)
+                    continue
+
+                detail, reason = self._snapshot_detail_from_payload(payload)
+                if detail is None or reason != "ok":
+                    malformed_files.append(file_path)
+                    continue
+
+                if detail.integrity_status == "failed":
+                    failed_files.append((file_path, detail.version))
+
+            if dry_run:
+                return BenchmarkVersionRepairResponse(
+                    generated_at=_now_iso(),
+                    dry_run=True,
+                    total_files=total_files,
+                    candidate_failed_count=len(failed_files),
+                    candidate_malformed_count=len(malformed_files),
+                    moved_count=0,
+                    moved_failed_count=0,
+                    moved_malformed_count=0,
+                    quarantine_dir="",
+                    moved_files=[],
+                    message="dry_run",
+                )
+
+            quarantine_dir = self.version_root / "_quarantine" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            quarantine_dir.mkdir(parents=True, exist_ok=True)
+
+            moved_files: list[str] = []
+            moved_failed_count = 0
+            moved_malformed_count = 0
+
+            for file_path, _version in failed_files:
+                target = self._unique_target_path(quarantine_dir, file_path.name)
+                try:
+                    file_path.replace(target)
+                    moved_failed_count += 1
+                    moved_files.append(str(target.name))
+                except Exception:
+                    continue
+
+            for file_path in malformed_files:
+                target = self._unique_target_path(quarantine_dir, file_path.name)
+                try:
+                    file_path.replace(target)
+                    moved_malformed_count += 1
+                    moved_files.append(str(target.name))
+                except Exception:
+                    continue
+
+            return BenchmarkVersionRepairResponse(
+                generated_at=_now_iso(),
+                dry_run=False,
+                total_files=total_files,
+                candidate_failed_count=len(failed_files),
+                candidate_malformed_count=len(malformed_files),
+                moved_count=moved_failed_count + moved_malformed_count,
+                moved_failed_count=moved_failed_count,
+                moved_malformed_count=moved_malformed_count,
+                quarantine_dir=str(quarantine_dir),
+                moved_files=moved_files,
+                message="repaired",
+            )
+
     def _state_version(self, rows: list[dict[str, object]]) -> str:
         active_count = self._active_count(rows)
         return f"v7-benchmark-{len(rows):05d}-a{active_count:05d}"
@@ -564,6 +648,19 @@ class V7BenchmarkStore:
             backup_version=backup_version,
             message=message,
         )
+
+    def _unique_target_path(self, directory: Path, name: str) -> Path:
+        target = directory / name
+        if not target.exists():
+            return target
+        stem = target.stem
+        suffix = target.suffix
+        index = 1
+        while True:
+            candidate = directory / f"{stem}-{index}{suffix}"
+            if not candidate.exists():
+                return candidate
+            index += 1
 
     def _normalize_rows(self, value: object) -> list[dict[str, object]]:
         if not isinstance(value, list):
