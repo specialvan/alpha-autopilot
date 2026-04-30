@@ -32,6 +32,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -326,6 +327,17 @@ class BenchmarkLibrary:
         limit: int = 200,
     ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse:
         return self._store.build_maintenance_alert_governance_escalation_remediations_digest(limit=limit)
+
+    def auto_remediate_maintenance_alert_governance_escalation_remediations(
+        self,
+        *,
+        dry_run: bool = True,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateResponse:
+        return self._store.auto_remediate_maintenance_alert_governance_escalation_remediations(
+            dry_run=dry_run,
+            limit=limit,
+        )
 
     def auto_remediate_maintenance_alert_governance_runs(
         self,

@@ -1122,6 +1122,23 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse(Bas
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    limit: int = Field(default=0, ge=0)
+    action: str = "observe"
+    executed: bool = False
+    remediated_escalations: bool = False
+    pruned_remediation_history: bool = False
+    escalation_auto_remediate: BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse | None = None
+    remediation_auto_prune: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse | None = None
+    digest_before: BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse
+    digest_after: BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

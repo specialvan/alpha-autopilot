@@ -50,6 +50,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -2126,6 +2127,60 @@ class V7BenchmarkStore:
             is_stale=is_stale,
             recommended_action=recommended_action,
             summary=summary,
+            message=message,
+        )
+
+    def auto_remediate_maintenance_alert_governance_escalation_remediations(
+        self,
+        *,
+        dry_run: bool = True,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateResponse:
+        query_limit = max(0, int(limit))
+        digest_before = self.build_maintenance_alert_governance_escalation_remediations_digest(limit=query_limit)
+        action = str(digest_before.recommended_action or "observe")
+
+        remediated_escalations = False
+        pruned_remediation_history = False
+        escalation_auto_remediate: BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse | None = None
+        remediation_auto_prune: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse | None = None
+
+        if action == "run_auto_remediate_escalations":
+            escalation_auto_remediate = self.auto_remediate_maintenance_alert_governance_escalations(
+                dry_run=dry_run,
+                limit=query_limit,
+            )
+            if not dry_run:
+                remediated_escalations = bool(escalation_auto_remediate.executed)
+        elif action == "auto_prune_remediations":
+            remediation_auto_prune = self.auto_prune_maintenance_alert_governance_escalation_remediations(dry_run=dry_run)
+            if not dry_run and remediation_auto_prune.prune is not None:
+                pruned_remediation_history = bool(
+                    remediation_auto_prune.prune.pruned_count > 0
+                    or remediation_auto_prune.prune.malformed_dropped_count > 0
+                )
+
+        executed = remediated_escalations or pruned_remediation_history
+        digest_after = self.build_maintenance_alert_governance_escalation_remediations_digest(limit=query_limit)
+        if dry_run:
+            message = "dry_run"
+        elif executed:
+            message = "remediated"
+        else:
+            message = "no_action"
+
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            limit=query_limit,
+            action=action,
+            executed=executed,
+            remediated_escalations=remediated_escalations,
+            pruned_remediation_history=pruned_remediation_history,
+            escalation_auto_remediate=escalation_auto_remediate,
+            remediation_auto_prune=remediation_auto_prune,
+            digest_before=digest_before,
+            digest_after=digest_after,
             message=message,
         )
 
