@@ -5,6 +5,7 @@ from .schemas import (
     BenchmarkAuditExportResponse,
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
+    BenchmarkMaintenanceReportResponse,
     BenchmarkQueryRequest,
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
@@ -49,3 +50,6 @@ class BenchmarkLibrary:
 
     def repair_versions(self, *, dry_run: bool = True) -> BenchmarkVersionRepairResponse:
         return self._store.repair_versions(dry_run=dry_run)
+
+    def build_maintenance_report(self, *, limit: int = 50) -> BenchmarkMaintenanceReportResponse:
+        return self._store.build_maintenance_report(limit=limit)

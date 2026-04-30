@@ -15,6 +15,7 @@ from .schemas import (
     BenchmarkAuditExportResponse,
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
+    BenchmarkMaintenanceReportResponse,
     BenchmarkParameterSet,
     BenchmarkQueryRequest,
     BenchmarkQueryResponse,
@@ -492,6 +493,35 @@ class V7BenchmarkStore:
                 moved_files=moved_files,
                 message="repaired",
             )
+
+    def build_maintenance_report(self, *, limit: int = 50) -> BenchmarkMaintenanceReportResponse:
+        audit = self.export_audit(limit=limit)
+        health = self.scan_version_health()
+        recommendations: list[str] = []
+        severity: str = "ok"
+
+        if health.failed_integrity_count > 0 or health.malformed_file_count > 0:
+            severity = "critical"
+            recommendations.append("Run benchmark version repair to quarantine failed/malformed snapshots.")
+            recommendations.append("Review quarantined files and restore from verified snapshots when needed.")
+        elif audit.integrity_unverified_count > 0:
+            severity = "warn"
+            recommendations.append("Backfill snapshot rows_sha256 for legacy unverified versions if possible.")
+
+        if audit.version_count > 500:
+            severity = "critical" if severity == "critical" else "warn"
+            recommendations.append("Run benchmark version prune to control snapshot growth.")
+
+        if not recommendations:
+            recommendations.append("Benchmark version repository is healthy.")
+
+        return BenchmarkMaintenanceReportResponse(
+            generated_at=_now_iso(),
+            severity=severity,
+            recommendations=recommendations,
+            audit=audit,
+            health=health,
+        )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:
         active_count = self._active_count(rows)

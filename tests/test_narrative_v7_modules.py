@@ -381,6 +381,22 @@ def test_benchmark_store_repairs_failed_and_malformed_snapshots(tmp_path) -> Non
     assert health_after.malformed_file_count == 0
 
 
+def test_benchmark_store_builds_maintenance_report(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-maint",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.74},
+        )
+    )
+    report = store.build_maintenance_report(limit=20)
+    assert report.audit.version_count >= 1
+    assert report.health.total_files >= 1
+    assert report.severity in {"ok", "warn", "critical"}
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

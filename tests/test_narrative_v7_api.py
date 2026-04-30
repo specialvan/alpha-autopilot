@@ -370,6 +370,25 @@ def test_v7_api_supports_benchmark_version_repair() -> None:
     assert applied["moved_count"] >= 2
 
 
+def test_v7_api_supports_benchmark_maintenance_report() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-maint-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.76},
+        },
+    )
+    response = client.get("/api/narrative/v7/benchmark/maintenance/report?limit=20")
+    assert response.status_code == 200
+    body = response.json()
+    assert "audit" in body
+    assert "health" in body
+    assert body["severity"] in {"ok", "warn", "critical"}
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

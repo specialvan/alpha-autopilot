@@ -180,6 +180,13 @@
 - [x] 输出 moved/candidate 统计与文件列表
 - [x] 第七轮回归测试覆盖（repair store/api）
 
+## 生产化增强清单（第八轮）
+
+- [x] 维护报告聚合能力（audit + health + recommendations）
+- [x] 维护报告接口：`GET /api/narrative/v7/benchmark/maintenance/report`
+- [x] 输出 severity 分级（ok/warn/critical）与建议动作
+- [x] 第八轮回归测试覆盖（maintenance report store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -190,5 +197,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`30 passed`
+- [x] 结果：`32 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

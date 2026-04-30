@@ -457,3 +457,13 @@ class BenchmarkVersionRepairResponse(BaseModel):
     quarantine_dir: str = ""
     moved_files: list[str] = Field(default_factory=list)
     message: str = ""
+
+
+class BenchmarkMaintenanceReportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    severity: Literal["ok", "warn", "critical"] = "ok"
+    recommendations: list[str] = Field(default_factory=list)
+    audit: BenchmarkAuditExportResponse
+    health: BenchmarkVersionHealthResponse
