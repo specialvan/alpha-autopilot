@@ -697,6 +697,7 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
     governance_runs_prune_trigger_count: int = Field(default=0, ge=0)
     governance_runs_prune_keep_last: int = Field(default=0, ge=0)
     governance_runs_max_retry_attempts: int = Field(default=0, ge=0)
+    governance_runs_escalation_failure_streak: int = Field(default=0, ge=0)
     stale_threshold_seconds: int = Field(default=0, ge=0)
 
 
@@ -777,6 +778,7 @@ class BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(BaseModel):
     malformed_line_count: int = Field(default=0, ge=0)
     succeeded_count: int = Field(default=0, ge=0)
     failed_count: int = Field(default=0, ge=0)
+    consecutive_failed_runs: int = Field(default=0, ge=0)
     latest_run: BenchmarkMaintenanceAlertGovernanceRunRecord | None = None
     latest_failed_run: BenchmarkMaintenanceAlertGovernanceRunRecord | None = None
     message: str = ""
@@ -820,6 +822,8 @@ class BenchmarkMaintenanceAlertGovernanceRunDigestResponse(BaseModel):
     retry_max_attempts: int = Field(default=0, ge=0)
     latest_failed_attempt: int = Field(default=0, ge=0)
     retry_exhausted: bool = False
+    escalation_failure_streak_limit: int = Field(default=0, ge=0)
+    failure_streak_exhausted: bool = False
     is_stale: bool = True
     recommended_action: str = "observe"
     summary: BenchmarkMaintenanceAlertGovernanceRunSummaryResponse

@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第二十八轮生产化）
+# V7 Claude 评审验收提交清单（第二十九轮生产化）
 
-- 日期：2026-04-30
-- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第二十八轮生产化增强进行验收（治理运行重试上限与升级联动）
+- 日期：2026-05-01
+- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第二十九轮生产化增强进行验收（治理运行连续失败熔断升级）
 
 ## 1. 需求与计划文档
 
@@ -14,29 +14,28 @@
 
 1. `backend/app/services/narrative_v7/schemas.py`
 2. `backend/app/services/narrative_v7/benchmark_store.py`
-3. `backend/app/api/routes/narrative_v7.py`
-4. `tests/test_narrative_v7_modules.py`
-5. `tests/test_narrative_v7_api.py`
+3. `tests/test_narrative_v7_modules.py`
+4. `tests/test_narrative_v7_api.py`
 
-## 3. 第二十八轮能力增量
+## 3. 第二十九轮能力增量
 
-1. 新增治理运行重试上限策略：`AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS`。
-2. 治理运行重试门禁：当 `retry_target.attempt >= max_retry_attempts` 时返回 `retry_attempt_limit_exceeded`。
-3. 治理运行 Digest 新增升级动作：`escalate_failed_run`，并输出 `retry_max_attempts/latest_failed_attempt/retry_exhausted`。
-4. auto-remediate 新增升级输出：`escalation_required/escalation_reason`，达到重试上限时不再执行重试。
-5. API 路由新增错误码映射：重试超限返回 `422`。
+1. 新增治理运行连续失败升级阈值策略：`AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK`。
+2. 治理运行摘要新增连续失败计数：`consecutive_failed_runs`。
+3. 治理运行 Digest 新增失败熔断字段：`escalation_failure_streak_limit/failure_streak_exhausted`。
+4. 当连续失败达到阈值时，Digest 推荐动作升级为 `escalate_failed_run`（message: `consecutive_failure_streak_exhausted`）。
+5. auto-remediate 新增连续失败升级原因输出：`consecutive_failures_{n}_reached_limit_{limit}`。
 
 ## 4. 测试清单
 
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`76 passed`
+4. 结果：`78 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 5. 建议评审重点
 
-1. 重试上限门禁是否严格生效（超限后拒绝重试且不污染运行日志）。
-2. Digest 在失败超限场景下是否稳定给出 `escalate_failed_run`。
-3. auto-remediate 在升级场景下是否输出清晰升级信号（`escalation_required/reason`）。
-4. 新增 422 错误码语义是否与测试证据一致。
+1. 连续失败计数 `consecutive_failed_runs` 是否准确反映最新连续失败窗口。
+2. Digest 在连续失败超阈值场景下是否稳定给出 `escalate_failed_run`。
+3. 重试预算充足但连续失败超阈值时，是否正确触发熔断升级而非继续重试。
+4. auto-remediate 在连续失败升级场景下的 `escalation_reason` 是否可用于值班处置。

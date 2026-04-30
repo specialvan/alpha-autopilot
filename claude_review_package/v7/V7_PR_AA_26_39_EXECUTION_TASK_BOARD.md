@@ -366,6 +366,15 @@
 - [x] 路由错误码映射：重试超限返回 `422`
 - [x] 第28轮回归测试覆盖（retry limit + escalation digest/remediate store/api）
 
+## 生产化增强清单（第二十九轮）
+
+- [x] 治理运行连续失败升级阈值策略：`AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK`
+- [x] 治理运行摘要新增连续失败计数：`consecutive_failed_runs`
+- [x] 治理运行 Digest 新增失败熔断字段：`escalation_failure_streak_limit/failure_streak_exhausted`
+- [x] 失败升级动作增强：连续失败超阈值触发 `escalate_failed_run`（`consecutive_failure_streak_exhausted`）
+- [x] auto-remediate 升级原因增强：`consecutive_failures_{n}_reached_limit_{limit}`
+- [x] 第29轮回归测试覆盖（failure streak escalation digest/remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -376,5 +385,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`76 passed`
+- [x] 结果：`78 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

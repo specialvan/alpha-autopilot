@@ -1408,7 +1408,7 @@ def test_v7_api_governance_retry_limit_escalates(monkeypatch) -> None:
 
     history_two = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
     assert history_two.status_code == 200
-    failed_run_two = history_two.json()["records"][0]
+    failed_run_two = max(history_two.json()["records"], key=lambda item: item["attempt"])
     assert failed_run_two["attempt"] == 2
 
     retry_three = client.post(
@@ -1419,7 +1419,7 @@ def test_v7_api_governance_retry_limit_escalates(monkeypatch) -> None:
 
     history_three = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
     assert history_three.status_code == 200
-    failed_run_three = history_three.json()["records"][0]
+    failed_run_three = max(history_three.json()["records"], key=lambda item: item["attempt"])
     assert failed_run_three["attempt"] == 3
 
     retry_four = client.post(
@@ -1449,6 +1449,68 @@ def test_v7_api_governance_retry_limit_escalates(monkeypatch) -> None:
     assert remediate["executed"] is False
     assert remediate["escalation_required"] is True
     assert remediate["escalation_reason"] == "retry_exhausted_at_attempt_3"
+    assert remediate["message"] == "escalation_required"
+
+
+def test_v7_api_governance_failure_streak_escalates(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-failure-streak-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.57},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    store = narrative_v7_route._benchmark_store
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_failure_streak_api")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        failed_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-failure-streak-api-{index}"
+        )
+        assert failed_response.status_code == 500
+
+    digest_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/digest?limit=20"
+    )
+    assert digest_response.status_code == 200
+    digest = digest_response.json()
+    assert digest["summary"]["total_records"] == 2
+    assert digest["summary"]["consecutive_failed_runs"] == 2
+    assert digest["retry_max_attempts"] == 5
+    assert digest["latest_failed_attempt"] == 1
+    assert digest["retry_exhausted"] is False
+    assert digest["escalation_failure_streak_limit"] == 2
+    assert digest["failure_streak_exhausted"] is True
+    assert digest["recommended_action"] == "escalate_failed_run"
+    assert digest["message"] == "consecutive_failure_streak_exhausted"
+
+    remediate_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate"
+        "?dry_run=false&limit=20&alert_limit=20&archive_limit=20"
+    )
+    assert remediate_response.status_code == 200
+    remediate = remediate_response.json()
+    assert remediate["action"] == "escalate_failed_run"
+    assert remediate["executed"] is False
+    assert remediate["escalation_required"] is True
+    assert remediate["escalation_reason"] == "consecutive_failures_2_reached_limit_2"
     assert remediate["message"] == "escalation_required"
 
 

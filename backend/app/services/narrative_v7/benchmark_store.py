@@ -1308,6 +1308,12 @@ class V7BenchmarkStore:
         records.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
         window = records[:query_limit] if query_limit > 0 else records
         latest_failed_run = next((item for item in records if item.status == "failed"), None)
+        consecutive_failed_runs = 0
+        for item in records:
+            if item.status == "failed":
+                consecutive_failed_runs += 1
+            else:
+                break
 
         return BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(
             generated_at=_now_iso(),
@@ -1317,6 +1323,7 @@ class V7BenchmarkStore:
             malformed_line_count=malformed_line_count,
             succeeded_count=sum(1 for item in window if item.status == "succeeded"),
             failed_count=sum(1 for item in window if item.status == "failed"),
+            consecutive_failed_runs=consecutive_failed_runs,
             latest_run=records[0] if records else None,
             latest_failed_run=latest_failed_run,
             message="ok",
@@ -1398,6 +1405,7 @@ class V7BenchmarkStore:
         stale_threshold_seconds = _env_int("AA_V7_BENCH_GOVERNANCE_RUNS_STALE_SECONDS", 900, low=0)
         policy = self._load_alert_governance_policy()
         retry_max_attempts = max(1, int(policy.governance_runs_max_retry_attempts))
+        escalation_failure_streak_limit = max(1, int(policy.governance_runs_escalation_failure_streak))
 
         latest_run_age_seconds = -1.0
         is_stale = True
@@ -1405,6 +1413,7 @@ class V7BenchmarkStore:
         if summary.latest_run is not None and summary.latest_run.status == "failed":
             latest_failed_attempt = max(latest_failed_attempt, summary.latest_run.attempt)
         retry_exhausted = latest_failed_attempt >= retry_max_attempts and latest_failed_attempt > 0
+        failure_streak_exhausted = summary.consecutive_failed_runs >= escalation_failure_streak_limit
 
         if summary.latest_run is not None:
             parsed_latest = _parse_iso_utc(summary.latest_run.generated_at)
@@ -1421,6 +1430,9 @@ class V7BenchmarkStore:
             if retry_exhausted:
                 recommended_action = "escalate_failed_run"
                 message = "retry_exhausted"
+            elif failure_streak_exhausted:
+                recommended_action = "escalate_failed_run"
+                message = "consecutive_failure_streak_exhausted"
             else:
                 recommended_action = "retry_latest_failed_run"
                 message = "failed_latest_run"
@@ -1444,6 +1456,8 @@ class V7BenchmarkStore:
             retry_max_attempts=retry_max_attempts,
             latest_failed_attempt=latest_failed_attempt,
             retry_exhausted=retry_exhausted,
+            escalation_failure_streak_limit=escalation_failure_streak_limit,
+            failure_streak_exhausted=failure_streak_exhausted,
             is_stale=is_stale,
             recommended_action=recommended_action,
             summary=summary,
@@ -1494,7 +1508,12 @@ class V7BenchmarkStore:
                 executed = True
         elif action == "escalate_failed_run":
             escalation_required = True
-            if digest_before.summary.latest_failed_run is not None:
+            if digest_before.message == "consecutive_failure_streak_exhausted":
+                escalation_reason = (
+                    f"consecutive_failures_{digest_before.summary.consecutive_failed_runs}"
+                    f"_reached_limit_{digest_before.escalation_failure_streak_limit}"
+                )
+            elif digest_before.summary.latest_failed_run is not None:
                 escalation_reason = (
                     f"retry_exhausted_at_attempt_{digest_before.summary.latest_failed_run.attempt}"
                 )
@@ -1792,6 +1811,11 @@ class V7BenchmarkStore:
             governance_runs_prune_trigger_count=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", 10000, low=0),
             governance_runs_prune_keep_last=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_KEEP_LAST", 5000, low=0),
             governance_runs_max_retry_attempts=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", 3, low=1),
+            governance_runs_escalation_failure_streak=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK",
+                3,
+                low=1,
+            ),
             stale_threshold_seconds=_env_int("AA_V7_BENCH_ALERT_STALE_SECONDS", 900, low=0),
         )
 

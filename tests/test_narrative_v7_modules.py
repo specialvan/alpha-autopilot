@@ -1260,7 +1260,8 @@ def test_benchmark_store_governance_retry_limit_escalates(monkeypatch, tmp_path)
             idempotency_key="governance-retry-limit-2",
         )
 
-    second_failed = store.list_maintenance_alert_governance_runs(limit=20).records[0]
+    second_history = store.list_maintenance_alert_governance_runs(limit=20)
+    second_failed = max(second_history.records, key=lambda item: item.attempt)
     assert second_failed.status == "failed"
     assert second_failed.attempt == 2
 
@@ -1273,7 +1274,8 @@ def test_benchmark_store_governance_retry_limit_escalates(monkeypatch, tmp_path)
             idempotency_key="governance-retry-limit-3",
         )
 
-    third_failed = store.list_maintenance_alert_governance_runs(limit=20).records[0]
+    third_history = store.list_maintenance_alert_governance_runs(limit=20)
+    third_failed = max(third_history.records, key=lambda item: item.attempt)
     assert third_failed.status == "failed"
     assert third_failed.attempt == 3
 
@@ -1288,7 +1290,7 @@ def test_benchmark_store_governance_retry_limit_escalates(monkeypatch, tmp_path)
 
     history = store.list_maintenance_alert_governance_runs(limit=20)
     assert history.total_records == 3
-    assert history.records[0].attempt == 3
+    assert max(item.attempt for item in history.records) == 3
 
     digest = store.build_maintenance_alert_governance_runs_digest(limit=20)
     assert digest.recommended_action == "escalate_failed_run"
@@ -1306,6 +1308,60 @@ def test_benchmark_store_governance_retry_limit_escalates(monkeypatch, tmp_path)
     assert remediated.executed is False
     assert remediated.escalation_required is True
     assert remediated.escalation_reason == "retry_exhausted_at_attempt_3"
+    assert remediated.message == "escalation_required"
+
+
+def test_benchmark_store_governance_failure_streak_escalates(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-failure-streak",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.58},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_failure_streak")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_failure_streak"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-failure-streak-{index}",
+            )
+
+    digest = store.build_maintenance_alert_governance_runs_digest(limit=20)
+    assert digest.summary.total_records == 2
+    assert digest.summary.consecutive_failed_runs == 2
+    assert digest.retry_max_attempts == 5
+    assert digest.latest_failed_attempt == 1
+    assert digest.retry_exhausted is False
+    assert digest.escalation_failure_streak_limit == 2
+    assert digest.failure_streak_exhausted is True
+    assert digest.recommended_action == "escalate_failed_run"
+    assert digest.message == "consecutive_failure_streak_exhausted"
+
+    remediated = store.auto_remediate_maintenance_alert_governance_runs(
+        dry_run=False,
+        limit=20,
+        alert_limit=20,
+        archive_limit=20,
+    )
+    assert remediated.action == "escalate_failed_run"
+    assert remediated.executed is False
+    assert remediated.escalation_required is True
+    assert remediated.escalation_reason == "consecutive_failures_2_reached_limit_2"
     assert remediated.message == "escalation_required"
 
 
