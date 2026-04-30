@@ -29,6 +29,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertAutoArchiveResponse,
     BenchmarkMaintenanceAlertGovernancePolicy,
     BenchmarkMaintenanceAlertGovernanceReportResponse,
+    BenchmarkMaintenanceAlertGovernanceRunListResponse,
+    BenchmarkMaintenanceAlertGovernanceRunRecord,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -1118,36 +1120,166 @@ class V7BenchmarkStore:
         dry_run: bool = True,
         alert_limit: int = 200,
         archive_limit: int = 200,
+        idempotency_key: str = "",
+        retry_run_id: str = "",
     ) -> BenchmarkMaintenanceAlertGovernanceRunResponse:
         limit_alert = max(0, int(alert_limit))
         limit_archive = max(0, int(archive_limit))
-        policy = self._load_alert_governance_policy()
-
-        active_summary_before = self.summarize_maintenance_alerts(limit=limit_alert)
-        archive_index_before = self.list_maintenance_alert_archive_files(limit=limit_archive)
-        auto_archive = self.auto_archive_maintenance_alerts(dry_run=dry_run)
-        archive_cleanup = self.cleanup_maintenance_alert_archives(dry_run=dry_run)
-        active_summary_after = self.summarize_maintenance_alerts(limit=limit_alert)
-        archive_index_after = self.list_maintenance_alert_archive_files(limit=limit_archive)
-
-        performed_steps = [
-            "auto_archive:scheduled" if auto_archive.should_archive else "auto_archive:skipped",
-            "archive_cleanup:scheduled" if archive_cleanup.candidate_count > 0 else "archive_cleanup:noop",
-        ]
-        return BenchmarkMaintenanceAlertGovernanceRunResponse(
-            generated_at=_now_iso(),
-            dry_run=bool(dry_run),
+        normalized_idempotency_key = str(idempotency_key or "").strip()
+        normalized_retry_run_id = str(retry_run_id or "").strip()
+        request_fingerprint = self._governance_run_fingerprint(
+            dry_run=dry_run,
             alert_limit=limit_alert,
             archive_limit=limit_archive,
-            policy=policy,
-            performed_steps=performed_steps,
-            active_summary_before=active_summary_before,
-            active_summary_after=active_summary_after,
-            archive_index_before=archive_index_before,
-            archive_index_after=archive_index_after,
-            auto_archive=auto_archive,
-            archive_cleanup=archive_cleanup,
-            message="dry_run" if dry_run else "governed",
+            retry_run_id=normalized_retry_run_id,
+        )
+
+        with self._lock:
+            run_log_path = self._governance_runs_path()
+            if run_log_path.exists():
+                records, _malformed_count = self._read_governance_run_records(path=run_log_path)
+            else:
+                records = []
+
+        if normalized_idempotency_key:
+            previous = next(
+                (item for item in reversed(records) if item.idempotency_key == normalized_idempotency_key),
+                None,
+            )
+            if previous is not None:
+                if previous.request_fingerprint and previous.request_fingerprint != request_fingerprint:
+                    raise ValueError("idempotency_key_reused_with_different_request")
+                if previous.status == "succeeded" and previous.response_payload:
+                    reused = BenchmarkMaintenanceAlertGovernanceRunResponse.model_validate(previous.response_payload)
+                    reused.idempotency_reused = True
+                    reused.message = "idempotent_replay"
+                    return reused
+
+        attempt = 1
+        if normalized_retry_run_id:
+            retry_target = next((item for item in reversed(records) if item.run_id == normalized_retry_run_id), None)
+            if retry_target is None:
+                raise ValueError("retry_target_not_found")
+            if retry_target.status != "failed":
+                raise ValueError("retry_target_not_failed")
+            attempt = retry_target.attempt + 1
+
+        run_id = self._next_governance_run_id()
+        started_at = _now_iso()
+
+        policy = self._load_alert_governance_policy()
+
+        try:
+            active_summary_before = self.summarize_maintenance_alerts(limit=limit_alert)
+            archive_index_before = self.list_maintenance_alert_archive_files(limit=limit_archive)
+            auto_archive = self.auto_archive_maintenance_alerts(dry_run=dry_run)
+            archive_cleanup = self.cleanup_maintenance_alert_archives(dry_run=dry_run)
+            active_summary_after = self.summarize_maintenance_alerts(limit=limit_alert)
+            archive_index_after = self.list_maintenance_alert_archive_files(limit=limit_archive)
+
+            performed_steps = [
+                "auto_archive:scheduled" if auto_archive.should_archive else "auto_archive:skipped",
+                "archive_cleanup:scheduled" if archive_cleanup.candidate_count > 0 else "archive_cleanup:noop",
+            ]
+            response = BenchmarkMaintenanceAlertGovernanceRunResponse(
+                run_id=run_id,
+                generated_at=started_at,
+                dry_run=bool(dry_run),
+                alert_limit=limit_alert,
+                archive_limit=limit_archive,
+                idempotency_key=normalized_idempotency_key,
+                request_fingerprint=request_fingerprint,
+                retry_run_id=normalized_retry_run_id,
+                attempt=attempt,
+                idempotency_reused=False,
+                policy=policy,
+                performed_steps=performed_steps,
+                active_summary_before=active_summary_before,
+                active_summary_after=active_summary_after,
+                archive_index_before=archive_index_before,
+                archive_index_after=archive_index_after,
+                auto_archive=auto_archive,
+                archive_cleanup=archive_cleanup,
+                message="dry_run" if dry_run else "governed",
+            )
+            record = BenchmarkMaintenanceAlertGovernanceRunRecord(
+                run_id=run_id,
+                generated_at=started_at,
+                completed_at=_now_iso(),
+                status="succeeded",
+                dry_run=bool(dry_run),
+                alert_limit=limit_alert,
+                archive_limit=limit_archive,
+                idempotency_key=normalized_idempotency_key,
+                request_fingerprint=request_fingerprint,
+                retry_run_id=normalized_retry_run_id,
+                attempt=attempt,
+                performed_steps=performed_steps,
+                auto_archive_should_archive=auto_archive.should_archive,
+                archive_cleanup_candidate_count=archive_cleanup.candidate_count,
+                result_message=response.message,
+                response_payload=response.model_dump(mode="json"),
+            )
+            with self._lock:
+                self._append_governance_run_record(path=self._governance_runs_path(), record=record)
+            return response
+        except Exception as exc:
+            failed_record = BenchmarkMaintenanceAlertGovernanceRunRecord(
+                run_id=run_id,
+                generated_at=started_at,
+                completed_at=_now_iso(),
+                status="failed",
+                dry_run=bool(dry_run),
+                alert_limit=limit_alert,
+                archive_limit=limit_archive,
+                idempotency_key=normalized_idempotency_key,
+                request_fingerprint=request_fingerprint,
+                retry_run_id=normalized_retry_run_id,
+                attempt=attempt,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                result_message="failed",
+            )
+            with self._lock:
+                self._append_governance_run_record(path=self._governance_runs_path(), record=failed_record)
+            raise
+
+    def list_maintenance_alert_governance_runs(
+        self,
+        *,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceRunListResponse:
+        query_limit = max(0, int(limit))
+        offset = _parse_cursor_offset(cursor)
+        with self._lock:
+            path = self._governance_runs_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceRunListResponse(
+                    limit=query_limit,
+                    cursor=str(offset),
+                    records=[],
+                    message="no_runs",
+                )
+            records, malformed_line_count = self._read_governance_run_records(path=path)
+
+        records.sort(key=lambda item: item.generated_at, reverse=True)
+        total = len(records)
+        start = min(offset, total)
+        end = min(total, start + query_limit) if query_limit > 0 else total
+        window = records[start:end]
+        has_more = end < total
+        next_cursor = str(end) if has_more else ""
+
+        return BenchmarkMaintenanceAlertGovernanceRunListResponse(
+            limit=query_limit,
+            cursor=str(start),
+            next_cursor=next_cursor,
+            has_more=has_more,
+            total_records=total,
+            malformed_line_count=malformed_line_count,
+            records=window,
+            message="ok",
         )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
@@ -1247,6 +1379,61 @@ class V7BenchmarkStore:
 
     def _alerts_archive_dir(self) -> Path:
         return self.version_root / "_maintenance_alerts_archive"
+
+    def _governance_runs_path(self) -> Path:
+        return self.version_root / "_maintenance_alert_governance_runs.jsonl"
+
+    def _next_governance_run_id(self) -> str:
+        return f"bm-governance-run-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+
+    def _governance_run_fingerprint(
+        self,
+        *,
+        dry_run: bool,
+        alert_limit: int,
+        archive_limit: int,
+        retry_run_id: str,
+    ) -> str:
+        payload = {
+            "dry_run": bool(dry_run),
+            "alert_limit": int(alert_limit),
+            "archive_limit": int(archive_limit),
+            "retry_run_id": str(retry_run_id or ""),
+        }
+        canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    def _append_governance_run_record(
+        self,
+        *,
+        path: Path,
+        record: BenchmarkMaintenanceAlertGovernanceRunRecord,
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record.model_dump(mode="json"), ensure_ascii=False))
+            handle.write("\n")
+
+    def _read_governance_run_records(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertGovernanceRunRecord], int]:
+        rows: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = []
+        malformed_count = 0
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except Exception:
+                malformed_count += 1
+                continue
+            if not isinstance(payload, dict):
+                malformed_count += 1
+                continue
+            try:
+                rows.append(BenchmarkMaintenanceAlertGovernanceRunRecord.model_validate(payload))
+            except Exception:
+                malformed_count += 1
+        return rows, malformed_count
 
     def _write_alert_events(self, *, path: Path, events: list[BenchmarkMaintenanceAlertEvent]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

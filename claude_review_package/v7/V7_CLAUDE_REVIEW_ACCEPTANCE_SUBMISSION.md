@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第二十轮生产化）
+# V7 Claude 评审验收提交清单（第二十一轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第二十轮生产化增强做验收（维护告警治理报告 + 一键治理汇总）
+- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第二十一轮生产化增强进行验收（治理执行幂等保护 + 失败重试记录）
 
 ## 1. 需求与计划文档
 
@@ -19,18 +19,28 @@
 5. `tests/test_narrative_v7_modules.py`
 6. `tests/test_narrative_v7_api.py`
 
-## 3. 测试清单
+## 3. 第二十一轮能力增量
+
+1. 治理执行接口支持 `idempotency_key`，并引入请求指纹（request fingerprint）保护。
+2. 相同 `idempotency_key + 同请求` 复用历史成功结果，不重复执行治理动作。
+3. 相同 `idempotency_key + 不同请求` 返回冲突（409），避免误复用。
+4. 治理执行失败会持久化运行记录（`status/error_type/error_message/attempt`）。
+5. 治理执行支持 `retry_run_id`，仅允许对 failed 记录重试并自动递增 `attempt`。
+6. 新增治理运行历史查询接口：
+   `GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs`
+
+## 4. 测试清单
 
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`58 passed`
+4. 结果：`62 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
-## 4. 评审重点建议
+## 5. 建议评审重点
 
-- `GET /benchmark/maintenance/alerts/governance/report` 的策略快照与预演输出是否完整一致
-- `POST /benchmark/maintenance/alerts/governance/run` 的 `dry_run/apply` 执行轨迹是否可追踪
-- 执行前后快照（active/archive）与步骤轨迹（`performed_steps`）是否可解释
-- 一键治理结果与子接口（auto-archive/cleanup/archive-files）语义是否一致
-- 接口契约、异常路径与测试证据是否一致
+1. 幂等语义是否严格：复用与冲突路径是否可解释、可追踪。
+2. 失败记录完整性：失败时是否稳定落盘并保留错误上下文。
+3. 重试约束是否合理：`retry_run_id` 是否仅接受 failed 记录。
+4. 运行历史契约是否满足运维消费（分页、状态、attempt、错误信息）。
+5. API 契约、异常路径与测试证据是否一致。

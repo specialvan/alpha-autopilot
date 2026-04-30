@@ -711,13 +711,55 @@ class BenchmarkMaintenanceAlertGovernanceReportResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceRunRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    generated_at: str
+    completed_at: str = ""
+    status: Literal["succeeded", "failed"] = "succeeded"
+    dry_run: bool
+    alert_limit: int = Field(default=0, ge=0)
+    archive_limit: int = Field(default=0, ge=0)
+    idempotency_key: str = ""
+    request_fingerprint: str = ""
+    retry_run_id: str = ""
+    attempt: int = Field(default=1, ge=1)
+    performed_steps: list[str] = Field(default_factory=list)
+    auto_archive_should_archive: bool = False
+    archive_cleanup_candidate_count: int = Field(default=0, ge=0)
+    error_type: str = ""
+    error_message: str = ""
+    result_message: str = ""
+    response_payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class BenchmarkMaintenanceAlertGovernanceRunListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    records: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    run_id: str = ""
     generated_at: str
     dry_run: bool
     alert_limit: int = Field(default=0, ge=0)
     archive_limit: int = Field(default=0, ge=0)
+    idempotency_key: str = ""
+    request_fingerprint: str = ""
+    retry_run_id: str = ""
+    attempt: int = Field(default=1, ge=1)
+    idempotency_reused: bool = False
     policy: BenchmarkMaintenanceAlertGovernancePolicy
     performed_steps: list[str] = Field(default_factory=list)
     active_summary_before: BenchmarkMaintenanceAlertSummaryResponse

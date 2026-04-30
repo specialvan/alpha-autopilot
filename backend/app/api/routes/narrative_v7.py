@@ -36,6 +36,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertArchiveCleanupResponse,
     BenchmarkMaintenanceAlertAutoArchiveResponse,
     BenchmarkMaintenanceAlertGovernanceReportResponse,
+    BenchmarkMaintenanceAlertGovernanceRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertEmitResponse,
@@ -556,15 +557,44 @@ def benchmark_maintenance_alert_governance_run(
     dry_run: bool = Query(default=True),
     alert_limit: int = Query(default=200, ge=1, le=20000),
     archive_limit: int = Query(default=200, ge=1, le=20000),
+    idempotency_key: str = Query(default="", max_length=200),
+    retry_run_id: str = Query(default="", max_length=120),
 ) -> BenchmarkMaintenanceAlertGovernanceRunResponse:
+    def _op() -> BenchmarkMaintenanceAlertGovernanceRunResponse:
+        try:
+            return _benchmark_library.run_maintenance_alert_governance(
+                dry_run=dry_run,
+                alert_limit=alert_limit,
+                archive_limit=archive_limit,
+                idempotency_key=idempotency_key,
+                retry_run_id=retry_run_id,
+            )
+        except ValueError as exc:
+            detail = str(exc)
+            if detail == "idempotency_key_reused_with_different_request":
+                raise HTTPException(status_code=409, detail=detail) from exc
+            if detail == "retry_target_not_found":
+                raise HTTPException(status_code=404, detail=detail) from exc
+            if detail == "retry_target_not_failed":
+                raise HTTPException(status_code=422, detail=detail) from exc
+            raise
+
     return _execute_with_metrics(
         route="/api/narrative/v7/benchmark/maintenance/alerts/governance/run",
         feature_name="benchmark_maintenance_alert_governance_run",
-        operation=lambda: _benchmark_library.run_maintenance_alert_governance(
-            dry_run=dry_run,
-            alert_limit=alert_limit,
-            archive_limit=archive_limit,
-        ),
+        operation=_op,
+    )
+
+
+@router.get("/benchmark/maintenance/alerts/governance/runs", response_model=BenchmarkMaintenanceAlertGovernanceRunListResponse)
+def benchmark_maintenance_alert_governance_runs(
+    limit: int = Query(default=100, ge=1, le=20000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertGovernanceRunListResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs",
+        feature_name="benchmark_maintenance_alert_governance_runs",
+        operation=lambda: _benchmark_library.list_maintenance_alert_governance_runs(limit=limit, cursor=cursor),
     )
 
 

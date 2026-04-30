@@ -874,6 +874,134 @@ def test_v7_api_supports_maintenance_alert_governance_report_and_run(monkeypatch
     assert len(list_response.json()["alerts"]) <= 1
 
 
+def test_v7_api_supports_governance_run_idempotency_and_history(monkeypatch) -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-idempotency-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.74},
+        },
+    )
+    for _ in range(5):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    first_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-idem-001"
+    )
+    assert first_response.status_code == 200
+    first = first_response.json()
+    assert first["idempotency_reused"] is False
+    assert first["run_id"]
+
+    replay_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-idem-001"
+    )
+    assert replay_response.status_code == 200
+    replay = replay_response.json()
+    assert replay["idempotency_reused"] is True
+    assert replay["run_id"] == first["run_id"]
+    assert replay["request_fingerprint"] == first["request_fingerprint"]
+
+    conflict_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=false&alert_limit=20&archive_limit=20&idempotency_key=governance-idem-001"
+    )
+    assert conflict_response.status_code == 409
+    assert conflict_response.json()["detail"] == "idempotency_key_reused_with_different_request"
+
+    history_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20"
+    )
+    assert history_response.status_code == 200
+    history = history_response.json()
+    assert history["total_records"] == 1
+    assert history["records"][0]["status"] == "succeeded"
+
+
+def test_v7_api_records_governance_failure_and_supports_retry(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-retry-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.70},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    store = narrative_v7_route._benchmark_store
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_auto_archive_failure_api")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+
+    failed_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-retry-seed-api"
+    )
+    assert failed_response.status_code == 500
+
+    history_after_fail = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20"
+    )
+    assert history_after_fail.status_code == 200
+    failed_body = history_after_fail.json()
+    assert failed_body["total_records"] == 1
+    assert failed_body["records"][0]["status"] == "failed"
+    failed_run_id = failed_body["records"][0]["run_id"]
+
+    retry_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        f"?dry_run=true&alert_limit=20&archive_limit=20&retry_run_id={failed_run_id}&idempotency_key=governance-retry-001-api"
+    )
+    assert retry_response.status_code == 200
+    retry_body = retry_response.json()
+    assert retry_body["retry_run_id"] == failed_run_id
+    assert retry_body["attempt"] == 2
+    assert retry_body["idempotency_reused"] is False
+
+    history_after_retry = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20"
+    )
+    assert history_after_retry.status_code == 200
+    final_history = history_after_retry.json()
+    assert final_history["total_records"] == 2
+    assert final_history["records"][0]["status"] == "succeeded"
+    assert final_history["records"][0]["attempt"] == 2
+    assert final_history["records"][1]["status"] == "failed"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

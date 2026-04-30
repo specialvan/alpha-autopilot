@@ -294,6 +294,17 @@
 - [x] 输出策略快照 + 执行前后快照 + 步骤执行轨迹（`performed_steps`）
 - [x] 第20轮回归测试覆盖（governance report/run store/api）
 
+## 生产化增强清单（第二十一轮）
+
+- [x] 治理执行幂等保护：`idempotency_key` + request fingerprint
+- [x] 幂等复用语义：相同 key+同请求直接复用历史成功结果（不重复执行）
+- [x] 幂等冲突语义：相同 key+不同请求返回冲突（409）
+- [x] 治理运行失败记录：status/error_type/error_message/attempt 落盘
+- [x] 治理重试语义：`retry_run_id` 仅允许针对 failed 记录重试并递增 attempt
+- [x] 治理运行历史查询：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs`
+- [x] 治理运行接口升级：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/run` 支持 `idempotency_key/retry_run_id`
+- [x] 第21轮回归测试覆盖（governance idempotency + failure/retry history store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -304,5 +315,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`58 passed`
+- [x] 结果：`62 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

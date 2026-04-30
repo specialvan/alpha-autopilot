@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import json
+import pytest
 
 from backend.app.services.narrative_v7.antipattern_registry import AntiPatternRegistry
 from backend.app.services.narrative_v7.benchmark_store import V7BenchmarkStore
@@ -800,6 +801,112 @@ def test_benchmark_store_builds_and_runs_alert_governance(monkeypatch, tmp_path)
     assert applied.auto_archive.should_archive is True
     assert applied.auto_archive.archive is not None
     assert applied.active_summary_after.total_valid_events <= 1
+
+
+def test_benchmark_store_governance_run_supports_idempotency(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-idempotency",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.68},
+        )
+    )
+    for _ in range(5):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    first = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        idempotency_key="idem-governance-001",
+    )
+    second = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        idempotency_key="idem-governance-001",
+    )
+
+    assert second.idempotency_reused is True
+    assert second.run_id == first.run_id
+    assert second.request_fingerprint == first.request_fingerprint
+
+    history = store.list_maintenance_alert_governance_runs(limit=20)
+    assert history.total_records == 1
+    assert history.records[0].status == "succeeded"
+
+    with pytest.raises(ValueError, match="idempotency_key_reused_with_different_request"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=False,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key="idem-governance-001",
+        )
+
+
+def test_benchmark_store_governance_run_records_failure_and_retry(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-retry",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.71},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_auto_archive_failure")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+
+    with pytest.raises(RuntimeError, match="forced_governance_auto_archive_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key="governance-retry-seed",
+        )
+
+    failed_history = store.list_maintenance_alert_governance_runs(limit=20)
+    assert failed_history.total_records == 1
+    failed_record = failed_history.records[0]
+    assert failed_record.status == "failed"
+    assert failed_record.error_type == "RuntimeError"
+    assert "forced_governance_auto_archive_failure" in failed_record.error_message
+
+    retry_result = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        retry_run_id=failed_record.run_id,
+        idempotency_key="governance-retry-001",
+    )
+    assert retry_result.retry_run_id == failed_record.run_id
+    assert retry_result.attempt == 2
+    assert retry_result.idempotency_reused is False
+
+    history = store.list_maintenance_alert_governance_runs(limit=20)
+    assert history.total_records == 2
+    assert history.records[0].status == "succeeded"
+    assert history.records[0].attempt == 2
+    assert history.records[1].status == "failed"
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
