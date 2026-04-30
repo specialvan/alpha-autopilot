@@ -1,8 +1,11 @@
 ﻿from __future__ import annotations
 
+import json
+
 from backend.app.services.narrative_v7.antipattern_registry import AntiPatternRegistry
 from backend.app.services.narrative_v7.benchmark_store import V7BenchmarkStore
 from backend.app.services.narrative_v7.decision_controller import DecisionFeedbackController
+from backend.app.services.narrative_v7.decision_rules import DecisionRuleSet
 from backend.app.services.narrative_v7.deadlock_router import DeadlockRouter
 from backend.app.services.narrative_v7.expectation_debt import ExpectationDebtManager
 from backend.app.services.narrative_v7.nqm_sampler import NQMSampler
@@ -162,6 +165,61 @@ def test_benchmark_store_ingest_query_and_retract(tmp_path) -> None:
     assert store.retract("book-001") is True
     query_after = store.query(BenchmarkQueryRequest(channel="fantasy", genre_track="fast"))
     assert query_after.source_count == 0
+
+
+def test_benchmark_store_version_listing_and_restore(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+
+    first = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-a",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.70},
+        )
+    )
+    second = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-b",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.80},
+        )
+    )
+
+    assert first.accepted is True
+    assert second.accepted is True
+
+    versions = store.list_versions(limit=10)
+    assert len(versions) >= 2
+
+    restored = store.restore(versions[0].version)
+    assert restored.restored is True
+    assert restored.requested_version == versions[0].version
+
+    query = store.query(BenchmarkQueryRequest(channel="fantasy", genre_track="fast"))
+    assert query.source_count == versions[0].active_rows
+
+
+def test_decision_ruleset_supports_file_override(tmp_path) -> None:
+    rule_file = tmp_path / "decision_rules.json"
+    rule_file.write_text(
+        json.dumps(
+            {
+                "opening_t8_gate": 0.91,
+                "early_chapter_limit": 5,
+                "elastic_breakout_margin": 0.03,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    rules = DecisionRuleSet(config_path=str(rule_file))
+    current = rules.current()
+    assert current["opening_t8_gate"] == 0.91
+    assert current["early_chapter_limit"] == 5.0
+    assert current["elastic_breakout_margin"] == 0.03
+    assert "tail_hook_zero_threshold" in current
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:

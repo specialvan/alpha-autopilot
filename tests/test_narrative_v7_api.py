@@ -171,6 +171,16 @@ def test_v7_api_supports_opening_gate_and_decision_routes() -> None:
     assert body["decision"]["decision_type"] == "stop_loss"
 
 
+def test_v7_api_exposes_decision_rules() -> None:
+    client = _create_v7_only_client()
+    response = client.get("/api/narrative/v7/decision/rules")
+    assert response.status_code == 200
+    body = response.json()
+    assert "source" in body
+    assert "rules" in body
+    assert "opening_t8_gate" in body["rules"]
+
+
 def test_v7_api_supports_benchmark_ingest_query_and_retract() -> None:
     client = _create_v7_only_client()
 
@@ -198,6 +208,32 @@ def test_v7_api_supports_benchmark_ingest_query_and_retract() -> None:
     retract_response = client.delete("/api/narrative/v7/benchmark/book-100")
     assert retract_response.status_code == 200
     assert retract_response.json()["retracted"] is True
+
+
+def test_v7_api_supports_benchmark_versions_and_restore() -> None:
+    client = _create_v7_only_client()
+    for index in range(2):
+        response = client.post(
+            "/api/narrative/v7/benchmark/ingest",
+            json={
+                "book_id": f"book-v{index}",
+                "channel": "fantasy",
+                "genre_track": "fast",
+                "sample_payload": {"nqm_mean": 0.70 + index * 0.05},
+            },
+        )
+        assert response.status_code == 200
+
+    versions_response = client.get("/api/narrative/v7/benchmark/versions?limit=20")
+    assert versions_response.status_code == 200
+    versions = versions_response.json()["versions"]
+    assert len(versions) >= 2
+
+    restore_response = client.post(f"/api/narrative/v7/benchmark/restore/{versions[0]['version']}")
+    assert restore_response.status_code == 200
+    restore_body = restore_response.json()
+    assert restore_body["restored"] is True
+    assert restore_body["requested_version"] == versions[0]["version"]
 
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
@@ -262,6 +298,9 @@ def test_v7_api_exposes_observability_snapshot() -> None:
     routes = {item["route"] for item in body["routes"]}
     assert "/api/narrative/v7/sample" in routes
     assert "/api/narrative/v7/benchmark/query" in routes
+    assert "thresholds" in body
+    assert body["thresholds"]["latencyP95Ms"] > 0
+    assert body["thresholds"]["errorRate"] >= 0
 
 
 def test_v7_api_rejects_empty_benchmark_payload() -> None:

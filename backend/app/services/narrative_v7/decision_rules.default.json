@@ -1,0 +1,9 @@
+﻿{
+  "early_chapter_limit": 3,
+  "opening_t8_gate": 0.60,
+  "tail_hook_zero_threshold": 0.01,
+  "antagonist_drop_threshold": -0.20,
+  "a6_sigma_lower": -2.0,
+  "w6_floor": 0.40,
+  "elastic_breakout_margin": 0.02
+}

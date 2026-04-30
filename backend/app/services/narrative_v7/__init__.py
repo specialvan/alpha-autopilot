@@ -4,6 +4,7 @@ from .benchmark_refit import refit_thresholds
 from .benchmark_store import V7BenchmarkStore, create_default_v7_benchmark_store
 from .contract_guard import SellingPointContractGuard
 from .deadlock_router import DeadlockRouter
+from .decision_rules import DecisionRuleSet
 from .decision_controller import DecisionFeedbackController
 from .emotion_satisfaction import EmotionSatisfactionScorer
 from .expectation_debt import ExpectationDebtManager
@@ -23,6 +24,7 @@ __all__ = [
     "BenchmarkLibrary",
     "refit_thresholds",
     "DecisionFeedbackController",
+    "DecisionRuleSet",
     "DeadlockRouter",
     "EmotionSatisfactionScorer",
     "ExpectationDebtManager",

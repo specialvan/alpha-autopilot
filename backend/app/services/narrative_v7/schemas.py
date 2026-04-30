@@ -347,3 +347,30 @@ class BenchmarkQueryResponse(BaseModel):
     source_count: int = Field(default=0, ge=0)
     corridor_ready: bool = False
     warnings: list[str] = Field(default_factory=list)
+
+
+class BenchmarkVersionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: str
+    created_at: str
+    trigger: str = "unknown"
+    total_rows: int = Field(default=0, ge=0)
+    active_rows: int = Field(default=0, ge=0)
+
+
+class BenchmarkVersionListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    versions: list[BenchmarkVersionRecord] = Field(default_factory=list)
+
+
+class BenchmarkRestoreResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    restored: bool
+    requested_version: str
+    active_version: str
+    total_rows: int = Field(default=0, ge=0)
+    active_rows: int = Field(default=0, ge=0)
+    message: str = ""

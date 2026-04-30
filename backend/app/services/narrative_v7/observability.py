@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 from threading import RLock
 
@@ -13,6 +14,26 @@ from ...core.config import settings
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return float(default)
+    try:
+        return float(raw)
+    except Exception:
+        return float(default)
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return int(default)
+    try:
+        return int(raw)
+    except Exception:
+        return int(default)
 
 
 @dataclass
@@ -80,6 +101,10 @@ def build_v7_observability_snapshot(
     rows = store.read_rows(limit=limit)
     count = len(rows)
 
+    latency_threshold = _env_float("AA_V7_OBS_LATENCY_P95_MS", float(settings.v7_sampler_timeout_ms))
+    error_threshold = _env_float("AA_V7_OBS_ERROR_RATE", 0.1)
+    min_samples = max(1, _env_int("AA_V7_OBS_MIN_SAMPLES", 8))
+
     if count == 0:
         return {
             "enabled": False,
@@ -95,6 +120,11 @@ def build_v7_observability_snapshot(
                     "message": "No runtime metrics persisted for V7 yet.",
                 }
             ],
+            "thresholds": {
+                "latencyP95Ms": latency_threshold,
+                "errorRate": error_threshold,
+                "minSamples": min_samples,
+            },
             "lastUpdated": "",
         }
 
@@ -124,24 +154,24 @@ def build_v7_observability_snapshot(
     routes.sort(key=lambda item: item["sampleCount"], reverse=True)
 
     alerts: list[dict[str, object]] = []
-    if count >= 8 and latency_p95 >= float(settings.v7_sampler_timeout_ms):
+    if count >= min_samples and latency_p95 >= latency_threshold:
         alerts.append(
             {
                 "code": "v7-latency-p95-high",
                 "severity": "warning",
                 "message": "V7 runtime P95 latency exceeded configured threshold.",
                 "value": round(latency_p95, 3),
-                "threshold": float(settings.v7_sampler_timeout_ms),
+                "threshold": round(latency_threshold, 3),
             }
         )
-    if count >= 8 and error_rate >= 0.1:
+    if count >= min_samples and error_rate >= error_threshold:
         alerts.append(
             {
                 "code": "v7-error-rate-high",
                 "severity": "critical",
                 "message": "V7 runtime error rate exceeded threshold.",
                 "value": round(error_rate, 4),
-                "threshold": 0.1,
+                "threshold": round(error_threshold, 4),
             }
         )
 
@@ -153,6 +183,11 @@ def build_v7_observability_snapshot(
         "errorRate": round(error_rate, 4),
         "routes": routes,
         "alerts": alerts,
+        "thresholds": {
+            "latencyP95Ms": round(latency_threshold, 3),
+            "errorRate": round(error_threshold, 4),
+            "minSamples": min_samples,
+        },
         "lastUpdated": str(rows[-1].get("timestamp", "")),
     }
 

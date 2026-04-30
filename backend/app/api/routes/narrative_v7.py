@@ -31,6 +31,8 @@ from ...services.narrative_v7.schemas import (
     BenchmarkParameterSet,
     BenchmarkQueryRequest,
     BenchmarkQueryResponse,
+    BenchmarkRestoreResponse,
+    BenchmarkVersionListResponse,
     DeadlockCheckRequest,
     DeadlockCheckResponse,
     DecisionRequest,
@@ -207,6 +209,15 @@ def decide(payload: DecisionRequest) -> DecisionResponse:
     )
 
 
+@router.get("/decision/rules", response_model=dict)
+def decision_rules() -> dict[str, object]:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/decision/rules",
+        feature_name="decision_rules",
+        operation=lambda: _decision_controller.describe_rules(),
+    )
+
+
 @router.post("/opening-gate", response_model=OpeningGateResponse)
 def opening_gate(payload: OpeningGateRequest) -> OpeningGateResponse:
     return _execute_with_metrics(
@@ -304,6 +315,30 @@ def benchmark_retract(book_id: str) -> dict[str, bool]:
         route="/api/narrative/v7/benchmark/{book_id}",
         feature_name="benchmark_retract",
         operation=lambda: {"retracted": _benchmark_library.retract_sample(book_id)},
+    )
+
+
+@router.get("/benchmark/versions", response_model=BenchmarkVersionListResponse)
+def benchmark_versions(limit: int = Query(default=20, ge=1, le=200)) -> BenchmarkVersionListResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/versions",
+        feature_name="benchmark_versions",
+        operation=lambda: BenchmarkVersionListResponse(versions=_benchmark_library.list_versions(limit=limit)),
+    )
+
+
+@router.post("/benchmark/restore/{version}", response_model=BenchmarkRestoreResponse)
+def benchmark_restore(version: str) -> BenchmarkRestoreResponse:
+    def _op() -> BenchmarkRestoreResponse:
+        result = _benchmark_library.restore_version(version)
+        if not result.restored:
+            raise HTTPException(status_code=404, detail=result.message or "benchmark_version_not_found")
+        return result
+
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/restore/{version}",
+        feature_name="benchmark_restore",
+        operation=_op,
     )
 
 

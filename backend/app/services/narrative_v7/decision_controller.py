@@ -1,18 +1,27 @@
 ﻿from __future__ import annotations
 
+from .decision_rules import DecisionRuleSet
 from .schemas import DecisionRequest, DecisionResponse, DecisionType, NarrativeDecision, RiskLevel
 from .threshold_band import ThresholdBandEngine
 
 
 class DecisionFeedbackController:
-    def __init__(self, *, threshold_engine: ThresholdBandEngine | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        threshold_engine: ThresholdBandEngine | None = None,
+        decision_rules: DecisionRuleSet | None = None,
+    ) -> None:
         self._threshold_engine = threshold_engine or ThresholdBandEngine()
+        self._decision_rules = decision_rules or DecisionRuleSet()
 
     def decide(self, payload: DecisionRequest) -> DecisionResponse:
+        rules = self._decision_rules.current()
         vector = payload.vector
         benchmark = payload.market_state.benchmark_state
         story_state = payload.market_state.story_state
         composite = vector.composite
+
         if payload.override_confirmed:
             decision = NarrativeDecision(
                 decision_type=DecisionType.OBSERVE,
@@ -24,8 +33,11 @@ class DecisionFeedbackController:
             )
             return DecisionResponse(decision=decision)
 
+        early_chapter_limit = int(rules.get("early_chapter_limit", 3))
+        opening_gate = float(rules.get("opening_t8_gate", benchmark.opening_gate_t8))
+
         # R-04: opening gate
-        if int(story_state.get("chapter_index", 1)) <= 3 and vector.metrics.get("T8", 1.0) < benchmark.opening_gate_t8:
+        if int(story_state.get("chapter_index", 1)) <= early_chapter_limit and vector.metrics.get("T8", 1.0) < opening_gate:
             decision = NarrativeDecision(
                 decision_type=DecisionType.STOP_LOSS,
                 risk_level=RiskLevel.P0,
@@ -60,8 +72,10 @@ class DecisionFeedbackController:
             )
             return DecisionResponse(decision=decision)
 
+        tail_hook_zero_threshold = float(rules.get("tail_hook_zero_threshold", 0.01))
+
         # R-06: no hook near chapter tail
-        if vector.metrics.get("T4", 0.0) <= 0.01:
+        if vector.metrics.get("T4", 0.0) <= tail_hook_zero_threshold:
             decision = NarrativeDecision(
                 decision_type=DecisionType.ADD,
                 risk_level=RiskLevel.P1,
@@ -72,8 +86,10 @@ class DecisionFeedbackController:
             )
             return DecisionResponse(decision=decision)
 
+        antagonist_drop_threshold = float(rules.get("antagonist_drop_threshold", -0.2))
+
         # R-07: antagonist pressure collapse
-        if float(story_state.get("t9_delta_5chapters", 0.0)) < -0.2:
+        if float(story_state.get("t9_delta_5chapters", 0.0)) < antagonist_drop_threshold:
             decision = NarrativeDecision(
                 decision_type=DecisionType.RETRACE_REPAIR,
                 risk_level=RiskLevel.P1,
@@ -84,8 +100,10 @@ class DecisionFeedbackController:
             )
             return DecisionResponse(decision=decision)
 
+        a6_sigma_lower = float(rules.get("a6_sigma_lower", -2.0))
+
         # R-09: IP flavor corridor loss
-        if float(story_state.get("a6_sigma_delta", 0.0)) < -2.0:
+        if float(story_state.get("a6_sigma_delta", 0.0)) < a6_sigma_lower:
             decision = NarrativeDecision(
                 decision_type=DecisionType.REDUCE,
                 risk_level=RiskLevel.P1,
@@ -96,8 +114,10 @@ class DecisionFeedbackController:
             )
             return DecisionResponse(decision=decision)
 
+        w6_floor = float(rules.get("w6_floor", 0.4))
+
         # R-10: death payoff warning
-        if bool(story_state.get("is_death_chapter", False)) and vector.metrics.get("W6", 1.0) < 0.4:
+        if bool(story_state.get("is_death_chapter", False)) and vector.metrics.get("W6", 1.0) < w6_floor:
             decision = NarrativeDecision(
                 decision_type=DecisionType.RETRACE_REPAIR,
                 risk_level=RiskLevel.P1,
@@ -121,7 +141,8 @@ class DecisionFeedbackController:
             return DecisionResponse(decision=decision)
 
         if zone == "elastic_injection":
-            if composite >= benchmark.high_threshold - 0.02:
+            elastic_breakout_margin = float(rules.get("elastic_breakout_margin", 0.02))
+            if composite >= benchmark.high_threshold - elastic_breakout_margin:
                 decision = NarrativeDecision(
                     decision_type=DecisionType.BREAKOUT_FOLLOW,
                     risk_level=RiskLevel.P2,
@@ -150,3 +171,9 @@ class DecisionFeedbackController:
             observe_next_metrics=["NQM", "T9", "A6"],
         )
         return DecisionResponse(decision=decision)
+
+    def describe_rules(self) -> dict[str, object]:
+        return {
+            "source": self._decision_rules.source_path(),
+            "rules": self._decision_rules.current(),
+        }

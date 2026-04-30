@@ -133,6 +133,18 @@
 - [x] benchmark 查询新增 `corridor_ready` 与 `warnings`
 - [x] 新增生产化回归测试（feature flag / observability / duplicate conflict / empty payload）
 
+## 生产化增强清单（第三轮）
+
+- [x] Decision 路由规则外置：`decision_rules.default.json` + `DecisionRuleSet`
+- [x] Decision 控制器接入规则热加载（默认文件 + 环境变量 `AA_V7_DECISION_RULES_JSON`）
+- [x] 新增规则可视化接口：`GET /api/narrative/v7/decision/rules`
+- [x] Benchmark 版本快照落盘（每次 ingest/retract/restore 记录可回放快照）
+- [x] Benchmark 版本列表接口：`GET /api/narrative/v7/benchmark/versions`
+- [x] Benchmark 版本恢复接口：`POST /api/narrative/v7/benchmark/restore/{version}`
+- [x] observability 阈值支持环境变量覆写
+- [x] observability 输出新增 `thresholds` 字段
+- [x] 第三轮回归测试覆盖（rules/versions/restore/threshold snapshot）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -143,4 +155,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`16 passed`
+- [x] 结果：`20 passed`
+- [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
