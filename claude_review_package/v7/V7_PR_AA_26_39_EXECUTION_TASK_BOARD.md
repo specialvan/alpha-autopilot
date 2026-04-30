@@ -563,6 +563,16 @@
 - [x] 治理运行同时间戳排序稳定性增强：`attempt` 作为 runs 排序补充键，避免最新失败 attempt 漂移
 - [x] 第49轮回归测试覆盖（orchestrator-runs auto-remediate run-history store/api）
 
+## 生产化增强清单（第五十轮）
+
+- [x] 编排运行历史自愈执行轨迹摘要能力（auto-remediate runs history summary）
+- [x] 摘要接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/summary`
+- [x] 编排运行历史自愈执行轨迹导出能力（auto-remediate runs history export）
+- [x] 导出接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/export`
+- [x] 摘要输出窗口统计（`dry_run/apply/executed/remediated_orchestrator/pruned_run_history`）与 `latest_record`，并保留脏行计数
+- [x] 导出支持 `limit/cursor` 分页，输出 `summary + records` 单请求验收上下文
+- [x] 第50轮回归测试覆盖（orchestrator-runs auto-remediate run-history summary/export store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

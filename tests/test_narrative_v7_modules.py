@@ -2374,6 +2374,48 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
     assert orchestrator_run_history_after_malformed.total_records == 2
     assert orchestrator_run_history_after_malformed.malformed_line_count >= 1
 
+    orchestrator_run_history_summary = (
+        store.summarize_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=20
+        )
+    )
+    assert orchestrator_run_history_summary.total_records == 2
+    assert orchestrator_run_history_summary.window_record_count == 2
+    assert orchestrator_run_history_summary.malformed_line_count >= 1
+    assert orchestrator_run_history_summary.dry_run_count == 0
+    assert orchestrator_run_history_summary.apply_count == 2
+    assert orchestrator_run_history_summary.executed_count == 2
+    assert orchestrator_run_history_summary.remediated_orchestrator_count == 1
+    assert orchestrator_run_history_summary.pruned_run_history_count == 1
+    assert orchestrator_run_history_summary.latest_record is not None
+    assert orchestrator_run_history_summary.latest_record.action == "auto_prune_runs"
+
+    orchestrator_run_history_export_first = (
+        store.export_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=1
+        )
+    )
+    assert orchestrator_run_history_export_first.summary.total_records == 2
+    assert orchestrator_run_history_export_first.summary.malformed_line_count >= 1
+    assert len(orchestrator_run_history_export_first.records) == 1
+    assert orchestrator_run_history_export_first.has_more is True
+    assert orchestrator_run_history_export_first.next_cursor
+
+    orchestrator_run_history_export_second = (
+        store.export_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=1,
+            cursor=orchestrator_run_history_export_first.next_cursor,
+        )
+    )
+    assert orchestrator_run_history_export_second.summary.total_records == 2
+    assert orchestrator_run_history_export_second.summary.malformed_line_count >= 1
+    assert len(orchestrator_run_history_export_second.records) == 1
+    assert orchestrator_run_history_export_second.has_more is False
+    assert (
+        orchestrator_run_history_export_second.cursor
+        == orchestrator_run_history_export_first.next_cursor
+    )
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()

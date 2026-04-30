@@ -41,6 +41,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunDigestResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunListResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunSummaryResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -421,6 +423,26 @@ class BenchmarkLibrary:
         cursor: str = "",
     ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunListResponse:
         return self._store.list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=limit,
+            cursor=cursor,
+        )
+
+    def summarize_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunSummaryResponse:
+        return self._store.summarize_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=limit
+        )
+
+    def export_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+        self,
+        *,
+        limit: int = 200,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunExportResponse:
+        return self._store.export_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
             limit=limit,
             cursor=cursor,
         )
