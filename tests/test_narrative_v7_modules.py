@@ -1702,6 +1702,65 @@ def test_benchmark_store_builds_governance_escalations_digest(monkeypatch, tmp_p
     assert digest_malformed.message == "malformed_detected"
 
 
+def test_benchmark_store_auto_remediates_governance_escalations(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-escalation-auto-remediate",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.56},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_STALE_SECONDS", "3600")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT", "100")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_auto_remediate")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_escalation_auto_remediate"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-escalation-auto-remediate-{index}",
+            )
+
+    dry_run_emit = store.auto_remediate_maintenance_alert_governance_escalations(dry_run=True, limit=20)
+    assert dry_run_emit.action == "emit_escalation"
+    assert dry_run_emit.executed is False
+    assert dry_run_emit.message == "dry_run"
+
+    applied_emit = store.auto_remediate_maintenance_alert_governance_escalations(dry_run=False, limit=20)
+    assert applied_emit.action == "emit_escalation"
+    assert applied_emit.executed is True
+    assert applied_emit.emitted is True
+    assert applied_emit.emitted_event is not None
+    assert applied_emit.message == "remediated"
+
+    escalation_log = store.version_root / "_maintenance_alert_governance_escalations.jsonl"
+    with escalation_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    applied_prune = store.auto_remediate_maintenance_alert_governance_escalations(dry_run=False, limit=20)
+    assert applied_prune.action == "auto_prune_escalations"
+    assert applied_prune.executed is True
+    assert applied_prune.pruned is True
+    assert applied_prune.auto_prune is not None
+    assert applied_prune.auto_prune.prune is not None
+    assert applied_prune.auto_prune.prune.malformed_dropped_count >= 1
+    assert applied_prune.message == "remediated"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

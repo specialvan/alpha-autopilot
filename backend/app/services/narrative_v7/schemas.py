@@ -990,6 +990,23 @@ class BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    limit: int = Field(default=0, ge=0)
+    action: str = "observe"
+    executed: bool = False
+    emitted: bool = False
+    pruned: bool = False
+    emitted_event: BenchmarkMaintenanceAlertGovernanceEscalationEvent | None = None
+    auto_prune: BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse | None = None
+    digest_before: BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse
+    digest_after: BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

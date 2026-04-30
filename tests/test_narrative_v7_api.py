@@ -1989,6 +1989,81 @@ def test_v7_api_supports_governance_escalations_digest(monkeypatch) -> None:
     assert digest_malformed["message"] == "malformed_detected"
 
 
+def test_v7_api_supports_governance_escalations_auto_remediate(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-escalation-auto-remediate-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.59},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_STALE_SECONDS", "3600")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT", "100")
+
+    store = narrative_v7_route._benchmark_store
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_auto_remediate_api")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        failed_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-escalation-auto-remediate-api-{index}"
+        )
+        assert failed_response.status_code == 500
+
+    dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediate?dry_run=true&limit=20"
+    )
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["action"] == "emit_escalation"
+    assert dry_run["executed"] is False
+    assert dry_run["message"] == "dry_run"
+
+    apply_emit_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediate?dry_run=false&limit=20"
+    )
+    assert apply_emit_response.status_code == 200
+    applied_emit = apply_emit_response.json()
+    assert applied_emit["action"] == "emit_escalation"
+    assert applied_emit["executed"] is True
+    assert applied_emit["emitted"] is True
+    assert applied_emit["emitted_event"] is not None
+    assert applied_emit["message"] == "remediated"
+
+    with (store.version_root / "_maintenance_alert_governance_escalations.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    apply_prune_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediate?dry_run=false&limit=20"
+    )
+    assert apply_prune_response.status_code == 200
+    applied_prune = apply_prune_response.json()
+    assert applied_prune["action"] == "auto_prune_escalations"
+    assert applied_prune["executed"] is True
+    assert applied_prune["pruned"] is True
+    assert applied_prune["auto_prune"] is not None
+    assert applied_prune["auto_prune"]["prune"] is not None
+    assert applied_prune["auto_prune"]["prune"]["malformed_dropped_count"] >= 1
+    assert applied_prune["message"] == "remediated"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

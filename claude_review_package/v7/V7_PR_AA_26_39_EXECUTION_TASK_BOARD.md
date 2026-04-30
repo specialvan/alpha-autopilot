@@ -421,6 +421,15 @@
 - [x] 输出 `summary + run_digest` 聚合上下文，便于值班单请求验收
 - [x] 第34轮回归测试覆盖（governance escalations digest store/api）
 
+## 生产化增强清单（第三十五轮）
+
+- [x] 治理升级事件一键自愈能力：`auto_remediate_maintenance_alert_governance_escalations`
+- [x] 一键自愈接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediate`
+- [x] 自愈策略基于 escalation digest 推荐动作执行（`emit_escalation/auto_prune_escalations`）
+- [x] 支持 `dry_run/apply` 双路径，并输出 `digest_before/digest_after`
+- [x] 输出执行细节（`emitted/pruned/emitted_event/auto_prune`）便于值班审计
+- [x] 第35轮回归测试覆盖（governance escalations auto-remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -431,5 +440,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`92 passed`
+- [x] 结果：`94 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

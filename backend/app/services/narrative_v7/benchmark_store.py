@@ -41,6 +41,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1755,6 +1756,58 @@ class V7BenchmarkStore:
             recommended_action=recommended_action,
             summary=summary,
             run_digest=run_digest,
+            message=message,
+        )
+
+    def auto_remediate_maintenance_alert_governance_escalations(
+        self,
+        *,
+        dry_run: bool = True,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse:
+        query_limit = max(0, int(limit))
+        digest_before = self.build_maintenance_alert_governance_escalations_digest(limit=query_limit)
+        action = str(digest_before.recommended_action or "observe")
+
+        emitted = False
+        pruned = False
+        emitted_event: BenchmarkMaintenanceAlertGovernanceEscalationEvent | None = None
+        auto_prune: BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse | None = None
+
+        if action == "emit_escalation":
+            if not dry_run:
+                emit_result = self.emit_maintenance_alert_governance_escalation(limit=query_limit, source="auto_remediate")
+                emitted = bool(emit_result.emitted and emit_result.event is not None)
+                emitted_event = emit_result.event
+        elif action == "auto_prune_escalations":
+            auto_prune = self.auto_prune_maintenance_alert_governance_escalations(dry_run=dry_run)
+            if not dry_run and auto_prune.prune is not None:
+                pruned = bool(
+                    auto_prune.prune.pruned_count > 0
+                    or auto_prune.prune.malformed_dropped_count > 0
+                )
+
+        executed = emitted or pruned
+        digest_after = self.build_maintenance_alert_governance_escalations_digest(limit=query_limit)
+        if dry_run:
+            message = "dry_run"
+        elif executed:
+            message = "remediated"
+        else:
+            message = "no_action"
+
+        return BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            limit=query_limit,
+            action=action,
+            executed=executed,
+            emitted=emitted,
+            pruned=pruned,
+            emitted_event=emitted_event,
+            auto_prune=auto_prune,
+            digest_before=digest_before,
+            digest_after=digest_after,
             message=message,
         )
 
