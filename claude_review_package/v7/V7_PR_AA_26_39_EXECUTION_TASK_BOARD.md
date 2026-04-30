@@ -505,6 +505,16 @@
 - [x] 将 dry-run 与 apply 编排轨迹统一纳入审计闭环
 - [x] 第43轮回归测试覆盖（governance escalation auto-remediation orchestrator runs store/api）
 
+## 生产化增强清单（第四十四轮）
+
+- [x] 编排运行历史摘要能力：`summarize_maintenance_alert_governance_escalation_remediation_auto_remediate_runs`
+- [x] 编排运行历史摘要接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/summary`
+- [x] 编排运行历史导出能力：`export_maintenance_alert_governance_escalation_remediation_auto_remediate_runs`
+- [x] 编排运行历史导出接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/export`
+- [x] 摘要输出窗口统计（`dry_run/apply/executed/remediated/pruned`）与 `latest_record`，并保留脏行计数
+- [x] 导出支持 `limit/cursor` 分页，输出 `summary + records` 单请求验收上下文
+- [x] 第44轮回归测试覆盖（orchestrator runs summary/export store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

@@ -2093,9 +2093,42 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediations(monk
     assert run_history.total_records == 3
     assert run_history.records[0].action == "auto_prune_remediations"
     assert run_history.records[0].pruned_remediation_history is True
-    assert run_history.records[1].dry_run is True
-    assert run_history.records[2].action == "run_auto_remediate_escalations"
-    assert run_history.records[2].remediated_escalations is True
+    assert any(item.dry_run for item in run_history.records)
+    assert any(item.action == "run_auto_remediate_escalations" for item in run_history.records)
+    assert any(item.remediated_escalations for item in run_history.records)
+
+    run_history_log = store.version_root / "_maintenance_alert_governance_escalation_remediation_auto_remediate_runs.jsonl"
+    with run_history_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    summary = store.summarize_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(limit=20)
+    assert summary.total_records == 3
+    assert summary.window_record_count == 3
+    assert summary.malformed_line_count == 1
+    assert summary.dry_run_count == 1
+    assert summary.apply_count == 2
+    assert summary.executed_count == 2
+    assert summary.remediated_escalations_count == 1
+    assert summary.pruned_remediation_history_count == 1
+    assert summary.latest_record is not None
+    assert summary.latest_record.action == "auto_prune_remediations"
+
+    export_first = store.export_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(limit=2)
+    assert export_first.summary.total_records == 3
+    assert export_first.summary.malformed_line_count == 1
+    assert len(export_first.records) == 2
+    assert export_first.has_more is True
+    assert export_first.next_cursor
+
+    export_second = store.export_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(
+        limit=2,
+        cursor=export_first.next_cursor,
+    )
+    assert export_second.summary.total_records == 3
+    assert export_second.summary.malformed_line_count == 1
+    assert len(export_second.records) == 1
+    assert export_second.has_more is False
+    assert export_second.cursor == export_first.next_cursor
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:

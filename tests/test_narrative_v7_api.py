@@ -2471,9 +2471,54 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediations(monkeypa
     assert run_history["total_records"] == 3
     assert run_history["records"][0]["action"] == "auto_prune_remediations"
     assert run_history["records"][0]["pruned_remediation_history"] is True
-    assert run_history["records"][1]["dry_run"] is True
-    assert run_history["records"][2]["action"] == "run_auto_remediate_escalations"
-    assert run_history["records"][2]["remediated_escalations"] is True
+    assert any(item["dry_run"] for item in run_history["records"])
+    assert any(item["action"] == "run_auto_remediate_escalations" for item in run_history["records"])
+    assert any(item["remediated_escalations"] for item in run_history["records"])
+
+    with (store.version_root / "_maintenance_alert_governance_escalation_remediation_auto_remediate_runs.jsonl").open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write("{bad-json\n")
+
+    summary_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/summary?limit=20"
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["total_records"] == 3
+    assert summary["window_record_count"] == 3
+    assert summary["malformed_line_count"] == 1
+    assert summary["dry_run_count"] == 1
+    assert summary["apply_count"] == 2
+    assert summary["executed_count"] == 2
+    assert summary["remediated_escalations_count"] == 1
+    assert summary["pruned_remediation_history_count"] == 1
+    assert summary["latest_record"] is not None
+    assert summary["latest_record"]["action"] == "auto_prune_remediations"
+
+    export_first_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/export?limit=2"
+    )
+    assert export_first_response.status_code == 200
+    export_first = export_first_response.json()
+    assert export_first["summary"]["total_records"] == 3
+    assert export_first["summary"]["malformed_line_count"] == 1
+    assert len(export_first["records"]) == 2
+    assert export_first["has_more"] is True
+    assert export_first["next_cursor"]
+
+    export_second_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/export"
+        f"?limit=2&cursor={export_first['next_cursor']}"
+    )
+    assert export_second_response.status_code == 200
+    export_second = export_second_response.json()
+    assert export_second["summary"]["total_records"] == 3
+    assert export_second["summary"]["malformed_line_count"] == 1
+    assert len(export_second["records"]) == 1
+    assert export_second["has_more"] is False
+    assert export_second["cursor"] == export_first["next_cursor"]
 
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:

@@ -1168,6 +1168,38 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunLi
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunSummaryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    total_records: int = Field(default=0, ge=0)
+    window_record_count: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    dry_run_count: int = Field(default=0, ge=0)
+    apply_count: int = Field(default=0, ge=0)
+    executed_count: int = Field(default=0, ge=0)
+    remediated_escalations_count: int = Field(default=0, ge=0)
+    pruned_remediation_history_count: int = Field(default=0, ge=0)
+    latest_record: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunRecord | None = None
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    summary: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunSummaryResponse
+    records: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunRecord] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -118,3 +118,18 @@
 - Verification:
   - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 101 passed
   - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
+
+## Round-44 Delta (2026-05-01)
+
+- Scope: add summary/export consumption layer for remediation-orchestrator run history.
+- New APIs:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/summary
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/export
+- Summary outputs:
+  - dry_run/apply/executed/remediated/pruned counters
+  - latest_record and malformed_line_count
+- Export contract:
+  - summary + paged records with limit/cursor/next_cursor/has_more
+- Verification:
+  - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 101 passed
+  - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
