@@ -742,6 +742,14 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
     governance_escalation_remediations_prune_keep_last: int = Field(default=0, ge=0)
     governance_escalation_remediation_auto_remediate_runs_prune_trigger_count: int = Field(default=0, ge=0)
     governance_escalation_remediation_auto_remediate_runs_prune_keep_last: int = Field(default=0, ge=0)
+    governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_prune_trigger_count: int = Field(
+        default=0,
+        ge=0,
+    )
+    governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_prune_keep_last: int = Field(
+        default=0,
+        ge=0,
+    )
     governance_escalation_remediation_auto_remediate_runs_stale_seconds: int = Field(default=0, ge=0)
     governance_escalation_remediations_stale_seconds: int = Field(default=0, ge=0)
     governance_escalations_emit_cooldown_seconds: int = Field(default=0, ge=0)
@@ -1342,6 +1350,20 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAu
     malformed_dropped_count: int = Field(default=0, ge=0)
     kept_run_ids: list[str] = Field(default_factory=list)
     pruned_run_ids: list[str] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    trigger_count: int = Field(default=0, ge=0)
+    keep_last: int = Field(default=0, ge=0)
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    should_prune: bool = False
+    prune: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunPruneResponse | None = None
     message: str = ""
 
 
