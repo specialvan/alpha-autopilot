@@ -1,17 +1,19 @@
 # V7 Claude Review Request Prompt
 
-请对以下提交做 V7 阶段评审（第十六轮，生产化增强验收）：
+请对以下提交做 V7 阶段评审（第十七轮，生产化增强验收）：
 
 ## 评审目标
 
-1. 验证维护告警分页治理能力是否达到生产可运维标准。
-2. 验证告警归档分片能力（dry_run/apply）是否稳定可用。
-3. 验证分页列表/分页导出/归档接口语义是否一致且可追踪。
+1. 验证维护告警归档索引与归档读取治理能力是否达到生产可运维标准。
+2. 验证归档读取分页语义与文件名安全约束是否稳定可用。
+3. 验证归档索引/读取与分片归档接口语义是否一致且可追踪。
 4. 验证新增 API 契约与测试证据一致性。
 
 ## 重点检查项
 
 - `POST /api/narrative/v7/benchmark/maintenance/alerts/archive`
+- `GET /api/narrative/v7/benchmark/maintenance/alerts/archive/files`
+- `GET /api/narrative/v7/benchmark/maintenance/alerts/archive/read`
 - `GET /api/narrative/v7/benchmark/maintenance/alerts/export`
 - `GET /api/narrative/v7/benchmark/maintenance/alerts/digest`
 - `GET /api/narrative/v7/benchmark/maintenance/alerts/summary`
@@ -26,5 +28,5 @@
 1. 阻断问题（P0）
 2. 高优先修复（P1）
 3. 可后续迭代优化（P2）
-4. 可验收结论（是否通过第十六轮生产化验收）
-5. 第十七轮建议切片（按 PR-AA 编号）
+4. 可验收结论（是否通过第十七轮生产化验收）
+5. 第十八轮建议切片（按 PR-AA 编号）

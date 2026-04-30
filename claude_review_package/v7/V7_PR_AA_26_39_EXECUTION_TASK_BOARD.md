@@ -257,6 +257,16 @@
 - [x] 归档输出 `archive_files / archive_shard_count / malformed_dropped_count` 等治理指标
 - [x] 第十六轮回归测试覆盖（alert pagination + archive shard store/api）
 
+## 生产化增强清单（第十七轮）
+
+- [x] 归档分片索引能力：`list_maintenance_alert_archive_files`
+- [x] 归档文件列表接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/archive/files`
+- [x] 归档文件读取能力：`read_maintenance_alert_archive_file(file_name, limit, cursor)`
+- [x] 归档文件读取接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/archive/read`
+- [x] 归档读取支持分页治理（`cursor/next_cursor/has_more`）
+- [x] 归档读取支持文件名安全约束（防路径穿越）
+- [x] 第十七轮回归测试覆盖（archive files/read store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -267,5 +277,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`50 passed`
+- [x] 结果：`52 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

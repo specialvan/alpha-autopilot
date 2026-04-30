@@ -669,6 +669,35 @@ def test_benchmark_store_archives_maintenance_alerts_into_shards(tmp_path) -> No
         assert (archive_dir / file_name).exists()
 
 
+def test_benchmark_store_lists_and_reads_alert_archive_files(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-archive-read",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.63},
+        )
+    )
+    for _ in range(5):
+        _ = store.emit_maintenance_alert(limit=20)
+    _ = store.archive_maintenance_alerts(keep_last=2, shard_size=2, dry_run=False)
+
+    archive_list = store.list_maintenance_alert_archive_files(limit=20)
+    assert archive_list.total_files >= 2
+    assert archive_list.files
+    first_file = archive_list.files[0].file_name
+    assert first_file.endswith(".jsonl")
+
+    first_page = store.read_maintenance_alert_archive_file(file_name=first_file, limit=1, cursor="")
+    assert first_page.message == "ok"
+    assert first_page.total_valid_events >= 1
+    assert len(first_page.alerts) == 1
+
+    invalid = store.read_maintenance_alert_archive_file(file_name="../bad.jsonl", limit=1, cursor="")
+    assert invalid.message == "invalid_file_name"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

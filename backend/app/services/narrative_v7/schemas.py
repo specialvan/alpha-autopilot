@@ -617,3 +617,36 @@ class BenchmarkMaintenanceAlertArchiveResponse(BaseModel):
     archive_dir: str = ""
     archive_files: list[str] = Field(default_factory=list)
     message: str = ""
+
+
+class BenchmarkMaintenanceAlertArchiveFileRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    file_name: str
+    size_bytes: int = Field(default=0, ge=0)
+    modified_at: str = ""
+    valid_event_count: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+
+
+class BenchmarkMaintenanceAlertArchiveListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    total_files: int = Field(default=0, ge=0)
+    files: list[BenchmarkMaintenanceAlertArchiveFileRecord] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertArchiveReadResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    file_name: str
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_valid_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)
+    message: str = ""

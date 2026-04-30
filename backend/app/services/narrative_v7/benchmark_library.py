@@ -9,6 +9,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertArchiveResponse,
+    BenchmarkMaintenanceAlertArchiveListResponse,
+    BenchmarkMaintenanceAlertArchiveReadResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -99,6 +101,18 @@ class BenchmarkLibrary:
         dry_run: bool = True,
     ) -> BenchmarkMaintenanceAlertArchiveResponse:
         return self._store.archive_maintenance_alerts(keep_last=keep_last, shard_size=shard_size, dry_run=dry_run)
+
+    def list_maintenance_alert_archive_files(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertArchiveListResponse:
+        return self._store.list_maintenance_alert_archive_files(limit=limit)
+
+    def read_maintenance_alert_archive_file(
+        self,
+        *,
+        file_name: str,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertArchiveReadResponse:
+        return self._store.read_maintenance_alert_archive_file(file_name=file_name, limit=limit, cursor=cursor)
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
         return self._store.build_maintenance_alert_digest(limit=limit)

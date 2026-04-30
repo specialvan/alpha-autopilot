@@ -692,6 +692,51 @@ def test_v7_api_supports_maintenance_alert_archive() -> None:
     assert len(list_response.json()["alerts"]) == 2
 
 
+def test_v7_api_supports_maintenance_alert_archive_file_listing_and_read() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-archive-read-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.65},
+        },
+    )
+
+    for _ in range(5):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/archive?keep_last=2&shard_size=2&dry_run=false"
+    )
+    assert apply_response.status_code == 200
+    assert apply_response.json()["archived_count"] >= 3
+
+    files_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/archive/files?limit=20")
+    assert files_response.status_code == 200
+    files_body = files_response.json()
+    assert files_body["total_files"] >= 2
+    assert files_body["files"]
+    first_file = files_body["files"][0]["file_name"]
+
+    read_response = client.get(
+        f"/api/narrative/v7/benchmark/maintenance/alerts/archive/read?file_name={first_file}&limit=1"
+    )
+    assert read_response.status_code == 200
+    read_body = read_response.json()
+    assert read_body["message"] == "ok"
+    assert read_body["total_valid_events"] >= 1
+    assert len(read_body["alerts"]) == 1
+
+    invalid_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/archive/read?file_name=../bad.jsonl&limit=1"
+    )
+    assert invalid_response.status_code == 200
+    assert invalid_response.json()["message"] == "invalid_file_name"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

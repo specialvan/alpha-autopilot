@@ -22,6 +22,9 @@ from .schemas import (
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertArchiveResponse,
+    BenchmarkMaintenanceAlertArchiveFileRecord,
+    BenchmarkMaintenanceAlertArchiveListResponse,
+    BenchmarkMaintenanceAlertArchiveReadResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceAlertSummaryResponse,
@@ -858,6 +861,98 @@ class V7BenchmarkStore:
             archive_dir=str(archive_dir),
             archive_files=archive_files,
             message="dry_run" if dry_run else "archived",
+        )
+
+    def list_maintenance_alert_archive_files(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertArchiveListResponse:
+        query_limit = max(0, int(limit))
+        with self._lock:
+            archive_dir = self._alerts_archive_dir()
+            if not archive_dir.exists():
+                return BenchmarkMaintenanceAlertArchiveListResponse(
+                    generated_at=_now_iso(),
+                    total_files=0,
+                    files=[],
+                    message="no_archive",
+                )
+
+            all_files = sorted(archive_dir.glob("*.jsonl"), key=lambda item: item.name, reverse=True)
+            selected = all_files[:query_limit] if query_limit > 0 else all_files
+            records: list[BenchmarkMaintenanceAlertArchiveFileRecord] = []
+            for item in selected:
+                rows, malformed_line_count = self._read_alert_events(path=item)
+                try:
+                    modified_at = datetime.fromtimestamp(item.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+                        "+00:00", "Z"
+                    )
+                    size_bytes = int(item.stat().st_size)
+                except Exception:
+                    modified_at = ""
+                    size_bytes = 0
+                records.append(
+                    BenchmarkMaintenanceAlertArchiveFileRecord(
+                        file_name=item.name,
+                        size_bytes=max(0, size_bytes),
+                        modified_at=modified_at,
+                        valid_event_count=len(rows),
+                        malformed_line_count=malformed_line_count,
+                    )
+                )
+
+        return BenchmarkMaintenanceAlertArchiveListResponse(
+            generated_at=_now_iso(),
+            total_files=len(all_files),
+            files=records,
+            message="ok",
+        )
+
+    def read_maintenance_alert_archive_file(
+        self,
+        *,
+        file_name: str,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertArchiveReadResponse:
+        query_limit = max(0, int(limit))
+        offset = _parse_cursor_offset(cursor)
+        requested_name = str(file_name or "").strip()
+        normalized_name = Path(requested_name).name
+        if not normalized_name or normalized_name != requested_name:
+            return BenchmarkMaintenanceAlertArchiveReadResponse(
+                file_name=normalized_name,
+                limit=query_limit,
+                cursor=str(offset),
+                message="invalid_file_name",
+            )
+
+        with self._lock:
+            path = self._alerts_archive_dir() / normalized_name
+            if not path.exists():
+                return BenchmarkMaintenanceAlertArchiveReadResponse(
+                    file_name=normalized_name,
+                    limit=query_limit,
+                    cursor=str(offset),
+                    message="file_not_found",
+                )
+            rows, malformed_line_count = self._read_alert_events(path=path)
+
+        rows.sort(key=lambda item: item.generated_at, reverse=True)
+        total = len(rows)
+        start = min(offset, total)
+        end = min(total, start + query_limit) if query_limit > 0 else total
+        window = rows[start:end]
+        has_more = end < total
+        next_cursor = str(end) if has_more else ""
+
+        return BenchmarkMaintenanceAlertArchiveReadResponse(
+            file_name=normalized_name,
+            limit=query_limit,
+            cursor=str(start),
+            next_cursor=next_cursor,
+            has_more=has_more,
+            total_valid_events=total,
+            malformed_line_count=malformed_line_count,
+            alerts=window,
+            message="ok",
         )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:

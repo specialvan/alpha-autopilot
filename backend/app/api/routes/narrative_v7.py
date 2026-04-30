@@ -31,6 +31,8 @@ from ...services.narrative_v7.schemas import (
     BenchmarkIngestResponse,
     BenchmarkMaintenanceAlertResponse,
     BenchmarkMaintenanceAlertArchiveResponse,
+    BenchmarkMaintenanceAlertArchiveListResponse,
+    BenchmarkMaintenanceAlertArchiveReadResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertExportResponse,
@@ -480,6 +482,34 @@ def benchmark_maintenance_alert_archive(
             keep_last=keep_last,
             shard_size=shard_size,
             dry_run=dry_run,
+        ),
+    )
+
+
+@router.get("/benchmark/maintenance/alerts/archive/files", response_model=BenchmarkMaintenanceAlertArchiveListResponse)
+def benchmark_maintenance_alert_archive_files(
+    limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertArchiveListResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/archive/files",
+        feature_name="benchmark_maintenance_alert_archive_files",
+        operation=lambda: _benchmark_library.list_maintenance_alert_archive_files(limit=limit),
+    )
+
+
+@router.get("/benchmark/maintenance/alerts/archive/read", response_model=BenchmarkMaintenanceAlertArchiveReadResponse)
+def benchmark_maintenance_alert_archive_read(
+    file_name: str = Query(min_length=1),
+    limit: int = Query(default=100, ge=1, le=20000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertArchiveReadResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/archive/read",
+        feature_name="benchmark_maintenance_alert_archive_read",
+        operation=lambda: _benchmark_library.read_maintenance_alert_archive_file(
+            file_name=file_name,
+            limit=limit,
+            cursor=cursor,
         ),
     )
 
