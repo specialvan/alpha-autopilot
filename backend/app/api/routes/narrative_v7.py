@@ -63,6 +63,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunDigestResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -1111,6 +1112,24 @@ def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_au
         operation=lambda: _benchmark_library.auto_remediate_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(
             dry_run=dry_run,
             limit=limit,
+        ),
+    )
+
+
+@router.get(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunListResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_auto_remediate_runs_auto_remediate_runs(
+    limit: int = Query(default=100, ge=1, le=20000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunListResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_auto_remediate_runs_auto_remediate_runs",
+        operation=lambda: _benchmark_library.list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=limit,
+            cursor=cursor,
         ),
     )
 

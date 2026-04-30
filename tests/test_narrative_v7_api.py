@@ -2800,6 +2800,35 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
     post_prune_history = post_prune_history_response.json()
     assert post_prune_history["total_records"] == 0
 
+    orchestrator_run_history_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs?limit=20"
+    )
+    assert orchestrator_run_history_response.status_code == 200
+    orchestrator_run_history = orchestrator_run_history_response.json()
+    assert orchestrator_run_history["total_records"] == 2
+    assert orchestrator_run_history["malformed_line_count"] == 0
+    assert orchestrator_run_history["records"][0]["action"] == "auto_prune_runs"
+    assert orchestrator_run_history["records"][0]["pruned_run_history"] is True
+    assert orchestrator_run_history["records"][1]["action"] == "run_auto_remediation_orchestrator"
+    assert orchestrator_run_history["records"][1]["remediated_orchestrator"] is True
+
+    with (
+        store.version_root
+        / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs.jsonl"
+    ).open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write("{bad-json\n")
+
+    orchestrator_run_history_after_malformed_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs?limit=20"
+    )
+    assert orchestrator_run_history_after_malformed_response.status_code == 200
+    orchestrator_run_history_after_malformed = orchestrator_run_history_after_malformed_response.json()
+    assert orchestrator_run_history_after_malformed["total_records"] == 2
+    assert orchestrator_run_history_after_malformed["malformed_line_count"] >= 1
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()

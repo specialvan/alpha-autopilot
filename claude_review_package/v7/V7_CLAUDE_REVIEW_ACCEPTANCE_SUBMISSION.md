@@ -193,3 +193,19 @@
 - Verification:
   - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
   - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
+
+## Round-49 Delta (2026-05-01)
+
+- Scope: persist and expose run history for orchestrator-run auto-remediate executions.
+- New API:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs
+- Stored run fields:
+  - action/executed/remediated_orchestrator/pruned_run_history
+  - digest_before_message/digest_after_message/message
+- Pagination contract:
+  - limit/cursor/next_cursor/has_more + malformed_line_count
+- Stability hardening:
+  - governance-run ordering adds attempt as tie-break key under same timestamp collisions.
+- Verification:
+  - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
+  - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
