@@ -694,6 +694,8 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
     archive_shard_size: int = Field(default=0, ge=0)
     archive_ttl_days: int = Field(default=0, ge=0)
     archive_max_shard_files: int = Field(default=0, ge=0)
+    governance_runs_prune_trigger_count: int = Field(default=0, ge=0)
+    governance_runs_prune_keep_last: int = Field(default=0, ge=0)
     stale_threshold_seconds: int = Field(default=0, ge=0)
 
 
@@ -791,6 +793,20 @@ class BenchmarkMaintenanceAlertGovernanceRunExportResponse(BaseModel):
     malformed_line_count: int = Field(default=0, ge=0)
     summary: BenchmarkMaintenanceAlertGovernanceRunSummaryResponse
     records: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    trigger_count: int = Field(default=0, ge=0)
+    keep_last: int = Field(default=0, ge=0)
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    should_prune: bool = False
+    prune: BenchmarkMaintenanceAlertGovernanceRunPruneResponse | None = None
     message: str = ""
 
 

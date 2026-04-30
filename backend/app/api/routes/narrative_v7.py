@@ -38,6 +38,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceReportResponse,
     BenchmarkMaintenanceAlertGovernanceRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunExportResponse,
+    BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertGovernanceRunSummaryResponse,
@@ -636,6 +637,17 @@ def benchmark_maintenance_alert_governance_runs_export(
         route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/export",
         feature_name="benchmark_maintenance_alert_governance_runs_export",
         operation=lambda: _benchmark_library.export_maintenance_alert_governance_runs(limit=limit, cursor=cursor),
+    )
+
+
+@router.post("/benchmark/maintenance/alerts/governance/runs/auto-prune", response_model=BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse)
+def benchmark_maintenance_alert_governance_runs_auto_prune(
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-prune",
+        feature_name="benchmark_maintenance_alert_governance_runs_auto_prune",
+        operation=lambda: _benchmark_library.auto_prune_maintenance_alert_governance_runs(dry_run=dry_run),
     )
 
 

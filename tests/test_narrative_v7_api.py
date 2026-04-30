@@ -1188,6 +1188,67 @@ def test_v7_api_supports_governance_runs_export(monkeypatch) -> None:
     assert export_second["summary"]["total_records"] == 3
 
 
+def test_v7_api_supports_governance_runs_auto_prune(monkeypatch) -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-auto-prune-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.66},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+    for index in range(4):
+        run_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-auto-prune-api-{index}"
+        )
+        assert run_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_KEEP_LAST", "1")
+
+    dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-prune?dry_run=true"
+    )
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["should_prune"] is True
+    assert dry_run["prune"] is not None
+    assert dry_run["prune"]["dry_run"] is True
+    assert dry_run["prune"]["candidate_count"] >= 3
+
+    apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-prune?dry_run=false"
+    )
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["should_prune"] is True
+    assert applied["prune"] is not None
+    assert applied["prune"]["dry_run"] is False
+    assert applied["prune"]["pruned_count"] >= 3
+
+    history_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
+    assert history_response.status_code == 200
+    assert history_response.json()["total_records"] <= 1
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", "100")
+    no_prune_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-prune?dry_run=true"
+    )
+    assert no_prune_response.status_code == 200
+    no_prune = no_prune_response.json()
+    assert no_prune["should_prune"] is False
+    assert no_prune["prune"] is None
+    assert no_prune["message"] == "below_threshold"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

@@ -1067,6 +1067,53 @@ def test_benchmark_store_exports_governance_runs(monkeypatch, tmp_path) -> None:
     assert export_second.summary.total_records == 3
 
 
+def test_benchmark_store_auto_prunes_governance_runs(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-auto-prune",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.67},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+    for index in range(4):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key=f"governance-auto-prune-{index}",
+        )
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_KEEP_LAST", "1")
+
+    dry_run = store.auto_prune_maintenance_alert_governance_runs(dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.should_prune is True
+    assert dry_run.prune is not None
+    assert dry_run.prune.dry_run is True
+    assert dry_run.prune.candidate_count >= 3
+
+    applied = store.auto_prune_maintenance_alert_governance_runs(dry_run=False)
+    assert applied.dry_run is False
+    assert applied.should_prune is True
+    assert applied.prune is not None
+    assert applied.prune.dry_run is False
+    assert applied.prune.pruned_count >= 3
+
+    history = store.list_maintenance_alert_governance_runs(limit=20)
+    assert history.total_records <= 1
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", "100")
+    not_needed = store.auto_prune_maintenance_alert_governance_runs(dry_run=True)
+    assert not_needed.should_prune is False
+    assert not_needed.prune is None
+    assert not_needed.message == "below_threshold"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)
