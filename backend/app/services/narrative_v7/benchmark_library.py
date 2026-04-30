@@ -11,6 +11,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertArchiveResponse,
     BenchmarkMaintenanceAlertArchiveListResponse,
     BenchmarkMaintenanceAlertArchiveReadResponse,
+    BenchmarkMaintenanceAlertAutoArchiveResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -113,6 +114,9 @@ class BenchmarkLibrary:
         cursor: str = "",
     ) -> BenchmarkMaintenanceAlertArchiveReadResponse:
         return self._store.read_maintenance_alert_archive_file(file_name=file_name, limit=limit, cursor=cursor)
+
+    def auto_archive_maintenance_alerts(self, *, dry_run: bool = True) -> BenchmarkMaintenanceAlertAutoArchiveResponse:
+        return self._store.auto_archive_maintenance_alerts(dry_run=dry_run)
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
         return self._store.build_maintenance_alert_digest(limit=limit)

@@ -737,6 +737,46 @@ def test_v7_api_supports_maintenance_alert_archive_file_listing_and_read() -> No
     assert invalid_response.json()["message"] == "invalid_file_name"
 
 
+def test_v7_api_supports_maintenance_alert_auto_archive(monkeypatch) -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-auto-archive-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.66},
+        },
+    )
+
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+
+    dry_run_response = client.post("/api/narrative/v7/benchmark/maintenance/alerts/auto-archive?dry_run=true")
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["should_archive"] is True
+    assert dry_run["archive"] is not None
+    assert dry_run["archive"]["dry_run"] is True
+
+    apply_response = client.post("/api/narrative/v7/benchmark/maintenance/alerts/auto-archive?dry_run=false")
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["should_archive"] is True
+    assert applied["archive"] is not None
+    assert applied["archive"]["dry_run"] is False
+    assert applied["archive"]["kept_count"] == 1
+
+    list_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts?limit=20")
+    assert list_response.status_code == 200
+    assert len(list_response.json()["alerts"]) == 1
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

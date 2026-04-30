@@ -25,6 +25,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertArchiveFileRecord,
     BenchmarkMaintenanceAlertArchiveListResponse,
     BenchmarkMaintenanceAlertArchiveReadResponse,
+    BenchmarkMaintenanceAlertAutoArchiveResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceAlertSummaryResponse,
@@ -953,6 +954,53 @@ class V7BenchmarkStore:
             malformed_line_count=malformed_line_count,
             alerts=window,
             message="ok",
+        )
+
+    def auto_archive_maintenance_alerts(self, *, dry_run: bool = True) -> BenchmarkMaintenanceAlertAutoArchiveResponse:
+        trigger_count = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", 10000, low=0)
+        keep_last = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", 5000, low=0)
+        shard_size = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", 1000, low=1)
+
+        with self._lock:
+            path = self._alerts_path()
+            if path.exists():
+                rows, malformed_line_count = self._read_alert_events(path=path)
+            else:
+                rows = []
+                malformed_line_count = 0
+
+        total_valid_events = len(rows)
+        should_archive = total_valid_events > trigger_count or malformed_line_count > 0
+        if not should_archive:
+            return BenchmarkMaintenanceAlertAutoArchiveResponse(
+                generated_at=_now_iso(),
+                dry_run=bool(dry_run),
+                trigger_count=trigger_count,
+                keep_last=keep_last,
+                shard_size=shard_size,
+                total_valid_events=total_valid_events,
+                malformed_line_count=malformed_line_count,
+                should_archive=False,
+                archive=None,
+                message="below_threshold",
+            )
+
+        archive = self.archive_maintenance_alerts(
+            keep_last=keep_last,
+            shard_size=shard_size,
+            dry_run=dry_run,
+        )
+        return BenchmarkMaintenanceAlertAutoArchiveResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            trigger_count=trigger_count,
+            keep_last=keep_last,
+            shard_size=shard_size,
+            total_valid_events=total_valid_events,
+            malformed_line_count=malformed_line_count,
+            should_archive=True,
+            archive=archive,
+            message="archived" if not dry_run else "dry_run",
         )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:

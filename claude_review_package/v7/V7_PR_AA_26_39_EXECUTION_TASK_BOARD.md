@@ -267,6 +267,15 @@
 - [x] 归档读取支持文件名安全约束（防路径穿越）
 - [x] 第十七轮回归测试覆盖（archive files/read store/api）
 
+## 生产化增强清单（第十八轮）
+
+- [x] 告警自动归档策略能力：`auto_archive_maintenance_alerts`
+- [x] 告警自动归档接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/auto-archive`
+- [x] 环境变量策略治理：`AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT/KEEP_LAST/SHARD_SIZE`
+- [x] 自动归档支持 `dry_run/apply` 双路径
+- [x] 自动归档响应输出 `should_archive` 与 `archive` 明细，便于运维联动
+- [x] 第十八轮回归测试覆盖（alert auto-archive store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -277,5 +286,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`52 passed`
+- [x] 结果：`54 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

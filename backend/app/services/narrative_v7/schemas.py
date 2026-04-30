@@ -650,3 +650,18 @@ class BenchmarkMaintenanceAlertArchiveReadResponse(BaseModel):
     malformed_line_count: int = Field(default=0, ge=0)
     alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)
     message: str = ""
+
+
+class BenchmarkMaintenanceAlertAutoArchiveResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    trigger_count: int = Field(default=0, ge=0)
+    keep_last: int = Field(default=0, ge=0)
+    shard_size: int = Field(default=0, ge=0)
+    total_valid_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    should_archive: bool = False
+    archive: BenchmarkMaintenanceAlertArchiveResponse | None = None
+    message: str = ""

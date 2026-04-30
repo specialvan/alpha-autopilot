@@ -698,6 +698,40 @@ def test_benchmark_store_lists_and_reads_alert_archive_files(tmp_path) -> None:
     assert invalid.message == "invalid_file_name"
 
 
+def test_benchmark_store_auto_archives_alerts_by_policy(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-auto-archive",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.64},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+
+    dry_run = store.auto_archive_maintenance_alerts(dry_run=True)
+    assert dry_run.should_archive is True
+    assert dry_run.archive is not None
+    assert dry_run.archive.dry_run is True
+    assert dry_run.archive.candidate_count >= 3
+
+    applied = store.auto_archive_maintenance_alerts(dry_run=False)
+    assert applied.should_archive is True
+    assert applied.archive is not None
+    assert applied.archive.dry_run is False
+    assert applied.archive.kept_count == 1
+    assert applied.archive.archived_count >= 3
+
+    listed_after = store.list_maintenance_alerts(limit=20)
+    assert len(listed_after.alerts) == 1
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)
