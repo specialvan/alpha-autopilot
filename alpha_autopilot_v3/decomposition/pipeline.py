@@ -4,6 +4,7 @@ from typing import Any
 
 from ..generation_control.policy import build_generation_control_plan
 from ..retention.metrics import build_retention_metrics
+from ..retention.models import RetentionDesireVector
 from .models import ChapterDecompositionRecord, CheckpointResult, EvidenceSpan
 
 
@@ -105,6 +106,8 @@ def decompose_chapter_text(
     text: str,
     genre: str,
     stage: str,
+    retention_desire_vector: RetentionDesireVector | None = None,
+    macro_structure: str | None = None,
 ) -> ChapterDecompositionRecord:
     paragraphs = _split_paragraphs(text)
     primary_function = _infer_primary_function(paragraphs)
@@ -156,7 +159,11 @@ def decompose_chapter_text(
     )
 
     retention_metrics = build_retention_metrics(record)
-    control_plan = build_generation_control_plan(record)
+    control_plan = build_generation_control_plan(
+        record,
+        desire_vector=retention_desire_vector,
+        macro_structure=macro_structure,
+    )
 
     record.attraction_score = retention_metrics.chapter_attraction_score
     record.hook_strength = retention_metrics.hook_strength

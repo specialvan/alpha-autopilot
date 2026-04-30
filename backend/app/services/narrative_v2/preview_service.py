@@ -8,7 +8,7 @@ from alpha_autopilot_v2.domain import SearchResult
 from .decision_contract import build_preview_decision
 from .evaluation_service import NarrativeV2EvaluationService
 from .rule_service import NarrativeV2RuleService
-from .schemas import NarrativeV2PreviewRequest
+from .schemas import NarrativeV2PreviewRequest, PlotUnitScaffold
 from .search_service import NarrativeV2SearchService
 from .state_builder import NarrativeV2StateBuilder
 from .validation_service import NarrativeV2ValidationService
@@ -71,6 +71,9 @@ class NarrativeV2PreviewService:
             "evaluation_summary": evaluation_summary,
             "validation": asdict(validation),
         }
+        prompt_constraints = _build_plot_unit_prompt_constraints(payload.plot_unit_scaffold)
+        if prompt_constraints is not None:
+            response["system_prompt_constraints"] = prompt_constraints
         if ledger_warning:
             response["ledger_warning"] = ledger_warning
         return response
@@ -84,3 +87,23 @@ def _select_recommendation(
         if recommendation.action.action == selected_action:
             return recommendation
     return recommendations[0] if recommendations else None
+
+
+def _build_plot_unit_prompt_constraints(
+    scaffold: PlotUnitScaffold | None,
+) -> dict[str, object] | None:
+    if scaffold is None:
+        return None
+    paragraph = (
+        "Follow this six-step plot scaffold in order: "
+        f"1) Encounter Event={scaffold.encounter_event}; "
+        f"2) Desire Goal={scaffold.desire_goal}; "
+        f"3) Obstacle={scaffold.obstacle}; "
+        f"4) Solution Method={scaffold.solution_method}; "
+        f"5) Action Climax={scaffold.action_climax.node} (turn={scaffold.action_climax.turn_type.value}); "
+        f"6) Resolution={scaffold.resolution}."
+    )
+    return {
+        "plot_unit_scaffold": scaffold.model_dump(mode="json"),
+        "system_prompt_paragraph": paragraph,
+    }

@@ -7,6 +7,8 @@ import {
   type NarrativeV2PreviewResponse,
   type NarrativeV2StoryState,
   type NarrativeV2WorkbenchContextsResponse,
+  type PlotTurnType,
+  type PlotUnitScaffold,
 } from '../../api';
 import { buildNarrativeV2PreviewRequest, clampNarrativeV2Value } from '../../v2Preview';
 import { computeStateDiff, listChapterMappedContexts, resolveBaseState } from './contextMapping';
@@ -26,6 +28,35 @@ type NumericStateField = Extract<
   | 'foreshadowing_load'
   | 'payoff_pressure'
 >;
+type MacroStructureField = Extract<
+  NonNullable<NarrativeV2StoryState['macro_structure']>,
+  'hub_and_spoke' | 'progressive' | 'anthology'
+>;
+
+type PlotUnitTextField = Exclude<keyof PlotUnitScaffold, 'action_climax'>;
+
+const EMPTY_PLOT_UNIT_SCAFFOLD: PlotUnitScaffold = {
+  encounter_event: '',
+  desire_goal: '',
+  obstacle: '',
+  solution_method: '',
+  action_climax: {
+    node: '',
+    turn_type: 'obstacle_shift',
+  },
+  resolution: '',
+};
+
+function isPlotUnitScaffoldComplete(scaffold: PlotUnitScaffold): boolean {
+  return (
+    scaffold.encounter_event.trim().length > 0
+    && scaffold.desire_goal.trim().length > 0
+    && scaffold.obstacle.trim().length > 0
+    && scaffold.solution_method.trim().length > 0
+    && scaffold.action_climax.node.trim().length > 0
+    && scaffold.resolution.trim().length > 0
+  );
+}
 
 export function useV2WorkbenchController() {
   const fallbackContexts = listChapterMappedContexts();
@@ -35,6 +66,7 @@ export function useV2WorkbenchController() {
   const [overrides, setOverrides] = useState<Partial<NarrativeV2StoryState>>({});
   const [currentPreview, setCurrentPreview] = useState<NarrativeV2PreviewResponse | null>(null);
   const [currentV4Preview, setCurrentV4Preview] = useState<V4WorkbenchPreview | null>(null);
+  const [plotUnitScaffold, setPlotUnitScaffold] = useState<PlotUnitScaffold>(EMPTY_PLOT_UNIT_SCAFFOLD);
   const [comparisonPreview, setComparisonPreview] = useState<NarrativeV2PreviewResponse | null>(null);
   const [runHistory, setRunHistory] = useState<WorkbenchRunEntry[]>([]);
   const [uiStatus, setUiStatus] = useState<UiStatus>('loading_context');
@@ -85,7 +117,11 @@ export function useV2WorkbenchController() {
     try {
       const [preview, v4PreviewRaw] = await Promise.all([
         fetchRecommendationPreviewV2(
-          buildNarrativeV2PreviewRequest(workingState),
+          buildNarrativeV2PreviewRequest(workingState, {
+            plotUnitScaffold: isPlotUnitScaffoldComplete(plotUnitScaffold)
+              ? plotUnitScaffold
+              : null,
+          }),
         ),
         fetchNarrativeV4WorkbenchPreview({
           id: selectedChapter || contextSource,
@@ -227,6 +263,44 @@ export function useV2WorkbenchController() {
     setUiStatus('dirty');
   };
 
+  const setMacroStructure = (value: MacroStructureField) => {
+    setOverrides((current) => ({
+      ...current,
+      macro_structure: value,
+    }));
+    setUiStatus('dirty');
+  };
+
+  const setPlotUnitTextField = (field: PlotUnitTextField, value: string) => {
+    setPlotUnitScaffold((current) => ({
+      ...current,
+      [field]: value,
+    }));
+    setUiStatus('dirty');
+  };
+
+  const setPlotUnitTurnType = (value: PlotTurnType) => {
+    setPlotUnitScaffold((current) => ({
+      ...current,
+      action_climax: {
+        ...current.action_climax,
+        turn_type: value,
+      },
+    }));
+    setUiStatus('dirty');
+  };
+
+  const setPlotUnitClimaxNode = (value: string) => {
+    setPlotUnitScaffold((current) => ({
+      ...current,
+      action_climax: {
+        ...current.action_climax,
+        node: value,
+      },
+    }));
+    setUiStatus('dirty');
+  };
+
   const selectComparisonRun = (id: string) => {
     const selected = runHistory.find((entry) => entry.id === id);
     setComparisonPreview(selected?.preview ?? null);
@@ -254,6 +328,7 @@ export function useV2WorkbenchController() {
     stateDiff,
     currentPreview,
     currentV4Preview,
+    plotUnitScaffold,
     comparisonPreview,
     comparisonDelta,
     runHistory,
@@ -266,6 +341,10 @@ export function useV2WorkbenchController() {
     setContextSource,
     setSelectedChapter,
     setNumericOverride,
+    setMacroStructure,
+    setPlotUnitTextField,
+    setPlotUnitTurnType,
+    setPlotUnitClimaxNode,
     runPreview,
     refreshContexts,
     selectComparisonRun,

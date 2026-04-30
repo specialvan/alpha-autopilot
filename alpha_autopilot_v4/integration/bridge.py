@@ -65,6 +65,8 @@ def build_v4_to_v3_bridge_result(context: dict[str, object]) -> V4ToV3BridgeResu
             "previous_dominant_gap": item.previous_dominant_gap,
             "current_dominant_gap": item.current_dominant_gap,
             "dominant_gap_shifted": item.dominant_gap_shifted,
+            "relation_layer": item.relation_layer,
+            "relation_hint": item.relation_hint,
         }
         for item in plot_result.relationship_displacements
     ]

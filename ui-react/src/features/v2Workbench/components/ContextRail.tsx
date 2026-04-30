@@ -491,6 +491,22 @@ export function ContextRail({ controller }: { controller: Controller }) {
       </div>
 
       <div className="workbench-stack">
+        <label className="field-card">
+          <span className="label">Macro Structure</span>
+          <select
+            className="field-input"
+            value={controller.workingState.macro_structure ?? 'progressive'}
+            onChange={(event) =>
+              controller.setMacroStructure(
+                event.target.value as 'hub_and_spoke' | 'progressive' | 'anthology',
+              )
+            }
+          >
+            <option value="progressive">progressive</option>
+            <option value="hub_and_spoke">hub_and_spoke</option>
+            <option value="anthology">anthology</option>
+          </select>
+        </label>
         {NUMERIC_FIELDS.map((field) => (
           <label className="field-card" key={field.key}>
             <div className="signal-row">
@@ -510,6 +526,74 @@ export function ContextRail({ controller }: { controller: Controller }) {
             />
           </label>
         ))}
+      </div>
+
+      <div className="field-card">
+        <span className="label">Plot Unit Scaffold</span>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">1. Encounter Event</span>
+          <textarea
+            className="field-input"
+            value={controller.plotUnitScaffold.encounter_event}
+            onChange={(event) => controller.setPlotUnitTextField('encounter_event', event.target.value)}
+          />
+        </label>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">2. Desire Goal</span>
+          <textarea
+            className="field-input"
+            value={controller.plotUnitScaffold.desire_goal}
+            onChange={(event) => controller.setPlotUnitTextField('desire_goal', event.target.value)}
+          />
+        </label>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">3. Obstacle</span>
+          <textarea
+            className="field-input"
+            value={controller.plotUnitScaffold.obstacle}
+            onChange={(event) => controller.setPlotUnitTextField('obstacle', event.target.value)}
+          />
+        </label>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">4. Solution Method</span>
+          <textarea
+            className="field-input"
+            value={controller.plotUnitScaffold.solution_method}
+            onChange={(event) => controller.setPlotUnitTextField('solution_method', event.target.value)}
+          />
+        </label>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">5. Action Climax Node</span>
+          <textarea
+            className="field-input"
+            value={controller.plotUnitScaffold.action_climax.node}
+            onChange={(event) => controller.setPlotUnitClimaxNode(event.target.value)}
+          />
+        </label>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">5. Action Climax Turn</span>
+          <select
+            className="field-input"
+            value={controller.plotUnitScaffold.action_climax.turn_type}
+            onChange={(event) =>
+              controller.setPlotUnitTurnType(
+                event.target.value as 'obstacle_shift' | 'goal_inversion' | 'character_contrast',
+              )
+            }
+          >
+            <option value="obstacle_shift">obstacle_shift</option>
+            <option value="goal_inversion">goal_inversion</option>
+            <option value="character_contrast">character_contrast</option>
+          </select>
+        </label>
+        <label className="field-card" style={{ marginTop: 10 }}>
+          <span className="label">6. Resolution</span>
+          <textarea
+            className="field-input"
+            value={controller.plotUnitScaffold.resolution}
+            onChange={(event) => controller.setPlotUnitTextField('resolution', event.target.value)}
+          />
+        </label>
       </div>
 
       <div className="field-card">

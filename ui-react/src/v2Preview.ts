@@ -1,4 +1,4 @@
-import type { NarrativeV2PreviewRequest, NarrativeV2StoryState } from './api';
+import type { NarrativeV2PreviewRequest, NarrativeV2StoryState, PlotUnitScaffold } from './api';
 
 export const DEFAULT_V2_PREVIEW_STATE: NarrativeV2StoryState = {
   chapter_index: 8,
@@ -12,6 +12,7 @@ export const DEFAULT_V2_PREVIEW_STATE: NarrativeV2StoryState = {
   payoff_pressure: 0.32,
   characters: {},
   tags: ['power'],
+  macro_structure: 'progressive',
 };
 
 export type NarrativeV2EditableField =
@@ -24,11 +25,20 @@ export type NarrativeV2EditableField =
   | 'foreshadowing_load'
   | 'payoff_pressure';
 
-export function buildNarrativeV2PreviewRequest(state: NarrativeV2StoryState): NarrativeV2PreviewRequest {
-  return {
+export function buildNarrativeV2PreviewRequest(
+  state: NarrativeV2StoryState,
+  options: {
+    plotUnitScaffold?: PlotUnitScaffold | null;
+  } = {},
+): NarrativeV2PreviewRequest {
+  const payload: NarrativeV2PreviewRequest = {
     case_id: `demo-v2-${state.stage}-${state.chapter_index}`,
     state,
   };
+  if (options.plotUnitScaffold) {
+    payload.plot_unit_scaffold = options.plotUnitScaffold;
+  }
+  return payload;
 }
 
 export function clampNarrativeV2Value(value: number): number {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Query
+from time import perf_counter
 
 from ...services.narrative_v4.alert_channel import (
     create_default_v4_alert_channel,
@@ -20,16 +21,60 @@ alert_channel = create_default_v4_alert_channel()
 
 @router.post("/plot/preview")
 def preview_v4_plot(context: dict[str, object]):
-    return build_v4_bridge_payload_with_memory(
-        context,
-        memory_store=memory_store,
-        context_id=str(context.get("id", "api-v4-plot")),
-    )
+    started_at = perf_counter()
+    route_name = "/api/v4/plot/preview"
+    context_id = str(context.get("id", "api-v4-plot"))
+    payload: dict[str, object] | None = None
+    try:
+        payload = build_v4_bridge_payload_with_memory(
+            context,
+            memory_store=memory_store,
+            context_id=context_id,
+        )
+        return payload
+    except Exception as exc:
+        _record_runtime_metric(
+            route_name=route_name,
+            started_at=started_at,
+            context_id=context_id,
+            error=exc,
+        )
+        raise
+    finally:
+        if payload is not None:
+            _record_runtime_metric(
+                route_name=route_name,
+                started_at=started_at,
+                context_id=context_id,
+                payload=payload,
+            )
 
 
 @router.post("/workbench/preview")
 def preview_v4_workbench(context: dict[str, object]):
-    return build_v4_workbench_preview(context, memory_store=memory_store)
+    started_at = perf_counter()
+    route_name = "/api/v4/workbench/preview"
+    context_id = str(context.get("id", "workbench-context"))
+    payload: dict[str, object] | None = None
+    try:
+        payload = build_v4_workbench_preview(context, memory_store=memory_store)
+        return payload
+    except Exception as exc:
+        _record_runtime_metric(
+            route_name=route_name,
+            started_at=started_at,
+            context_id=context_id,
+            error=exc,
+        )
+        raise
+    finally:
+        if payload is not None:
+            _record_runtime_metric(
+                route_name=route_name,
+                started_at=started_at,
+                context_id=context_id,
+                payload=payload,
+            )
 
 
 @router.get("/observability/snapshot")
@@ -56,3 +101,31 @@ def route_v4_observability_alerts_endpoint(
         "routing": routing,
         "snapshot": snapshot,
     }
+
+
+def _record_runtime_metric(
+    *,
+    route_name: str,
+    started_at: float,
+    context_id: str,
+    payload: dict[str, object] | None = None,
+    error: Exception | None = None,
+) -> None:
+    latency_ms = max(0.0, (perf_counter() - started_at) * 1000.0)
+    fallback_reason = ""
+    status = "success"
+    if payload is not None:
+        enabled = bool(payload.get("enabled", True))
+        if not enabled:
+            status = "fallback"
+            fallback_reason = str(payload.get("fallback_reason", "")).strip()
+    if error is not None:
+        status = "error"
+    memory_store.append_runtime_metric(
+        route=route_name,
+        status=status,
+        latency_ms=latency_ms,
+        fallback_reason=fallback_reason or None,
+        error_type=type(error).__name__ if error is not None else None,
+        context_id=context_id,
+    )

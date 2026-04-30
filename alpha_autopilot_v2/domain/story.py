@@ -25,3 +25,5 @@ class StoryState:
     payoff_pressure: float
     characters: dict[str, CharacterState] = field(default_factory=dict)
     tags: list[str] = field(default_factory=list)
+    retention_desire: dict[str, float | str] | None = None
+    macro_structure: str = "progressive"

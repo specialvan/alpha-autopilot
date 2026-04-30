@@ -67,6 +67,7 @@ def generate_plot_candidates(context: dict[str, object]) -> PlotGenerationResult
         characters,
         history=relation_history if isinstance(relation_history, list) else None,
         chapter_index=_safe_int(context.get("chapter_index")),
+        reveal_disguise=bool(context.get("reveal_disguise", False)),
     )
     pressure_profile = analyze_pressure(context)
     personalities = analyze_personalities(

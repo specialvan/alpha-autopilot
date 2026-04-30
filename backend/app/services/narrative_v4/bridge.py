@@ -5,13 +5,27 @@ import math
 
 from alpha_autopilot_v4.integration import build_v4_to_v3_bridge_result
 from ...core.config import settings
+from .character_validation import run_character_validation_loop
+from .emotion_slider import EmotionSliderMap
 from .memory_store import V4MemoryStore
+from .prompt_compressor import PromptCompressor
+from .relationship_graph import (
+    filter_relationship_edges,
+    relationship_edges_to_history_rows,
+    validate_relationship_graph_schema,
+)
 
 _GENRE_GUARD_OVERRIDE_CACHE: tuple[str | None, dict[str, dict[str, float | int]]] = (None, {})
 
 
 def build_v4_bridge_payload(context: dict[str, object]) -> dict[str, object]:
     bridge = build_v4_to_v3_bridge_result(context)
+    scene_id = _resolve_scene_id(context)
+    character_behavior_constraints = _build_character_behavior_constraints(
+        context.get("characters"),
+        scene_id=scene_id,
+    )
+    prompt_documents, prompt_compression_logs = _compress_prompt_documents(context)
     selected = bridge.plot_generation_result.selected_candidate
     candidates = [
         {
@@ -49,6 +63,9 @@ def build_v4_bridge_payload(context: dict[str, object]) -> dict[str, object]:
         "relationship_graph": bridge.v3_context.get("relationship_graph", {}),
         "relationship_displacements": bridge.v3_context.get("relationship_displacements", []),
         "retention_writeback": bridge.v3_context.get("retention_writeback", {}),
+        "character_behavior_constraints": character_behavior_constraints,
+        "prompt_documents": prompt_documents,
+        "prompt_compression_logs": prompt_compression_logs,
         "memory_summary": {
             "relationship_history_count": len(context.get("relationship_history", []))
             if isinstance(context.get("relationship_history"), list)
@@ -56,6 +73,22 @@ def build_v4_bridge_payload(context: dict[str, object]) -> dict[str, object]:
             "feedback_history_count": len(context.get("v3_feedback_history", []))
             if isinstance(context.get("v3_feedback_history"), list)
             else 0,
+            "character_behavior_constraints_count": len(character_behavior_constraints),
+            "prompt_compression_triggered_count": sum(
+                1
+                for row in prompt_compression_logs
+                if bool(row.get("triggered", False))
+            ),
+            "prompt_compression_original_tokens": sum(
+                _safe_int(row.get("original_tokens"), default=0) or 0
+                for row in prompt_compression_logs
+                if isinstance(row, dict)
+            ),
+            "prompt_compression_compressed_tokens": sum(
+                _safe_int(row.get("compressed_tokens"), default=0) or 0
+                for row in prompt_compression_logs
+                if isinstance(row, dict)
+            ),
         },
     }
 
@@ -76,6 +109,33 @@ def build_v4_bridge_payload_with_memory(
     incoming_relationship_history = context_payload.get("relationship_history")
     if not isinstance(incoming_relationship_history, list):
         incoming_relationship_history = []
+    graph_total_edges = 0
+    graph_filtered_edges = 0
+    graph_hidden_filtered_count = 0
+    relationship_graph_constraints: dict[str, object] = {}
+    relationship_graph_input = context_payload.get("relationship_graph_input")
+    if isinstance(relationship_graph_input, dict):
+        graph_model = validate_relationship_graph_schema(relationship_graph_input)
+        chapter_index_for_graph = _safe_int(context_payload.get("chapter_index"), default=None)
+        reveal_disguise = bool(context_payload.get("reveal_disguise", False))
+        filtered_edges = filter_relationship_edges(
+            graph_model,
+            current_chapter=chapter_index_for_graph,
+            reveal_disguise=reveal_disguise,
+        )
+        graph_total_edges = len(graph_model.edges)
+        graph_filtered_edges = len(filtered_edges)
+        graph_hidden_filtered_count = len(
+            [edge for edge in graph_model.edges if edge.hidden]
+        ) - len([edge for edge in filtered_edges if edge.hidden])
+        relationship_graph_constraints = {
+            "characters": list(graph_model.characters),
+            "edges": [edge.model_dump(mode="json", by_alias=True) for edge in filtered_edges],
+        }
+        incoming_relationship_history = [
+            *incoming_relationship_history,
+            *relationship_edges_to_history_rows(filtered_edges),
+        ]
     incoming_feedback_history = context_payload.get("v3_feedback_history")
     if not isinstance(incoming_feedback_history, list):
         incoming_feedback_history = []
@@ -138,6 +198,42 @@ def build_v4_bridge_payload_with_memory(
     )
     _inject_genre_auto_calibration(context_payload, genre_calibration)
 
+    validation_enabled = bool(context_payload.get("v4_enabled", True))
+    validation_override = context_payload.get("character_validation_enabled")
+    if isinstance(validation_override, bool):
+        validation_enabled = bool(context_payload.get("v4_enabled", True)) and validation_override
+    validation_mode_requested = str(
+        context_payload.get("character_validation_mode", settings.v4_character_validation_mode),
+    ).strip().lower() or "heuristic"
+    if validation_mode_requested not in {"heuristic", "external"}:
+        validation_mode_requested = "heuristic"
+    raw_validation_inspector = context_payload.get("_character_validation_inspector")
+    raw_validation_fixer = context_payload.get("_character_validation_fixer")
+    validation_inspector = (
+        raw_validation_inspector
+        if validation_mode_requested == "external" and callable(raw_validation_inspector)
+        else None
+    )
+    validation_fixer = (
+        raw_validation_fixer
+        if validation_mode_requested == "external" and callable(raw_validation_fixer)
+        else None
+    )
+    validation_mode_effective = (
+        "external"
+        if validation_mode_requested == "external"
+        and (validation_inspector is not None or validation_fixer is not None)
+        else "heuristic"
+    )
+    validated_characters, character_validation_log = run_character_validation_loop(
+        context_payload.get("characters"),
+        enabled=validation_enabled,
+        inspector=validation_inspector,
+        fixer=validation_fixer,
+    )
+    character_validation_log["mode_requested"] = validation_mode_requested
+    character_validation_log["mode_effective"] = validation_mode_effective
+    context_payload["characters"] = validated_characters
     context_payload["relationship_history"] = relationship_history
     context_payload["v3_feedback_history"] = feedback_history
     payload = build_v4_bridge_payload(context_payload)
@@ -167,6 +263,8 @@ def build_v4_bridge_payload_with_memory(
     payload["relationship_timeline"] = relationship_timeline
     payload["candidate_timeline"] = candidate_timeline
     payload["genre_calibration"] = genre_calibration
+    payload["character_validation"] = character_validation_log
+    payload["relationship_graph_constraints"] = relationship_graph_constraints
     memory_summary = dict(payload.get("memory_summary", {}))
     memory_summary["context_id"] = resolved_context_id
     memory_summary["history_window"] = history_window
@@ -196,6 +294,27 @@ def build_v4_bridge_payload_with_memory(
         for item in relationship_timeline
         if isinstance(item, dict)
     )
+    memory_summary["character_validation_enabled"] = bool(character_validation_log.get("enabled", False))
+    memory_summary["character_validation_issue_count"] = _safe_int(
+        character_validation_log.get("issue_count"),
+        default=0,
+    ) or 0
+    memory_summary["character_validation_elapsed_ms"] = round(
+        _safe_float(character_validation_log.get("elapsed_ms"), default=0.0),
+        4,
+    )
+    memory_summary["character_validation_mode_requested"] = validation_mode_requested
+    memory_summary["character_validation_mode_effective"] = validation_mode_effective
+    llm_calls = character_validation_log.get("llm_calls")
+    if isinstance(llm_calls, dict):
+        memory_summary["character_validation_llm_calls"] = {
+            "generate": _safe_int(llm_calls.get("generate"), default=0) or 0,
+            "self_inspect": _safe_int(llm_calls.get("self_inspect"), default=0) or 0,
+            "targeted_fix": _safe_int(llm_calls.get("targeted_fix"), default=0) or 0,
+        }
+    memory_summary["relationship_graph_input_edges_total"] = graph_total_edges
+    memory_summary["relationship_graph_input_edges_filtered"] = graph_filtered_edges
+    memory_summary["relationship_graph_hidden_filtered_count"] = max(0, graph_hidden_filtered_count)
     memory_summary["genre_auto_learning_mode"] = str(
         genre_calibration.get("learning_mode", "disabled"),
     )
@@ -299,6 +418,17 @@ def build_v4_workbench_preview(
             "relationship_timeline": [],
             "candidate_timeline": [],
             "genre_calibration": {},
+            "character_validation": {
+                "enabled": False,
+                "skipped": True,
+                "reason": "missing-state",
+                "issue_list": {"issues": []},
+                "llm_calls": {"generate": 0, "self_inspect": 0, "targeted_fix": 0},
+                "elapsed_ms": 0.0,
+            },
+            "relationship_graph_constraints": {},
+            "prompt_documents": {},
+            "prompt_compression_logs": [],
             "v4_input_profile": {},
         }
 
@@ -335,6 +465,11 @@ def build_v4_workbench_preview(
         "candidate_timeline": payload.get("candidate_timeline", []),
         "genre_calibration": payload.get("genre_calibration", {}),
         "retention_writeback": payload.get("retention_writeback", {}),
+        "character_behavior_constraints": payload.get("character_behavior_constraints", []),
+        "character_validation": payload.get("character_validation", {}),
+        "relationship_graph_constraints": payload.get("relationship_graph_constraints", {}),
+        "prompt_documents": payload.get("prompt_documents", {}),
+        "prompt_compression_logs": payload.get("prompt_compression_logs", []),
         "memory_summary": payload.get("memory_summary", {}),
         "v4_input_profile": {
             "chapter_index": _safe_int(state.get("chapter_index"), default=0),
@@ -346,6 +481,139 @@ def build_v4_workbench_preview(
             "foreshadowing_load": _bounded_float(state.get("foreshadowing_load"), 0.5),
         },
     }
+
+
+def _resolve_scene_id(context: dict[str, object]) -> str:
+    raw_scene_id = context.get("scene_id")
+    if isinstance(raw_scene_id, str) and raw_scene_id.strip():
+        return raw_scene_id.strip()
+    chapter_index = _safe_int(context.get("chapter_index"), default=None)
+    if chapter_index is not None:
+        return f"chapter-{chapter_index}"
+    return "scene-default"
+
+
+def _build_character_behavior_constraints(
+    characters: object,
+    *,
+    scene_id: str,
+) -> list[dict[str, object]]:
+    if not isinstance(characters, list):
+        return []
+    constraints: list[dict[str, object]] = []
+    for row in characters:
+        if not isinstance(row, dict):
+            continue
+        emotion_payload = row.get("emotion_slider_map")
+        if not isinstance(emotion_payload, dict):
+            continue
+        emotion_slider_map = EmotionSliderMap.model_validate(emotion_payload)
+        character_id = str(row.get("id", "unknown"))
+        constraints.append(
+            emotion_slider_map.build_prompt_constraint(
+                character_id=character_id,
+                scene_id=scene_id,
+            )
+        )
+    return constraints
+
+
+def _compress_prompt_documents(
+    context: dict[str, object],
+) -> tuple[dict[str, str], list[dict[str, object]]]:
+    raw_prompt_documents = context.get("prompt_documents")
+    documents: dict[str, str] = {}
+    if isinstance(raw_prompt_documents, dict):
+        for key, value in raw_prompt_documents.items():
+            if isinstance(key, str) and isinstance(value, str):
+                documents[key] = value
+
+    # Backward-compatible aliases for common document inputs.
+    for key in (
+        "style_document",
+        "character_profile_document",
+        "world_setting_document",
+        "core_instruction_document",
+    ):
+        value = context.get(key)
+        if isinstance(value, str):
+            documents.setdefault(key, value)
+
+    if not documents:
+        return {}, []
+
+    compress_enabled = bool(
+        context.get("compress_prompt_docs", settings.v4_prompt_compress_enabled),
+    )
+    threshold = _safe_int(
+        context.get("prompt_compress_threshold", settings.v4_prompt_compress_threshold_tokens),
+        default=settings.v4_prompt_compress_threshold_tokens,
+    ) or settings.v4_prompt_compress_threshold_tokens
+    target_ratio = _safe_float(
+        context.get("prompt_compress_target_ratio", settings.v4_prompt_compress_target_ratio),
+        default=settings.v4_prompt_compress_target_ratio,
+    )
+    default_mode = str(
+        context.get("prompt_compress_mode", settings.v4_prompt_compress_default_mode),
+    ).strip().lower() or "bullet"
+    if default_mode not in {"bullet", "headline"}:
+        default_mode = "bullet"
+    coverage_mode_requested = str(
+        context.get("prompt_compress_coverage_mode", settings.v4_prompt_compress_coverage_mode),
+    ).strip().lower() or "heuristic"
+    if coverage_mode_requested not in {"heuristic", "llm_judge"}:
+        coverage_mode_requested = "heuristic"
+    raw_coverage_judge = context.get("_prompt_compression_coverage_judge")
+    coverage_judge = raw_coverage_judge if callable(raw_coverage_judge) else None
+    coverage_mode_effective = (
+        "llm_judge"
+        if coverage_mode_requested == "llm_judge" and coverage_judge is not None
+        else "heuristic"
+    )
+    mode_overrides = context.get("prompt_compression_modes")
+    mode_by_doc = mode_overrides if isinstance(mode_overrides, dict) else {}
+
+    compressor = PromptCompressor(
+        threshold_tokens=threshold,
+        target_ratio=target_ratio,
+        enabled=compress_enabled,
+        coverage_judge=coverage_judge,
+    )
+    compressed_docs: dict[str, str] = {}
+    logs: list[dict[str, object]] = []
+    for key, value in documents.items():
+        raw_mode = mode_by_doc.get(key, default_mode) if isinstance(mode_by_doc, dict) else default_mode
+        mode = raw_mode if raw_mode in {"bullet", "headline"} else default_mode
+        compress_for_doc = key not in {"core_instruction_document", "core_instruction"}
+        result = compressor.compress(
+            value,
+            mode=mode,  # type: ignore[arg-type]
+            compress=compress_for_doc,
+        )
+        compressed_docs[key] = str(result.get("text", value))
+        logs.append(
+            {
+                "document_key": key,
+                "mode": mode,
+                "triggered": bool(result.get("triggered", False)),
+                "fallback_used": bool(result.get("fallback_used", False)),
+                "original_tokens": _safe_int(result.get("original_tokens"), default=0) or 0,
+                "compressed_tokens": _safe_int(result.get("compressed_tokens"), default=0) or 0,
+                "compression_ratio": round(
+                    _safe_float(result.get("compression_ratio"), default=1.0),
+                    4,
+                ),
+                "coverage_score": round(
+                    _safe_float(result.get("coverage_score"), default=1.0),
+                    4,
+                ),
+                "coverage_source": str(result.get("coverage_source", "unknown")),
+                "coverage_mode_requested": coverage_mode_requested,
+                "coverage_mode_effective": coverage_mode_effective,
+                "compress_enabled": compress_for_doc and compress_enabled,
+            }
+        )
+    return compressed_docs, logs
 
 
 def _bounded_float(value: object, default: float = 0.5) -> float:
@@ -1409,6 +1677,7 @@ def _v2_state_to_v4_context(
     return {
         "v4_enabled": True,
         "chapter_index": chapter_index,
+        "scene_id": f"chapter-{chapter_index}",
         "genre": genre,
         "genre_profile": {"genre": genre} if genre else {},
         "characters": [hero, rival],

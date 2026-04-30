@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .models import (
+    CharacterFunctionType,
     RelationshipDelta,
     RelationshipDisplacementEvent,
     RelationshipGraphSummary,
@@ -52,11 +53,49 @@ def _history_index(history: list[dict[str, object]]) -> dict[tuple[str, str], di
     return indexed
 
 
+def _normalized_function_type(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    return normalized
+
+
+def _relation_hint(
+    source: dict[str, object],
+    target: dict[str, object],
+    *,
+    reveal_disguise: bool,
+) -> tuple[str, str]:
+    source_function = _normalized_function_type(source.get("function_type"))
+    target_function = _normalized_function_type(target.get("function_type"))
+    is_disguise = source_function == CharacterFunctionType.DISGUISE.value or (
+        target_function == CharacterFunctionType.DISGUISE.value
+    )
+
+    if not is_disguise:
+        relation = source.get("relation") or target.get("relation") or "unknown"
+        return "surface", str(relation)
+
+    layer = "actual" if reveal_disguise else "surface"
+    key = f"{layer}_relation"
+    relation = (
+        source.get(key)
+        or target.get(key)
+        or source.get("surface_relation")
+        or target.get("surface_relation")
+        or "unknown"
+    )
+    return layer, str(relation)
+
+
 def analyze_relationships(
     characters: list[dict[str, object]],
     *,
     history: list[dict[str, object]] | None = None,
     chapter_index: int | None = None,
+    reveal_disguise: bool = False,
 ) -> RelationshipTensionResult:
     profiles: list[RelationshipProfile] = []
     displacement_events: list[RelationshipDisplacementEvent] = []
@@ -68,6 +107,11 @@ def analyze_relationships(
         for target in characters[index + 1 :]:
             source_character = str(source.get("id", ""))
             target_character = str(target.get("id", ""))
+            relation_layer, relation_hint = _relation_hint(
+                source,
+                target,
+                reveal_disguise=reveal_disguise,
+            )
             status_gap = clamp01(abs(_to_float(source.get("status")) - _to_float(target.get("status"))))
             info_gap = clamp01(abs(_to_float(source.get("knowledge")) - _to_float(target.get("knowledge"))))
             emotion_gap = clamp01(abs(_to_float(source.get("emotion")) - _to_float(target.get("emotion"))))
@@ -107,6 +151,8 @@ def analyze_relationships(
                     dominant_gap=current_dominant_gap,
                     relationship_velocity=clamp01(tension_score * 0.6 + betrayal_risk * 0.4),
                     tension_score=tension_score,
+                    relation_layer=relation_layer,
+                    relation_hint=relation_hint,
                 )
             )
             previous = history_map.get(_pair_key(source_character, target_character))
@@ -126,6 +172,8 @@ def analyze_relationships(
                             previous_dominant_gap=previous_dominant_gap,
                             current_dominant_gap=current_dominant_gap,
                             dominant_gap_shifted=previous_dominant_gap != current_dominant_gap,
+                            relation_layer=relation_layer,
+                            relation_hint=relation_hint,
                         )
                     )
             if tension_score > max_tension:
@@ -144,6 +192,8 @@ def analyze_relationships(
             "tension_score": item.tension_score,
             "relationship_velocity": item.relationship_velocity,
             "dominant_gap": item.dominant_gap,
+            "relation_layer": item.relation_layer,
+            "relation_hint": item.relation_hint,
         }
         for item in sorted(profiles, key=lambda profile: profile.tension_score, reverse=True)[:3]
     ]

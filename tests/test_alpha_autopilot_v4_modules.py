@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from alpha_autopilot_v4.integration import build_v4_to_v3_bridge_result
 from alpha_autopilot_v4.personality import analyze_personality
 from alpha_autopilot_v4.plot_generation import (
@@ -9,7 +11,7 @@ from alpha_autopilot_v4.plot_generation import (
 )
 from alpha_autopilot_v4.pressure import PressureIntensity, PressureProfile, PressureSource, analyze_pressure
 from alpha_autopilot_v4.qc import evaluate_plot_qc
-from alpha_autopilot_v4.relations import analyze_relationships
+from alpha_autopilot_v4.relations import CharacterFunctionType, analyze_relationships
 from backend.app.core.config import settings
 from backend.app.services.narrative_v4 import (
     V4MemoryStore,
@@ -17,6 +19,7 @@ from backend.app.services.narrative_v4 import (
     build_v4_observability_snapshot,
     build_v4_workbench_preview,
 )
+import backend.app.services.narrative_v4.alert_channel as alert_channel_module
 from backend.app.services.narrative_v4.alert_channel import V4AlertChannel, route_v4_observability_alerts
 
 
@@ -157,6 +160,64 @@ def test_relationship_analysis_tracks_cross_chapter_displacement() -> None:
     assert result.displacement_events
     assert result.displacement_events[0].chapter_index == 18
     assert result.displacement_events[0].delta_tension > 0
+
+
+def test_relationship_function_type_enum_and_disguise_dual_relation_layers() -> None:
+    assert {
+        item.value for item in CharacterFunctionType
+    } == {
+        "emotional",
+        "obstacle",
+        "method",
+        "conflict",
+        "background",
+        "disguise",
+        "task",
+        "anchor",
+    }
+    characters = [
+        {
+            "id": "hero",
+            "status": 0.2,
+            "knowledge": 0.4,
+            "emotion": 0.7,
+            "interest_conflict": 0.6,
+            "control": 0.5,
+            "dependency": 0.3,
+            "trust": 0.4,
+            "relation": "ally",
+        },
+        {
+            "id": "spy",
+            "status": 0.5,
+            "knowledge": 0.7,
+            "emotion": 0.4,
+            "interest_conflict": 0.7,
+            "control": 0.6,
+            "dependency": 0.3,
+            "trust": 0.2,
+            "function_type": "disguise",
+            "surface_relation": "mentor",
+            "actual_relation": "enemy",
+        },
+    ]
+
+    hidden = analyze_relationships(characters, reveal_disguise=False)
+    revealed = analyze_relationships(characters, reveal_disguise=True)
+
+    assert hidden.profiles[0].relation_layer == "surface"
+    assert hidden.profiles[0].relation_hint == "mentor"
+    assert revealed.profiles[0].relation_layer == "actual"
+    assert revealed.profiles[0].relation_hint == "enemy"
+
+
+def test_relationship_analysis_is_backward_compatible_when_function_type_missing() -> None:
+    characters = sample_context()["characters"]  # type: ignore[assignment]
+    result = analyze_relationships(characters)  # type: ignore[arg-type]
+
+    assert result.profiles
+    assert result.profiles[0].relation_layer == "surface"
+    assert result.profiles[0].relation_hint == "unknown"
 
 
 def test_v4_bridge_result_contains_v3_context_and_qc_summary() -> None:
@@ -521,12 +582,124 @@ def test_v4_observability_snapshot_reports_trend_and_alerts(tmp_path) -> None:
     assert snapshot["enabled"] is True
     assert snapshot["feedbackRows"] >= 15
     assert snapshot["relationshipRows"] >= 15
+    assert isinstance(snapshot["runtimeRows"], int)
+    assert isinstance(snapshot["latencyP95Ms"], float)
+    assert isinstance(snapshot["errorRate"], float)
+    assert isinstance(snapshot["fallbackRate"], float)
+    assert isinstance(snapshot["runtimeThresholds"], dict)
     assert isinstance(snapshot["trend"], list)
     assert snapshot["trend"]
     assert isinstance(snapshot["alerts"], list)
     assert snapshot["alertCount"] >= 1
     assert snapshot["criticalAlertCount"] >= 1
     assert any(item["code"] == "low-accept-rate" for item in snapshot["alerts"])
+
+
+def test_v4_observability_snapshot_reports_runtime_threshold_alerts(tmp_path) -> None:
+    memory_store = V4MemoryStore(
+        relationship_path=tmp_path / "v4_relationship_memory.jsonl",
+        feedback_path=tmp_path / "v4_feedback_memory.jsonl",
+        runtime_metrics_path=tmp_path / "v4_runtime_metrics.jsonl",
+    )
+    for index in range(12):
+        memory_store.append_runtime_metric(
+            route="/api/v4/plot/preview",
+            status="error" if index < 3 else "fallback",
+            latency_ms=1200 + index * 10,
+            fallback_reason="v4_disabled" if index >= 3 else None,
+            error_type="RuntimeError" if index < 3 else None,
+            context_id=f"ctx-{index}",
+        )
+
+    snapshot = build_v4_observability_snapshot(memory_store, limit=200)
+    assert snapshot["runtimeRows"] >= 12
+    assert snapshot["latencyP95Ms"] >= 1200
+    assert snapshot["errorRate"] >= 0.2
+    assert snapshot["fallbackRate"] >= 0.6
+    alert_codes = {
+        str(item.get("code"))
+        for item in snapshot["alerts"]
+        if isinstance(item, dict)
+    }
+    assert "runtime-latency-p95-high" in alert_codes
+    assert "runtime-error-rate-high" in alert_codes
+    assert "runtime-fallback-rate-high" in alert_codes
+
+
+def test_v4_bridge_injects_character_behavior_constraints_from_emotion_slider_map(tmp_path) -> None:
+    memory_store = V4MemoryStore(
+        relationship_path=tmp_path / "v4_relationship_memory.jsonl",
+        feedback_path=tmp_path / "v4_feedback_memory.jsonl",
+    )
+    payload = build_v4_bridge_payload_with_memory(
+        {
+            "id": "ctx-emotion-slider",
+            "scene_id": "chapter-18",
+            "chapter_index": 18,
+            "v4_enabled": True,
+            "characters": [
+                {
+                    "id": "hero",
+                    "status": 0.3,
+                    "knowledge": 0.4,
+                    "emotion": 0.6,
+                    "interest_conflict": 0.5,
+                    "control": 0.5,
+                    "dependency": 0.3,
+                    "trust": 0.4,
+                    "impulsiveness": 0.7,
+                    "calmness": 0.2,
+                    "resilience": 0.7,
+                    "directness": 0.8,
+                    "pragmatism": 0.7,
+                    "idealism": 0.3,
+                    "assertiveness": 0.7,
+                    "avoidance": 0.2,
+                    "self_protection": 0.4,
+                    "sacrifice_tendency": 0.2,
+                    "risk_appetite": 0.8,
+                    "emotion_slider_map": {
+                        "baseline": {"stress_baseline": 4.0, "trust_level": -1.0},
+                        "scene_overrides": {"chapter-18": {"stress_baseline": 7.0}},
+                        "mbti": "ENTJ",
+                    },
+                },
+                {
+                    "id": "rival",
+                    "status": 0.8,
+                    "knowledge": 0.7,
+                    "emotion": 0.2,
+                    "interest_conflict": 0.8,
+                    "control": 0.7,
+                    "dependency": 0.2,
+                    "trust": 0.1,
+                    "impulsiveness": 0.3,
+                    "calmness": 0.8,
+                    "resilience": 0.5,
+                    "directness": 0.4,
+                    "pragmatism": 0.8,
+                    "idealism": 0.2,
+                    "assertiveness": 0.6,
+                    "avoidance": 0.2,
+                    "self_protection": 0.8,
+                    "sacrifice_tendency": 0.2,
+                    "risk_appetite": 0.4,
+                },
+            ],
+            "pressure_items": [{"type": "survival", "intensity": 0.8}],
+        },
+        memory_store=memory_store,
+        context_id="ctx-emotion-slider",
+        history_window=20,
+    )
+
+    constraints = payload["character_behavior_constraints"]
+    assert isinstance(constraints, list)
+    assert constraints
+    assert constraints[0]["character_id"] == "hero"
+    assert constraints[0]["merged_sliders"]["stress_baseline"] == 7.0
+    assert "High stress response" in str(constraints[0]["system_prompt_constraint"])
+    assert payload["memory_summary"]["character_behavior_constraints_count"] == 1
 
 
 def test_v4_alert_channel_routes_critical_alert_and_applies_cooldown(tmp_path) -> None:
@@ -561,6 +734,128 @@ def test_v4_alert_channel_routes_critical_alert_and_applies_cooldown(tmp_path) -
         if line.strip()
     ]
     assert len(rows) == 1
+
+
+def test_v4_alert_channel_routes_remote_targets_with_oncall_validation(tmp_path, monkeypatch) -> None:
+    captured_requests: list[dict[str, object]] = []
+
+    class _FakeResponse:
+        status = 202
+
+        def __enter__(self):  # noqa: ANN001
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):  # noqa: ANN001
+            return False
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001
+        captured_requests.append(
+            {
+                "url": str(request.full_url),
+                "timeout": float(timeout),
+                "body": json.loads(request.data.decode("utf-8")),
+            }
+        )
+        return _FakeResponse()
+
+    monkeypatch.setattr(alert_channel_module.urllib.request, "urlopen", fake_urlopen)
+
+    channel = V4AlertChannel(
+        sink_path=tmp_path / "v4_observability_alerts.jsonl",
+        state_path=tmp_path / "v4_observability_alerts.state.json",
+        cooldown_seconds=3600,
+        remote_targets={
+            "im": "https://im.example.internal/v4-alert",
+            "webhook": "https://ops.example.internal/v4-alert",
+        },
+        remote_timeout_seconds=2.0,
+        oncall_contacts=("alice", "bob"),
+    )
+    snapshot = {
+        "feedbackRows": 20,
+        "relationshipRows": 20,
+        "acceptRate": 0.2,
+        "feedbackSignal": -0.5,
+        "alerts": [
+            {
+                "code": "low-accept-rate",
+                "severity": "critical",
+                "message": "Accept rate dropped below 35%.",
+            }
+        ],
+    }
+    routed = route_v4_observability_alerts(snapshot, channel=channel)
+    assert routed["routed"] is True
+    assert routed["reason"] == "routed-critical-alert"
+    assert routed["oncallValidation"]["valid"] is True
+    assert routed["remoteRouting"]["enabled"] is True
+    assert routed["remoteRouting"]["status"] == "ok"
+    assert routed["remoteRouting"]["deliveredCount"] == 2
+    assert routed["remoteRouting"]["failedCount"] == 0
+    assert len(captured_requests) == 2
+    assert {item["url"] for item in captured_requests} == {
+        "https://im.example.internal/v4-alert",
+        "https://ops.example.internal/v4-alert",
+    }
+    rows = [
+        line
+        for line in channel.sink_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(rows) == 1
+    persisted = json.loads(rows[0])
+    assert persisted["oncall_validation"]["valid"] is True
+    assert persisted["remote_routing"]["deliveredCount"] == 2
+
+
+def test_v4_alert_channel_remote_failure_falls_back_to_local_sink(tmp_path, monkeypatch) -> None:
+    calls: list[str] = []
+
+    def failing_urlopen(request, timeout):  # noqa: ANN001
+        calls.append(str(request.full_url))
+        raise OSError("network unreachable")
+
+    monkeypatch.setattr(alert_channel_module.urllib.request, "urlopen", failing_urlopen)
+
+    channel = V4AlertChannel(
+        sink_path=tmp_path / "v4_observability_alerts.jsonl",
+        state_path=tmp_path / "v4_observability_alerts.state.json",
+        cooldown_seconds=3600,
+        remote_targets={"webhook": "https://ops.example.internal/v4-alert"},
+        remote_timeout_seconds=1.5,
+        oncall_contacts=("alice",),
+    )
+    snapshot = {
+        "feedbackRows": 20,
+        "relationshipRows": 20,
+        "acceptRate": 0.2,
+        "feedbackSignal": -0.5,
+        "alerts": [
+            {
+                "code": "runtime-error-rate-high",
+                "severity": "critical",
+                "message": "Runtime error rate exceeded configured threshold.",
+            }
+        ],
+    }
+    first = route_v4_observability_alerts(snapshot, channel=channel)
+    second = route_v4_observability_alerts(snapshot, channel=channel)
+    assert first["routed"] is True
+    assert first["reason"] == "routed-critical-alert"
+    assert first["remoteRouting"]["status"] == "degraded-local-only"
+    assert first["remoteRouting"]["deliveredCount"] == 0
+    assert first["remoteRouting"]["failedCount"] == 1
+    assert second["routed"] is False
+    assert second["reason"] == "cooldown-active"
+    assert len(calls) == 1
+    rows = [
+        line
+        for line in channel.sink_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(rows) == 1
+    persisted = json.loads(rows[0])
+    assert persisted["remote_routing"]["status"] == "degraded-local-only"
 
 
 def test_apply_retention_feedback_writeback_supports_multi_window_decay_and_denoise() -> None:

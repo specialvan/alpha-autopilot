@@ -1,5 +1,6 @@
 from .analyzer import analyze_relationships
 from .models import (
+    CharacterFunctionType,
     RelationshipDelta,
     RelationshipDisplacementEvent,
     RelationshipGraphSummary,
@@ -9,6 +10,7 @@ from .models import (
 from .scoring import average_pair, clamp01, relationship_tension
 
 __all__ = [
+    "CharacterFunctionType",
     "RelationshipDelta",
     "RelationshipDisplacementEvent",
     "RelationshipGraphSummary",

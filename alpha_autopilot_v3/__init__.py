@@ -6,6 +6,8 @@ from .decomposition.models import (
 from .decomposition.taxonomy import CHAPTER_FUNCTIONS, CHECKPOINTS, STYLE_DNA_AXES
 from .generation_control import GenerationControlPlan, build_generation_control_plan
 from .retention import (
+    RetentionDesireDominant,
+    RetentionDesireVector,
     RetentionMetrics,
     RetentionTargetFunction,
     build_retention_metrics,
@@ -20,6 +22,8 @@ __all__ = [
     "CheckpointResult",
     "EvidenceSpan",
     "GenerationControlPlan",
+    "RetentionDesireDominant",
+    "RetentionDesireVector",
     "RetentionMetrics",
     "RetentionTargetFunction",
     "build_generation_control_plan",

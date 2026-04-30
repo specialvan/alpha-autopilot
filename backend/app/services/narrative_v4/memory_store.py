@@ -30,6 +30,7 @@ def _safe_int(value: object, default: int | None = None) -> int | None:
 class V4MemoryStore:
     relationship_path: Path
     feedback_path: Path
+    runtime_metrics_path: Path | None = None
 
     def read_relationship_rows(self, *, limit: int = 500) -> list[dict[str, object]]:
         rows = self._read_jsonl(self.relationship_path)
@@ -39,6 +40,12 @@ class V4MemoryStore:
 
     def read_feedback_rows(self, *, limit: int = 500) -> list[dict[str, object]]:
         rows = self._read_jsonl(self.feedback_path)
+        if limit <= 0:
+            return []
+        return rows[-limit:]
+
+    def read_runtime_metric_rows(self, *, limit: int = 500) -> list[dict[str, object]]:
+        rows = self._read_jsonl(self._resolve_runtime_metrics_path())
         if limit <= 0:
             return []
         return rows[-limit:]
@@ -189,6 +196,33 @@ class V4MemoryStore:
                 },
             )
 
+    def append_runtime_metric(
+        self,
+        *,
+        route: str,
+        status: str,
+        latency_ms: float,
+        fallback_reason: str | None = None,
+        error_type: str | None = None,
+        context_id: str | None = None,
+        http_status: int | None = None,
+    ) -> None:
+        normalized_status = str(status).strip().lower() or "unknown"
+        normalized_route = str(route).strip() or "unknown"
+        self._append_jsonl(
+            self._resolve_runtime_metrics_path(),
+            {
+                "timestamp": _now_iso(),
+                "route": normalized_route,
+                "status": normalized_status,
+                "latency_ms": round(max(0.0, _safe_float(latency_ms, 0.0)), 3),
+                "fallback_reason": str(fallback_reason).strip() if fallback_reason else "",
+                "error_type": str(error_type).strip() if error_type else "",
+                "context_id": str(context_id).strip() if context_id else "",
+                "http_status": _safe_int(http_status, None),
+            },
+        )
+
     def _read_jsonl(self, path: Path) -> list[dict[str, object]]:
         if not path.exists():
             return []
@@ -211,6 +245,11 @@ class V4MemoryStore:
             handle.write(json.dumps(row, ensure_ascii=False))
             handle.write("\n")
 
+    def _resolve_runtime_metrics_path(self) -> Path:
+        if self.runtime_metrics_path is not None:
+            return self.runtime_metrics_path
+        return self.relationship_path.with_name("v4_runtime_metrics.jsonl")
+
 
 def create_default_v4_memory_store(root: Path | None = None) -> V4MemoryStore:
     store = ArtifactStore.default()
@@ -218,6 +257,7 @@ def create_default_v4_memory_store(root: Path | None = None) -> V4MemoryStore:
     return V4MemoryStore(
         relationship_path=base / "v4_relationship_memory.jsonl",
         feedback_path=base / "v4_feedback_memory.jsonl",
+        runtime_metrics_path=base / "v4_runtime_metrics.jsonl",
     )
 
 

@@ -20,7 +20,11 @@ class NarrativeV2EvaluationService:
             return ranked
 
         target_function = build_retention_target_function()
-        priority_weights = _build_priority_weights(target_function.priority_order, stage=state.stage)
+        priority_weights = _build_priority_weights(
+            target_function.priority_order,
+            stage=state.stage,
+            macro_structure=state.macro_structure,
+        )
 
         for result in ranked:
             base_score = result.score
@@ -46,7 +50,11 @@ class NarrativeV2EvaluationService:
             return None
 
         target_function = build_retention_target_function()
-        priority_weights = _build_priority_weights(target_function.priority_order, stage=state.stage)
+        priority_weights = _build_priority_weights(
+            target_function.priority_order,
+            stage=state.stage,
+            macro_structure=state.macro_structure,
+        )
         retention_score = _retention_score(result, state, priority_weights)
         guardrail_penalty = _guardrail_penalty(result, state, target_function.guardrails)
         final_score = _clip01(result.score)
@@ -64,6 +72,7 @@ class NarrativeV2EvaluationService:
             "control_mode": _control_mode(retention_score, result.action.action),
             "decision_tags": {
                 "stage": state.stage,
+                "macro_structure": state.macro_structure,
                 "action": result.action.action,
                 "risk_flags": list(result.rule_check.risk_flags),
                 "top_priority": _highest_weight_label(priority_weights),
@@ -71,7 +80,11 @@ class NarrativeV2EvaluationService:
         }
 
 
-def _build_priority_weights(priority_order: list[str], stage: str | None = None) -> dict[str, float]:
+def _build_priority_weights(
+    priority_order: list[str],
+    stage: str | None = None,
+    macro_structure: str | None = None,
+) -> dict[str, float]:
     if not priority_order:
         return {}
     total = sum(range(1, len(priority_order) + 1))
@@ -86,10 +99,14 @@ def _build_priority_weights(priority_order: list[str], stage: str | None = None)
         key: value * _stage_multiplier(stage, key)
         for key, value in weights.items()
     }
-    staged_total = sum(staged_weights.values())
+    structure_adjusted_weights = {
+        key: value * _macro_structure_multiplier(macro_structure, key)
+        for key, value in staged_weights.items()
+    }
+    staged_total = sum(structure_adjusted_weights.values())
     if staged_total <= 0:
         return weights
-    return {key: value / staged_total for key, value in staged_weights.items()}
+    return {key: value / staged_total for key, value in structure_adjusted_weights.items()}
 
 
 def _retention_score(
@@ -184,6 +201,30 @@ def _control_mode(retention_score: float, action: str) -> str:
     if retention_score >= 0.58:
         return "balance-and-sharpen"
     return "repair-and-reframe"
+
+
+def _macro_structure_multiplier(macro_structure: str | None, signal: str) -> float:
+    structure_key = (macro_structure or "progressive").strip().lower()
+    if structure_key == "hub_and_spoke":
+        if signal == "hook-strength":
+            return 1.25
+        if signal == "suspense-drive":
+            return 1.15
+        return 1.0
+    if structure_key == "anthology":
+        if signal == "hook-strength":
+            return 0.75
+        if signal == "suspense-drive":
+            return 0.85
+        if signal == "chapter-attraction":
+            return 1.2
+        return 1.0
+    if structure_key == "progressive":
+        if signal == "conflict-drive":
+            return 1.1
+        if signal == "chapter-attraction":
+            return 1.05
+    return 1.0
 
 
 def _highest_weight_label(weights: dict[str, float]) -> str:

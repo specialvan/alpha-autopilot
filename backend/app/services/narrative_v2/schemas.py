@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from .retention_desire import RetentionDesireVector
+
+
+class MacroStructureEnum(str, Enum):
+    HUB_AND_SPOKE = "hub_and_spoke"
+    PROGRESSIVE = "progressive"
+    ANTHOLOGY = "anthology"
 
 
 class CharacterStatePayload(BaseModel):
@@ -25,11 +34,34 @@ class StoryStatePayload(BaseModel):
     payoff_pressure: float = Field(ge=0.0, le=1.0)
     characters: dict[str, CharacterStatePayload] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
+    retention_desire: RetentionDesireVector | None = None
+    macro_structure: MacroStructureEnum = MacroStructureEnum.PROGRESSIVE
+
+
+class TurnTypeEnum(str, Enum):
+    OBSTACLE_SHIFT = "obstacle_shift"
+    GOAL_INVERSION = "goal_inversion"
+    CHARACTER_CONTRAST = "character_contrast"
+
+
+class PlotUnitActionClimax(BaseModel):
+    node: str
+    turn_type: TurnTypeEnum
+
+
+class PlotUnitScaffold(BaseModel):
+    encounter_event: str
+    desire_goal: str
+    obstacle: str
+    solution_method: str
+    action_climax: PlotUnitActionClimax
+    resolution: str
 
 
 class NarrativeV2PreviewRequest(BaseModel):
     case_id: str
     state: StoryStatePayload
+    plot_unit_scaffold: PlotUnitScaffold | None = None
 
 
 class RuleStatusSummaryPayload(BaseModel):
@@ -86,6 +118,7 @@ class StoryStateContextPayload(BaseModel):
     payoff_pressure: float = Field(ge=0.0, le=1.0)
     characters: dict[str, dict[str, Any]] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
+    macro_structure: MacroStructureEnum = MacroStructureEnum.PROGRESSIVE
 
 
 class NarrativeV2ContextCheckpointPayload(BaseModel):
@@ -137,6 +170,11 @@ class NarrativeV4WorkbenchPreviewPayload(BaseModel):
     candidate_timeline: list[dict[str, Any]] = Field(default_factory=list)
     genre_calibration: dict[str, Any] = Field(default_factory=dict)
     retention_writeback: dict[str, Any] = Field(default_factory=dict)
+    character_behavior_constraints: list[dict[str, Any]] = Field(default_factory=list)
+    character_validation: dict[str, Any] = Field(default_factory=dict)
+    relationship_graph_constraints: dict[str, Any] = Field(default_factory=dict)
+    prompt_documents: dict[str, str] = Field(default_factory=dict)
+    prompt_compression_logs: list[dict[str, Any]] = Field(default_factory=list)
     memory_summary: dict[str, Any] = Field(default_factory=dict)
     selected_candidate: NarrativeV4WorkbenchCandidatePayload | None = None
     top_candidates: list[NarrativeV4WorkbenchCandidatePayload] = Field(default_factory=list)

@@ -1,6 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
+
+
+class CharacterFunctionType(str, Enum):
+    # Triggers emotional events for protagonist/readers.
+    EMOTIONAL = "emotional"
+    # Creates obstacles and bottlenecks.
+    OBSTACLE = "obstacle"
+    # Provides methods/resources for resolution.
+    METHOD = "method"
+    # Direct conflict opponent.
+    CONFLICT = "conflict"
+    # Worldbuilding background role.
+    BACKGROUND = "background"
+    # Hides true motives to create information gaps.
+    DISGUISE = "disguise"
+    # Stage-limited role that exits after milestone.
+    TASK = "task"
+    # Long-span anchor role across the whole story.
+    ANCHOR = "anchor"
 
 
 @dataclass(frozen=True)
@@ -22,6 +42,8 @@ class RelationshipProfile:
     dominant_gap: str
     relationship_velocity: float
     tension_score: float
+    relation_layer: str = "surface"
+    relation_hint: str = ""
 
 
 @dataclass(frozen=True)
@@ -35,6 +57,8 @@ class RelationshipDisplacementEvent:
     previous_dominant_gap: str
     current_dominant_gap: str
     dominant_gap_shifted: bool
+    relation_layer: str = "surface"
+    relation_hint: str = ""
 
 
 @dataclass(frozen=True)

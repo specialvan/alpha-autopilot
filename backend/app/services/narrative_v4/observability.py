@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ...core.config import settings
+from ..observability_envelope import build_unified_observability_envelope
 from .memory_store import V4MemoryStore, create_default_v4_memory_store
 
 AUTO_LEARNING_MIN_SAMPLES = 4
@@ -14,6 +16,7 @@ def build_v4_observability_snapshot(
     store = memory_store or create_default_v4_memory_store()
     relationship_rows = store.read_relationship_rows(limit=limit)
     feedback_rows = store.read_feedback_rows(limit=limit)
+    runtime_rows = store.read_runtime_metric_rows(limit=limit)
 
     context_ids = {
         str(row.get("context_id", "")).strip()
@@ -55,28 +58,75 @@ def build_v4_observability_snapshot(
         else 0.0
     )
     accept_rate = round(accepted_count / len(feedback_rows), 4) if feedback_rows else 0.0
+    runtime_thresholds = {
+        "latencyP95Ms": round(
+            max(1.0, float(settings.v4_observability_latency_p95_ms_threshold)),
+            3,
+        ),
+        "errorRate": round(
+            max(0.0, min(1.0, float(settings.v4_observability_error_rate_threshold))),
+            4,
+        ),
+        "fallbackRate": round(
+            max(0.0, min(1.0, float(settings.v4_observability_fallback_rate_threshold))),
+            4,
+        ),
+    }
+    latency_values = [
+        max(0.0, _safe_float(row.get("latency_ms"), default=0.0))
+        for row in runtime_rows
+        if isinstance(row, dict)
+    ]
+    runtime_count = len(runtime_rows)
+    error_count = sum(
+        1
+        for row in runtime_rows
+        if isinstance(row, dict) and str(row.get("status", "")).strip().lower() == "error"
+    )
+    fallback_count = sum(
+        1
+        for row in runtime_rows
+        if isinstance(row, dict)
+        and (
+            str(row.get("status", "")).strip().lower() == "fallback"
+            or bool(str(row.get("fallback_reason", "")).strip())
+        )
+    )
+    latency_p95_ms = round(_percentile(latency_values, percentile=95.0), 3) if latency_values else 0.0
+    error_rate = round(error_count / runtime_count, 4) if runtime_count else 0.0
+    fallback_rate = round(fallback_count / runtime_count, 4) if runtime_count else 0.0
     trend = _build_feedback_trend(feedback_rows)
     alerts = _build_observability_alerts(
         relationship_rows=relationship_rows,
         feedback_rows=feedback_rows,
+        runtime_rows=runtime_rows,
         average_tension=average_tension,
         feedback_signal=feedback_signal,
         accept_rate=accept_rate,
+        latency_p95_ms=latency_p95_ms,
+        error_rate=error_rate,
+        fallback_rate=fallback_rate,
+        runtime_thresholds=runtime_thresholds,
         genres_tracked=len(genres),
         auto_learning_ready_genres=auto_learning_ready_genres,
         trend=trend,
     )
     latest_timestamp = _latest_timestamp([*relationship_rows, *feedback_rows])
 
-    return {
+    snapshot = {
         "enabled": bool(relationship_rows or feedback_rows),
         "windowLimit": limit,
         "activeContexts": len(context_ids),
         "relationshipRows": len(relationship_rows),
         "feedbackRows": len(feedback_rows),
+        "runtimeRows": runtime_count,
         "averageTension": average_tension,
         "feedbackSignal": feedback_signal,
         "acceptRate": accept_rate,
+        "latencyP95Ms": latency_p95_ms,
+        "errorRate": error_rate,
+        "fallbackRate": fallback_rate,
+        "runtimeThresholds": runtime_thresholds,
         "genresTracked": len(genres),
         "autoLearningReadyGenres": auto_learning_ready_genres,
         "topGenres": top_genres,
@@ -88,6 +138,11 @@ def build_v4_observability_snapshot(
         ),
         "lastUpdated": latest_timestamp,
     }
+    snapshot["unifiedEnvelope"] = build_unified_observability_envelope(
+        layer="v4",
+        snapshot=snapshot,
+    )
+    return snapshot
 
 
 def _aggregate_genre_metrics(rows: list[dict[str, object]]) -> dict[str, dict[str, object]]:
@@ -159,9 +214,14 @@ def _build_observability_alerts(
     *,
     relationship_rows: list[dict[str, object]],
     feedback_rows: list[dict[str, object]],
+    runtime_rows: list[dict[str, object]],
     average_tension: float,
     feedback_signal: float,
     accept_rate: float,
+    latency_p95_ms: float,
+    error_rate: float,
+    fallback_rate: float,
+    runtime_thresholds: dict[str, float],
     genres_tracked: int,
     auto_learning_ready_genres: int,
     trend: list[dict[str, object]],
@@ -169,6 +229,10 @@ def _build_observability_alerts(
     alerts: list[dict[str, object]] = []
     feedback_count = len(feedback_rows)
     relationship_count = len(relationship_rows)
+    runtime_count = len(runtime_rows)
+    latency_threshold = _safe_float(runtime_thresholds.get("latencyP95Ms"), default=900.0)
+    error_threshold = _safe_float(runtime_thresholds.get("errorRate"), default=0.08)
+    fallback_threshold = _safe_float(runtime_thresholds.get("fallbackRate"), default=0.35)
     if feedback_count == 0:
         alerts.append(
             {
@@ -177,7 +241,6 @@ def _build_observability_alerts(
                 "message": "No persisted feedback rows yet.",
             }
         )
-        return alerts
 
     if feedback_count >= 12 and accept_rate < 0.35:
         alerts.append(
@@ -232,6 +295,36 @@ def _build_observability_alerts(
                     "threshold": -0.25,
                 }
             )
+    if runtime_count >= 8 and latency_p95_ms >= latency_threshold:
+        alerts.append(
+            {
+                "code": "runtime-latency-p95-high",
+                "severity": "warning",
+                "message": "Runtime P95 latency exceeded configured threshold.",
+                "value": round(latency_p95_ms, 3),
+                "threshold": round(latency_threshold, 3),
+            }
+        )
+    if runtime_count >= 8 and error_rate >= error_threshold:
+        alerts.append(
+            {
+                "code": "runtime-error-rate-high",
+                "severity": "critical",
+                "message": "Runtime error rate exceeded configured threshold.",
+                "value": round(error_rate, 4),
+                "threshold": round(error_threshold, 4),
+            }
+        )
+    if runtime_count >= 8 and fallback_rate >= fallback_threshold:
+        alerts.append(
+            {
+                "code": "runtime-fallback-rate-high",
+                "severity": "warning",
+                "message": "Runtime fallback rate exceeded configured threshold.",
+                "value": round(fallback_rate, 4),
+                "threshold": round(fallback_threshold, 4),
+            }
+        )
     return alerts
 
 
@@ -251,3 +344,18 @@ def _safe_float(value: object, *, default: float) -> float:
         return float(value)  # type: ignore[arg-type]
     except Exception:
         return default
+
+
+def _percentile(values: list[float], *, percentile: float) -> float:
+    if not values:
+        return 0.0
+    sorted_values = sorted(values)
+    if len(sorted_values) == 1:
+        return sorted_values[0]
+    rank = max(0.0, min(100.0, percentile)) / 100.0 * (len(sorted_values) - 1)
+    lower = int(rank)
+    upper = min(lower + 1, len(sorted_values) - 1)
+    if lower == upper:
+        return sorted_values[lower]
+    weight = rank - lower
+    return sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight

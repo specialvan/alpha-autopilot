@@ -9,6 +9,19 @@ from alpha_autopilot_v2.domain import CharacterState, StoryState
 class NarrativeV2StateBuilder:
     def build(self, payload: dict[str, object]) -> StoryState:
         characters_payload = payload.get("characters", {})
+        retention_desire_payload = payload.get("retention_desire")
+        if hasattr(retention_desire_payload, "model_dump"):
+            retention_desire_payload = retention_desire_payload.model_dump()
+        retention_desire = (
+            dict(retention_desire_payload)
+            if isinstance(retention_desire_payload, dict)
+            else None
+        )
+        macro_structure_raw = payload.get("macro_structure", "progressive")
+        if hasattr(macro_structure_raw, "value"):
+            macro_structure = str(macro_structure_raw.value)  # type: ignore[attr-defined]
+        else:
+            macro_structure = str(macro_structure_raw or "progressive")
         characters = {
             name: value
             if isinstance(value, CharacterState)
@@ -27,4 +40,6 @@ class NarrativeV2StateBuilder:
             payoff_pressure=float(payload["payoff_pressure"]),
             characters=characters,
             tags=list(payload.get("tags", [])),
+            retention_desire=retention_desire,
+            macro_structure=macro_structure,
         )
