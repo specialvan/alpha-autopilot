@@ -576,3 +576,13 @@ class BenchmarkMaintenanceAlertDigestResponse(BaseModel):
     current_alert: BenchmarkMaintenanceAlertResponse
     summary: BenchmarkMaintenanceAlertSummaryResponse
     message: str = ""
+
+
+class BenchmarkMaintenanceAlertExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    digest: BenchmarkMaintenanceAlertDigestResponse
+    alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)
+    message: str = ""

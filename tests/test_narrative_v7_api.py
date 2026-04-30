@@ -580,6 +580,29 @@ def test_v7_api_supports_maintenance_alert_digest() -> None:
     }
 
 
+def test_v7_api_supports_maintenance_alert_export() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-export-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.71},
+        },
+    )
+    emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+    assert emit_response.status_code == 200
+
+    export_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/export?limit=20")
+    assert export_response.status_code == 200
+    exported = export_response.json()
+    assert exported["limit"] == 20
+    assert exported["digest"]["current_alert"]["level"] in {"ok", "warn", "critical"}
+    assert exported["digest"]["summary"]["total_valid_events"] >= 1
+    assert exported["alerts"]
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

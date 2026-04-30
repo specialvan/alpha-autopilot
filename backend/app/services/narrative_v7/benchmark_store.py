@@ -21,6 +21,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertEvent,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertDigestResponse,
+    BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceAlertSummaryResponse,
     BenchmarkMaintenanceReportResponse,
@@ -795,6 +796,18 @@ class V7BenchmarkStore:
             current_alert=current_alert,
             summary=summary,
             message="ok" if summary.latest_event is not None else "no_alert_event",
+        )
+
+    def export_maintenance_alerts(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertExportResponse:
+        query_limit = max(0, int(limit))
+        digest = self.build_maintenance_alert_digest(limit=query_limit)
+        alerts = self.list_maintenance_alerts(limit=query_limit).alerts
+        return BenchmarkMaintenanceAlertExportResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            digest=digest,
+            alerts=alerts,
+            message="ok",
         )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:

@@ -239,6 +239,14 @@
 - [x] 输出推荐动作（`page_oncall/create_ticket/emit_fresh_alert/observe/clean_alert_log`）
 - [x] 第十四轮回归测试覆盖（maintenance alert digest store/api）
 
+## 生产化增强清单（第十五轮）
+
+- [x] 告警导出能力：`export_maintenance_alerts`
+- [x] 告警导出接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/export`
+- [x] 导出结构：`digest + recent alerts`（单请求获取验收所需核心上下文）
+- [x] 支持 `limit` 导出窗口，便于评审脚本/看板集成
+- [x] 第十五轮回归测试覆盖（maintenance alert export store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -249,5 +257,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`44 passed`
+- [x] 结果：`46 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
