@@ -535,6 +535,15 @@
 - [x] 支持脏行触发清理与清理后回读校验（`malformed_line_count -> 0`）
 - [x] 第46轮回归测试覆盖（orchestrator runs auto-prune store/api）
 
+## 生产化增强清单（第四十七轮）
+
+- [x] 编排运行历史 Digest 能力：`build_maintenance_alert_governance_escalation_remediation_auto_remediate_runs_digest`
+- [x] 编排运行历史 Digest 接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/digest`
+- [x] 支持编排运行新鲜度阈值治理：`AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUNS_STALE_SECONDS`
+- [x] Digest 联动编排运行清理阈值策略（`above_prune_threshold` / `malformed_detected`）
+- [x] 输出推荐动作（`run_auto_remediation_orchestrator/auto_prune_runs/observe`）
+- [x] 第47轮回归测试覆盖（orchestrator runs digest store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -545,5 +554,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`101 passed`
+- [x] 结果：`103 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

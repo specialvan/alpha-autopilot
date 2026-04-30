@@ -57,6 +57,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunDigestResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -2396,6 +2397,52 @@ class V7BenchmarkStore:
             message="pruned" if not dry_run else "dry_run",
         )
 
+    def build_maintenance_alert_governance_escalation_remediation_auto_remediate_runs_digest(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunDigestResponse:
+        query_limit = max(0, int(limit))
+        summary = self.summarize_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(limit=query_limit)
+        policy = self._load_alert_governance_policy()
+        stale_threshold_seconds = max(0, int(policy.governance_escalation_remediation_auto_remediate_runs_stale_seconds))
+
+        latest_record_age_seconds = -1.0
+        is_stale = True
+        if summary.latest_record is not None:
+            parsed_latest = _parse_iso_utc(summary.latest_record.generated_at)
+            if parsed_latest is not None:
+                latest_record_age_seconds = max(0.0, (datetime.now(timezone.utc) - parsed_latest).total_seconds())
+                is_stale = latest_record_age_seconds > float(stale_threshold_seconds)
+            else:
+                is_stale = True
+
+        if summary.latest_record is None:
+            recommended_action = "run_auto_remediation_orchestrator"
+            message = "no_records"
+        elif summary.malformed_line_count > 0:
+            recommended_action = "auto_prune_runs"
+            message = "malformed_detected"
+        elif summary.total_records > policy.governance_escalation_remediation_auto_remediate_runs_prune_trigger_count:
+            recommended_action = "auto_prune_runs"
+            message = "above_prune_threshold"
+        elif is_stale:
+            recommended_action = "run_auto_remediation_orchestrator"
+            message = "stale"
+        else:
+            recommended_action = "observe"
+            message = "ok"
+
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunDigestResponse(
+            generated_at=_now_iso(),
+            stale_threshold_seconds=stale_threshold_seconds,
+            latest_record_age_seconds=latest_record_age_seconds,
+            is_stale=is_stale,
+            recommended_action=recommended_action,
+            summary=summary,
+            message=message,
+        )
+
     def auto_remediate_maintenance_alert_governance_runs(
         self,
         *,
@@ -2991,6 +3038,11 @@ class V7BenchmarkStore:
             governance_escalation_remediation_auto_remediate_runs_prune_keep_last=_env_int(
                 "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUNS_PRUNE_KEEP_LAST",
                 5000,
+                low=0,
+            ),
+            governance_escalation_remediation_auto_remediate_runs_stale_seconds=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+                900,
                 low=0,
             ),
             governance_escalation_remediations_stale_seconds=_env_int(

@@ -161,3 +161,18 @@
 - Verification:
   - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 101 passed
   - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
+
+## Round-47 Delta (2026-05-01)
+
+- Scope: add digest observability for remediation-orchestrator run history.
+- New API:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/digest
+- New policy env var:
+  - AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUNS_STALE_SECONDS
+- Digest outputs:
+  - stale_threshold_seconds/latest_record_age_seconds/is_stale
+  - recommended_action: run_auto_remediation_orchestrator | auto_prune_runs | observe
+  - summary snapshot with malformed and volume counters
+- Verification:
+  - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 103 passed
+  - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
