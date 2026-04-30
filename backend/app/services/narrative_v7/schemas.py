@@ -528,7 +528,14 @@ class BenchmarkMaintenanceAlertEmitResponse(BaseModel):
 class BenchmarkMaintenanceAlertListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_valid_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
     alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)
+    message: str = ""
 
 
 class BenchmarkMaintenanceAlertPruneResponse(BaseModel):
@@ -583,6 +590,30 @@ class BenchmarkMaintenanceAlertExportResponse(BaseModel):
 
     generated_at: str
     limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_valid_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
     digest: BenchmarkMaintenanceAlertDigestResponse
     alerts: list[BenchmarkMaintenanceAlertEvent] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertArchiveResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    keep_last: int = Field(default=0, ge=0)
+    shard_size: int = Field(default=0, ge=0)
+    total_valid_events_before: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    archived_count: int = Field(default=0, ge=0)
+    archive_shard_count: int = Field(default=0, ge=0)
+    malformed_candidate_count: int = Field(default=0, ge=0)
+    malformed_dropped_count: int = Field(default=0, ge=0)
+    archive_dir: str = ""
+    archive_files: list[str] = Field(default_factory=list)
     message: str = ""

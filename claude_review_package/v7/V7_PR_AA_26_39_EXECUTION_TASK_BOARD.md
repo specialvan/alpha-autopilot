@@ -247,6 +247,16 @@
 - [x] 支持 `limit` 导出窗口，便于评审脚本/看板集成
 - [x] 第十五轮回归测试覆盖（maintenance alert export store/api）
 
+## 生产化增强清单（第十六轮）
+
+- [x] 告警日志分页治理：`list_maintenance_alerts(limit, cursor)`
+- [x] 告警列表接口升级：`GET /api/narrative/v7/benchmark/maintenance/alerts` 支持 `cursor`
+- [x] 告警导出接口升级：`GET /api/narrative/v7/benchmark/maintenance/alerts/export` 支持 `cursor`
+- [x] 告警归档分片能力：`archive_maintenance_alerts(keep_last, shard_size, dry_run)`
+- [x] 告警归档接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/archive`
+- [x] 归档输出 `archive_files / archive_shard_count / malformed_dropped_count` 等治理指标
+- [x] 第十六轮回归测试覆盖（alert pagination + archive shard store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -257,5 +267,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`46 passed`
+- [x] 结果：`50 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

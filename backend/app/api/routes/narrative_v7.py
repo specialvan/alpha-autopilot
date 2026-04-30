@@ -30,6 +30,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
     BenchmarkMaintenanceAlertResponse,
+    BenchmarkMaintenanceAlertArchiveResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertExportResponse,
@@ -443,11 +444,14 @@ def benchmark_maintenance_alert_emit(limit: int = Query(default=50, ge=1, le=500
 
 
 @router.get("/benchmark/maintenance/alerts", response_model=BenchmarkMaintenanceAlertListResponse)
-def benchmark_maintenance_alert_list(limit: int = Query(default=100, ge=1, le=2000)) -> BenchmarkMaintenanceAlertListResponse:
+def benchmark_maintenance_alert_list(
+    limit: int = Query(default=100, ge=1, le=2000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertListResponse:
     return _execute_with_metrics(
         route="/api/narrative/v7/benchmark/maintenance/alerts",
         feature_name="benchmark_maintenance_alert_list",
-        operation=lambda: _benchmark_library.list_maintenance_alerts(limit=limit),
+        operation=lambda: _benchmark_library.list_maintenance_alerts(limit=limit, cursor=cursor),
     )
 
 
@@ -460,6 +464,23 @@ def benchmark_maintenance_alert_prune(
         route="/api/narrative/v7/benchmark/maintenance/alerts/prune",
         feature_name="benchmark_maintenance_alert_prune",
         operation=lambda: _benchmark_library.prune_maintenance_alerts(keep_last=keep_last, dry_run=dry_run),
+    )
+
+
+@router.post("/benchmark/maintenance/alerts/archive", response_model=BenchmarkMaintenanceAlertArchiveResponse)
+def benchmark_maintenance_alert_archive(
+    keep_last: int = Query(default=1000, ge=0, le=2000000),
+    shard_size: int = Query(default=1000, ge=1, le=500000),
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertArchiveResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/archive",
+        feature_name="benchmark_maintenance_alert_archive",
+        operation=lambda: _benchmark_library.archive_maintenance_alerts(
+            keep_last=keep_last,
+            shard_size=shard_size,
+            dry_run=dry_run,
+        ),
     )
 
 
@@ -482,11 +503,14 @@ def benchmark_maintenance_alert_digest(limit: int = Query(default=200, ge=1, le=
 
 
 @router.get("/benchmark/maintenance/alerts/export", response_model=BenchmarkMaintenanceAlertExportResponse)
-def benchmark_maintenance_alert_export(limit: int = Query(default=200, ge=1, le=20000)) -> BenchmarkMaintenanceAlertExportResponse:
+def benchmark_maintenance_alert_export(
+    limit: int = Query(default=200, ge=1, le=20000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertExportResponse:
     return _execute_with_metrics(
         route="/api/narrative/v7/benchmark/maintenance/alerts/export",
         feature_name="benchmark_maintenance_alert_export",
-        operation=lambda: _benchmark_library.export_maintenance_alerts(limit=limit),
+        operation=lambda: _benchmark_library.export_maintenance_alerts(limit=limit, cursor=cursor),
     )
 
 

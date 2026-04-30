@@ -8,6 +8,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertDigestResponse,
+    BenchmarkMaintenanceAlertArchiveResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -76,8 +77,8 @@ class BenchmarkLibrary:
     def emit_maintenance_alert(self, *, limit: int = 50) -> BenchmarkMaintenanceAlertEmitResponse:
         return self._store.emit_maintenance_alert(limit=limit)
 
-    def list_maintenance_alerts(self, *, limit: int = 100) -> BenchmarkMaintenanceAlertListResponse:
-        return self._store.list_maintenance_alerts(limit=limit)
+    def list_maintenance_alerts(self, *, limit: int = 100, cursor: str = "") -> BenchmarkMaintenanceAlertListResponse:
+        return self._store.list_maintenance_alerts(limit=limit, cursor=cursor)
 
     def prune_maintenance_alerts(
         self,
@@ -90,8 +91,17 @@ class BenchmarkLibrary:
     def summarize_maintenance_alerts(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertSummaryResponse:
         return self._store.summarize_maintenance_alerts(limit=limit)
 
+    def archive_maintenance_alerts(
+        self,
+        *,
+        keep_last: int,
+        shard_size: int = 1000,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertArchiveResponse:
+        return self._store.archive_maintenance_alerts(keep_last=keep_last, shard_size=shard_size, dry_run=dry_run)
+
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
         return self._store.build_maintenance_alert_digest(limit=limit)
 
-    def export_maintenance_alerts(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertExportResponse:
-        return self._store.export_maintenance_alerts(limit=limit)
+    def export_maintenance_alerts(self, *, limit: int = 200, cursor: str = "") -> BenchmarkMaintenanceAlertExportResponse:
+        return self._store.export_maintenance_alerts(limit=limit, cursor=cursor)

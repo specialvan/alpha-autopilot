@@ -21,6 +21,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertEvent,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertDigestResponse,
+    BenchmarkMaintenanceAlertArchiveResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceAlertSummaryResponse,
@@ -79,6 +80,17 @@ def _parse_iso_utc(raw: str) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _parse_cursor_offset(raw: str | None) -> int:
+    text = str(raw or "").strip()
+    if not text:
+        return 0
+    try:
+        value = int(text)
+    except Exception:
+        return 0
+    return max(0, value)
 
 
 @dataclass
@@ -661,16 +673,41 @@ class V7BenchmarkStore:
 
         return BenchmarkMaintenanceAlertEmitResponse(alert=alert, event=event)
 
-    def list_maintenance_alerts(self, *, limit: int = 100) -> BenchmarkMaintenanceAlertListResponse:
+    def list_maintenance_alerts(
+        self,
+        *,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertListResponse:
+        query_limit = max(0, int(limit))
+        offset = _parse_cursor_offset(cursor)
         with self._lock:
             path = self._alerts_path()
             if not path.exists():
-                return BenchmarkMaintenanceAlertListResponse(alerts=[])
-            rows, _ = self._read_alert_events(path=path)
+                return BenchmarkMaintenanceAlertListResponse(
+                    limit=query_limit,
+                    cursor=str(offset),
+                    alerts=[],
+                    message="no_alerts",
+                )
+            rows, malformed_line_count = self._read_alert_events(path=path)
         rows.sort(key=lambda item: item.generated_at, reverse=True)
-        if limit > 0:
-            rows = rows[:limit]
-        return BenchmarkMaintenanceAlertListResponse(alerts=rows)
+        total = len(rows)
+        start = min(offset, total)
+        end = min(total, start + query_limit) if query_limit > 0 else total
+        window = rows[start:end]
+        has_more = end < total
+        next_cursor = str(end) if has_more else ""
+        return BenchmarkMaintenanceAlertListResponse(
+            limit=query_limit,
+            cursor=str(start),
+            next_cursor=next_cursor,
+            has_more=has_more,
+            total_valid_events=total,
+            malformed_line_count=malformed_line_count,
+            alerts=window,
+            message="ok",
+        )
 
     def prune_maintenance_alerts(
         self,
@@ -761,6 +798,68 @@ class V7BenchmarkStore:
             message="ok",
         )
 
+    def archive_maintenance_alerts(
+        self,
+        *,
+        keep_last: int,
+        shard_size: int = 1000,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertArchiveResponse:
+        keep_count = max(0, int(keep_last))
+        shard_count = max(1, int(shard_size))
+        with self._lock:
+            path = self._alerts_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertArchiveResponse(
+                    generated_at=_now_iso(),
+                    dry_run=bool(dry_run),
+                    keep_last=keep_count,
+                    shard_size=shard_count,
+                    message="no_alerts",
+                )
+
+            rows, malformed_candidate_count = self._read_alert_events(path=path)
+            rows.sort(key=lambda item: item.generated_at, reverse=True)
+            kept = rows[:keep_count]
+            candidates = rows[keep_count:]
+
+            archive_dir = self._alerts_archive_dir()
+            archive_files: list[str] = []
+            archived_count = 0
+            malformed_dropped_count = 0
+
+            if not dry_run:
+                self._write_alert_events(path=path, events=kept)
+                if candidates:
+                    archive_dir.mkdir(parents=True, exist_ok=True)
+                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+                    oldest_first = list(reversed(candidates))
+                    for index in range(0, len(oldest_first), shard_count):
+                        chunk = oldest_first[index : index + shard_count]
+                        shard_name = f"alerts-{timestamp}-{(index // shard_count) + 1:04d}.jsonl"
+                        shard_path = self._unique_target_path(archive_dir, shard_name)
+                        self._write_alert_events(path=shard_path, events=chunk)
+                        archive_files.append(shard_path.name)
+                    archived_count = len(candidates)
+                malformed_dropped_count = malformed_candidate_count
+
+        return BenchmarkMaintenanceAlertArchiveResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            keep_last=keep_count,
+            shard_size=shard_count,
+            total_valid_events_before=len(rows),
+            kept_count=len(kept),
+            candidate_count=len(candidates),
+            archived_count=archived_count,
+            archive_shard_count=len(archive_files),
+            malformed_candidate_count=malformed_candidate_count,
+            malformed_dropped_count=malformed_dropped_count,
+            archive_dir=str(archive_dir),
+            archive_files=archive_files,
+            message="dry_run" if dry_run else "archived",
+        )
+
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
         current_alert = self.build_maintenance_alert(limit=limit)
         summary = self.summarize_maintenance_alerts(limit=limit)
@@ -798,15 +897,25 @@ class V7BenchmarkStore:
             message="ok" if summary.latest_event is not None else "no_alert_event",
         )
 
-    def export_maintenance_alerts(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertExportResponse:
+    def export_maintenance_alerts(
+        self,
+        *,
+        limit: int = 200,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertExportResponse:
         query_limit = max(0, int(limit))
         digest = self.build_maintenance_alert_digest(limit=query_limit)
-        alerts = self.list_maintenance_alerts(limit=query_limit).alerts
+        page = self.list_maintenance_alerts(limit=query_limit, cursor=cursor)
         return BenchmarkMaintenanceAlertExportResponse(
             generated_at=_now_iso(),
             limit=query_limit,
+            cursor=page.cursor,
+            next_cursor=page.next_cursor,
+            has_more=page.has_more,
+            total_valid_events=page.total_valid_events,
+            malformed_line_count=page.malformed_line_count,
             digest=digest,
-            alerts=alerts,
+            alerts=page.alerts,
             message="ok",
         )
 
@@ -845,6 +954,19 @@ class V7BenchmarkStore:
 
     def _alerts_path(self) -> Path:
         return self.version_root / "_maintenance_alerts.jsonl"
+
+    def _alerts_archive_dir(self) -> Path:
+        return self.version_root / "_maintenance_alerts_archive"
+
+    def _write_alert_events(self, *, path: Path, events: list[BenchmarkMaintenanceAlertEvent]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_suffix(f"{path.suffix}.tmp")
+        serialized = [json.dumps(item.model_dump(mode="json"), ensure_ascii=False) for item in events]
+        payload = "\n".join(serialized)
+        if payload:
+            payload += "\n"
+        temp_path.write_text(payload, encoding="utf-8")
+        temp_path.replace(path)
 
     def _read_alert_events(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertEvent], int]:
         rows: list[BenchmarkMaintenanceAlertEvent] = []
