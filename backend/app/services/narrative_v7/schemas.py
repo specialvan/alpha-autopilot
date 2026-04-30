@@ -357,6 +357,8 @@ class BenchmarkVersionRecord(BaseModel):
     trigger: str = "unknown"
     total_rows: int = Field(default=0, ge=0)
     active_rows: int = Field(default=0, ge=0)
+    rows_sha256: str = ""
+    integrity_status: Literal["verified", "unverified", "failed"] = "unverified"
 
 
 class BenchmarkVersionListResponse(BaseModel):
@@ -373,4 +375,41 @@ class BenchmarkRestoreResponse(BaseModel):
     active_version: str
     total_rows: int = Field(default=0, ge=0)
     active_rows: int = Field(default=0, ge=0)
+    integrity_verified: bool = False
+    backup_version: str = ""
     message: str = ""
+
+
+class BenchmarkVersionDiffResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    comparable: bool
+    base_version: str
+    target_version: str
+    base_active_rows: int = Field(default=0, ge=0)
+    target_active_rows: int = Field(default=0, ge=0)
+    base_integrity_verified: bool = False
+    target_integrity_verified: bool = False
+    added_count: int = Field(default=0, ge=0)
+    removed_count: int = Field(default=0, ge=0)
+    activated_count: int = Field(default=0, ge=0)
+    deactivated_count: int = Field(default=0, ge=0)
+    mean_changed_count: int = Field(default=0, ge=0)
+    added_book_ids: list[str] = Field(default_factory=list)
+    removed_book_ids: list[str] = Field(default_factory=list)
+    activated_book_ids: list[str] = Field(default_factory=list)
+    deactivated_book_ids: list[str] = Field(default_factory=list)
+    mean_changed_book_ids: list[str] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkAuditExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    latest_version: str = ""
+    version_count: int = Field(default=0, ge=0)
+    integrity_verified_count: int = Field(default=0, ge=0)
+    integrity_unverified_count: int = Field(default=0, ge=0)
+    integrity_failed_count: int = Field(default=0, ge=0)
+    versions: list[BenchmarkVersionRecord] = Field(default_factory=list)

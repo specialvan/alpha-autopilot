@@ -145,6 +145,17 @@
 - [x] observability 输出新增 `thresholds` 字段
 - [x] 第三轮回归测试覆盖（rules/versions/restore/threshold snapshot）
 
+## 生产化增强清单（第四轮）
+
+- [x] Benchmark 快照增加完整性摘要 `rows_sha256`（防篡改审计）
+- [x] Benchmark 版本记录增加 `integrity_status`（verified/unverified/failed）
+- [x] restore 增加完整性校验失败拦截（tampered snapshot 拒绝恢复）
+- [x] restore 增加恢复前备份版本 `backup_version`（可回滚保护）
+- [x] Benchmark 版本差异对比能力（added/removed/activated/deactivated/mean_changed）
+- [x] 差异接口：`GET /api/narrative/v7/benchmark/versions/diff`
+- [x] 审计导出接口：`GET /api/narrative/v7/benchmark/audit/export`
+- [x] 第四轮回归测试覆盖（diff/audit/integrity/restore-guard）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -155,5 +166,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`20 passed`
+- [x] 结果：`24 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

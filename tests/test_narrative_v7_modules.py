@@ -222,6 +222,62 @@ def test_decision_ruleset_supports_file_override(tmp_path) -> None:
     assert "tail_hook_zero_threshold" in current
 
 
+def test_benchmark_store_compare_versions_and_export_audit(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-a",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.70},
+        )
+    )
+    second = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-b",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.80},
+        )
+    )
+    assert second.accepted is True
+    assert store.retract("book-b") is True
+
+    latest_versions = store.list_versions(limit=10)
+    assert latest_versions
+
+    diff = store.compare_versions(base_version=second.version, target_version=latest_versions[0].version)
+    assert diff.comparable is True
+    assert "book-b" in diff.deactivated_book_ids
+    assert diff.deactivated_count >= 1
+
+    audit = store.export_audit(limit=10)
+    assert audit.version_count >= 3
+    assert audit.integrity_failed_count == 0
+
+
+def test_benchmark_store_restore_rejects_tampered_snapshot(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    accepted = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-tamper",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.75},
+        )
+    )
+    assert accepted.accepted is True
+
+    snapshot_path = store.version_root / f"{accepted.version}.json"
+    payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    payload["rows"][0]["nqm_mean"] = 0.21
+    snapshot_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    restored = store.restore(accepted.version)
+    assert restored.restored is False
+    assert restored.message == "snapshot_integrity_failed"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from .benchmark_store import V7BenchmarkStore
 from .schemas import (
+    BenchmarkAuditExportResponse,
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
     BenchmarkQueryRequest,
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
+    BenchmarkVersionDiffResponse,
     BenchmarkVersionRecord,
 )
 
@@ -29,3 +31,9 @@ class BenchmarkLibrary:
 
     def restore_version(self, version: str) -> BenchmarkRestoreResponse:
         return self._store.restore(version)
+
+    def compare_versions(self, *, base_version: str, target_version: str) -> BenchmarkVersionDiffResponse:
+        return self._store.compare_versions(base_version=base_version, target_version=target_version)
+
+    def export_audit(self, *, limit: int = 50) -> BenchmarkAuditExportResponse:
+        return self._store.export_audit(limit=limit)

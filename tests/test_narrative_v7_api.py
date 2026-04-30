@@ -236,6 +236,58 @@ def test_v7_api_supports_benchmark_versions_and_restore() -> None:
     assert restore_body["requested_version"] == versions[0]["version"]
 
 
+def test_v7_api_supports_benchmark_diff_and_audit_export() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-diff-a",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.65},
+        },
+    )
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-diff-b",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.77},
+        },
+    )
+    _ = client.delete("/api/narrative/v7/benchmark/book-diff-b")
+
+    versions_response = client.get("/api/narrative/v7/benchmark/versions?limit=10")
+    assert versions_response.status_code == 200
+    versions = versions_response.json()["versions"]
+    assert len(versions) >= 2
+
+    diff_response = client.get(
+        "/api/narrative/v7/benchmark/versions/diff",
+        params={"base_version": versions[1]["version"], "target_version": versions[0]["version"]},
+    )
+    assert diff_response.status_code == 200
+    diff = diff_response.json()
+    assert diff["comparable"] is True
+    assert diff["deactivated_count"] >= 1
+
+    audit_response = client.get("/api/narrative/v7/benchmark/audit/export?limit=20")
+    assert audit_response.status_code == 200
+    audit = audit_response.json()
+    assert audit["version_count"] >= 1
+    assert "generated_at" in audit
+
+
+def test_v7_api_returns_404_for_missing_benchmark_diff_version() -> None:
+    client = _create_v7_only_client()
+    response = client.get(
+        "/api/narrative/v7/benchmark/versions/diff",
+        params={"base_version": "missing-a", "target_version": "missing-b"},
+    )
+    assert response.status_code == 404
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

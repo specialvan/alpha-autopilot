@@ -26,12 +26,14 @@ from ...services.narrative_v7 import (
 from ...services.narrative_v7.schemas import (
     AntiPatternCheckRequest,
     AntiPatternCheckResponse,
+    BenchmarkAuditExportResponse,
     BenchmarkIngestRequest,
     BenchmarkIngestResponse,
     BenchmarkParameterSet,
     BenchmarkQueryRequest,
     BenchmarkQueryResponse,
     BenchmarkRestoreResponse,
+    BenchmarkVersionDiffResponse,
     BenchmarkVersionListResponse,
     DeadlockCheckRequest,
     DeadlockCheckResponse,
@@ -339,6 +341,35 @@ def benchmark_restore(version: str) -> BenchmarkRestoreResponse:
         route="/api/narrative/v7/benchmark/restore/{version}",
         feature_name="benchmark_restore",
         operation=_op,
+    )
+
+
+@router.get("/benchmark/versions/diff", response_model=BenchmarkVersionDiffResponse)
+def benchmark_versions_diff(
+    base_version: str = Query(min_length=1),
+    target_version: str = Query(min_length=1),
+) -> BenchmarkVersionDiffResponse:
+    def _op() -> BenchmarkVersionDiffResponse:
+        result = _benchmark_library.compare_versions(base_version=base_version, target_version=target_version)
+        if not result.comparable:
+            if result.message in {"base_version_not_found", "target_version_not_found"}:
+                raise HTTPException(status_code=404, detail=result.message)
+            raise HTTPException(status_code=422, detail=result.message or "benchmark_versions_not_comparable")
+        return result
+
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/versions/diff",
+        feature_name="benchmark_versions_diff",
+        operation=_op,
+    )
+
+
+@router.get("/benchmark/audit/export", response_model=BenchmarkAuditExportResponse)
+def benchmark_audit_export(limit: int = Query(default=50, ge=1, le=200)) -> BenchmarkAuditExportResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/audit/export",
+        feature_name="benchmark_audit_export",
+        operation=lambda: _benchmark_library.export_audit(limit=limit),
     )
 
 
