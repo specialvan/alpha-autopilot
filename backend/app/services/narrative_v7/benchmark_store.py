@@ -30,6 +30,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernancePolicy,
     BenchmarkMaintenanceAlertGovernanceReportResponse,
     BenchmarkMaintenanceAlertGovernanceRunListResponse,
+    BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertExportResponse,
@@ -1263,7 +1264,7 @@ class V7BenchmarkStore:
                 )
             records, malformed_line_count = self._read_governance_run_records(path=path)
 
-        records.sort(key=lambda item: item.generated_at, reverse=True)
+        records.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
         total = len(records)
         start = min(offset, total)
         end = min(total, start + query_limit) if query_limit > 0 else total
@@ -1280,6 +1281,50 @@ class V7BenchmarkStore:
             malformed_line_count=malformed_line_count,
             records=window,
             message="ok",
+        )
+
+    def prune_maintenance_alert_governance_runs(
+        self,
+        *,
+        keep_last: int,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertGovernanceRunPruneResponse:
+        keep_count = max(0, int(keep_last))
+        with self._lock:
+            path = self._governance_runs_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceRunPruneResponse(
+                    generated_at=_now_iso(),
+                    dry_run=bool(dry_run),
+                    keep_last=keep_count,
+                    message="no_runs",
+                )
+
+            rows, malformed_candidate_count = self._read_governance_run_records(path=path)
+            rows.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
+            kept = rows[:keep_count]
+            candidates = rows[keep_count:]
+
+            pruned_run_ids: list[str] = []
+            malformed_dropped_count = 0
+            if not dry_run:
+                self._write_governance_run_records(path=path, records=kept)
+                pruned_run_ids = [item.run_id for item in candidates]
+                malformed_dropped_count = malformed_candidate_count
+
+        return BenchmarkMaintenanceAlertGovernanceRunPruneResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            keep_last=keep_count,
+            total_runs_before=len(rows),
+            kept_count=len(kept),
+            candidate_count=len(candidates),
+            pruned_count=len(pruned_run_ids),
+            malformed_candidate_count=malformed_candidate_count,
+            malformed_dropped_count=malformed_dropped_count,
+            kept_run_ids=[item.run_id for item in kept],
+            pruned_run_ids=pruned_run_ids,
+            message="dry_run" if dry_run else "pruned",
         )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
@@ -1413,6 +1458,21 @@ class V7BenchmarkStore:
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record.model_dump(mode="json"), ensure_ascii=False))
             handle.write("\n")
+
+    def _write_governance_run_records(
+        self,
+        *,
+        path: Path,
+        records: list[BenchmarkMaintenanceAlertGovernanceRunRecord],
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_suffix(f"{path.suffix}.tmp")
+        serialized = [json.dumps(item.model_dump(mode="json"), ensure_ascii=False) for item in records]
+        payload = "\n".join(serialized)
+        if payload:
+            payload += "\n"
+        temp_path.write_text(payload, encoding="utf-8")
+        temp_path.replace(path)
 
     def _read_governance_run_records(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertGovernanceRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = []

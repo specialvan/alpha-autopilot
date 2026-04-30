@@ -909,6 +909,60 @@ def test_benchmark_store_governance_run_records_failure_and_retry(monkeypatch, t
     assert history.records[1].status == "failed"
 
 
+def test_benchmark_store_prunes_governance_runs(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-prune",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.72},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    for index in range(3):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key=f"governance-prune-{index}",
+        )
+
+    governance_log = store.version_root / "_maintenance_alert_governance_runs.jsonl"
+    with governance_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    dry_run = store.prune_maintenance_alert_governance_runs(keep_last=1, dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.total_runs_before == 3
+    assert dry_run.kept_count == 1
+    assert dry_run.candidate_count == 2
+    assert dry_run.pruned_count == 0
+    assert dry_run.malformed_candidate_count >= 1
+    assert dry_run.malformed_dropped_count == 0
+
+    applied = store.prune_maintenance_alert_governance_runs(keep_last=1, dry_run=False)
+    assert applied.dry_run is False
+    assert applied.total_runs_before == 3
+    assert applied.kept_count == 1
+    assert applied.candidate_count == 2
+    assert applied.pruned_count == 2
+    assert applied.malformed_candidate_count >= 1
+    assert applied.malformed_dropped_count >= 1
+
+    history = store.list_maintenance_alert_governance_runs(limit=20)
+    assert history.total_records == 1
+    assert len(history.records) == 1
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

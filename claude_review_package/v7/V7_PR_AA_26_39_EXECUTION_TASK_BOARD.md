@@ -305,6 +305,16 @@
 - [x] 治理运行接口升级：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/run` 支持 `idempotency_key/retry_run_id`
 - [x] 第21轮回归测试覆盖（governance idempotency + failure/retry history store/api）
 
+## 生产化增强清单（第二十二轮）
+
+- [x] 治理运行日志生命周期治理：`prune_maintenance_alert_governance_runs`
+- [x] 治理运行日志清理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/prune`
+- [x] 支持 `dry_run/apply` 双路径（预演/执行）
+- [x] 支持 `keep_last` 保留最近 N 条治理运行记录
+- [x] 支持脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）
+- [x] 运行日志排序稳定性增强（`generated_at/completed_at/run_id` 多键排序）
+- [x] 第22轮回归测试覆盖（governance runs prune store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -315,5 +325,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`62 passed`
+- [x] 结果：`64 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
