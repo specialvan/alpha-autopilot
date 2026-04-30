@@ -458,6 +458,16 @@
 - [x] 导出支持 `limit/cursor` 分页，输出 `summary + records` 单请求验收上下文
 - [x] 第38轮回归测试覆盖（governance escalation auto-remediation summary/export store/api）
 
+## 生产化增强清单（第三十九轮）
+
+- [x] 治理升级事件自愈历史日志清理能力：`prune_maintenance_alert_governance_escalation_remediations`
+- [x] 自愈历史清理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/prune`
+- [x] 支持 `dry_run/apply` 双路径（预演/执行）
+- [x] 支持 `keep_last` 保留最近 N 条自愈历史记录
+- [x] 支持脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）
+- [x] 清理后历史可回读校验（记录数量与排序保持稳定）
+- [x] 第39轮回归测试覆盖（governance escalation auto-remediation prune store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

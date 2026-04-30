@@ -32,3 +32,15 @@ Please additionally review the newly added remediation history observability con
 
 
 
+
+## Round-39 Additional Review Targets
+
+Please additionally review remediation history log lifecycle behavior:
+
+- POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/prune
+  - Validate dry_run/apply semantics and keep_last retention behavior.
+  - Validate malformed_candidate_count and malformed_dropped_count accounting.
+  - Validate kept/pruned run-id lists align with list endpoint after pruning.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/export
