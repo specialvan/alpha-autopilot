@@ -224,3 +224,16 @@
 - Verification:
   - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
   - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
+
+## Round-51 Delta (2026-05-01)
+
+- Scope: add lifecycle prune governance for orchestrator-run auto-remediate run history logs.
+- New API:
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/prune
+- Prune outputs:
+  - keep_last/total_records_before/kept_count/candidate_count/pruned_count
+  - malformed_candidate_count/malformed_dropped_count
+  - kept_run_ids/pruned_run_ids
+- Verification:
+  - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
+  - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass

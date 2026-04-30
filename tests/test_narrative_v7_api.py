@@ -2871,6 +2871,43 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
         == orchestrator_run_history_export_first["next_cursor"]
     )
 
+    orchestrator_run_history_prune_dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/prune"
+        "?keep_last=1&dry_run=true"
+    )
+    assert orchestrator_run_history_prune_dry_run_response.status_code == 200
+    orchestrator_run_history_prune_dry_run = orchestrator_run_history_prune_dry_run_response.json()
+    assert orchestrator_run_history_prune_dry_run["dry_run"] is True
+    assert orchestrator_run_history_prune_dry_run["total_records_before"] == 2
+    assert orchestrator_run_history_prune_dry_run["kept_count"] == 1
+    assert orchestrator_run_history_prune_dry_run["candidate_count"] == 1
+    assert orchestrator_run_history_prune_dry_run["pruned_count"] == 0
+    assert orchestrator_run_history_prune_dry_run["malformed_candidate_count"] >= 1
+    assert orchestrator_run_history_prune_dry_run["malformed_dropped_count"] == 0
+
+    orchestrator_run_history_prune_apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/prune"
+        "?keep_last=1&dry_run=false"
+    )
+    assert orchestrator_run_history_prune_apply_response.status_code == 200
+    orchestrator_run_history_prune_apply = orchestrator_run_history_prune_apply_response.json()
+    assert orchestrator_run_history_prune_apply["dry_run"] is False
+    assert orchestrator_run_history_prune_apply["total_records_before"] == 2
+    assert orchestrator_run_history_prune_apply["kept_count"] == 1
+    assert orchestrator_run_history_prune_apply["candidate_count"] == 1
+    assert orchestrator_run_history_prune_apply["pruned_count"] == 1
+    assert orchestrator_run_history_prune_apply["malformed_candidate_count"] >= 1
+    assert orchestrator_run_history_prune_apply["malformed_dropped_count"] >= 1
+    assert len(orchestrator_run_history_prune_apply["pruned_run_ids"]) == 1
+
+    orchestrator_run_history_after_prune_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs?limit=20"
+    )
+    assert orchestrator_run_history_after_prune_response.status_code == 200
+    orchestrator_run_history_after_prune = orchestrator_run_history_after_prune_response.json()
+    assert orchestrator_run_history_after_prune["total_records"] == 1
+    assert orchestrator_run_history_after_prune["malformed_line_count"] == 0
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()

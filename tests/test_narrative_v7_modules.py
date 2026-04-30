@@ -2416,6 +2416,43 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
         == orchestrator_run_history_export_first.next_cursor
     )
 
+    orchestrator_run_history_prune_dry_run = (
+        store.prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            keep_last=1,
+            dry_run=True,
+        )
+    )
+    assert orchestrator_run_history_prune_dry_run.dry_run is True
+    assert orchestrator_run_history_prune_dry_run.total_records_before == 2
+    assert orchestrator_run_history_prune_dry_run.kept_count == 1
+    assert orchestrator_run_history_prune_dry_run.candidate_count == 1
+    assert orchestrator_run_history_prune_dry_run.pruned_count == 0
+    assert orchestrator_run_history_prune_dry_run.malformed_candidate_count >= 1
+    assert orchestrator_run_history_prune_dry_run.malformed_dropped_count == 0
+
+    orchestrator_run_history_prune_apply = (
+        store.prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            keep_last=1,
+            dry_run=False,
+        )
+    )
+    assert orchestrator_run_history_prune_apply.dry_run is False
+    assert orchestrator_run_history_prune_apply.total_records_before == 2
+    assert orchestrator_run_history_prune_apply.kept_count == 1
+    assert orchestrator_run_history_prune_apply.candidate_count == 1
+    assert orchestrator_run_history_prune_apply.pruned_count == 1
+    assert orchestrator_run_history_prune_apply.malformed_candidate_count >= 1
+    assert orchestrator_run_history_prune_apply.malformed_dropped_count >= 1
+    assert len(orchestrator_run_history_prune_apply.pruned_run_ids) == 1
+
+    orchestrator_run_history_after_prune = (
+        store.list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs(
+            limit=20
+        )
+    )
+    assert orchestrator_run_history_after_prune.total_records == 1
+    assert orchestrator_run_history_after_prune.malformed_line_count == 0
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
