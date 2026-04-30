@@ -204,3 +204,15 @@ Please additionally review orchestrator-run auto-remediate run-history auto-prun
 - Correlate with:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/prune
+
+## Round-53 Additional Review Targets
+
+Please additionally review orchestrator-run auto-remediate run-history digest behavior:
+
+- GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest
+  - Validate no_records/stale/threshold/malformed decision branches.
+  - Validate recommended_action contract and message routing.
+  - Validate latest_record age calculation and stale-threshold env override behavior.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-prune

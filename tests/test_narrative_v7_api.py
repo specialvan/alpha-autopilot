@@ -2720,6 +2720,17 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
     app.include_router(narrative_v7_router)
     client = TestClient(app, raise_server_exceptions=False)
 
+    no_records_digest_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert no_records_digest_response.status_code == 200
+    no_records_digest = no_records_digest_response.json()
+    assert no_records_digest["summary"]["total_records"] == 0
+    assert no_records_digest["recommended_action"] == "run_auto_remediation_orchestrator_runs"
+    assert no_records_digest["message"] == "no_records"
+    assert no_records_digest["is_stale"] is True
+    assert no_records_digest["latest_record_age_seconds"] == -1.0
+
     _ = client.post(
         "/api/narrative/v7/benchmark/ingest",
         json={
@@ -2991,6 +3002,69 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
     assert orchestrator_run_history_auto_prune_not_needed["should_prune"] is False
     assert orchestrator_run_history_auto_prune_not_needed["prune"] is None
     assert orchestrator_run_history_auto_prune_not_needed["message"] == "below_threshold"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "3600",
+    )
+    orchestrator_run_history_digest_ok_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert orchestrator_run_history_digest_ok_response.status_code == 200
+    orchestrator_run_history_digest_ok = orchestrator_run_history_digest_ok_response.json()
+    assert orchestrator_run_history_digest_ok["summary"]["total_records"] == 1
+    assert orchestrator_run_history_digest_ok["summary"]["malformed_line_count"] == 0
+    assert orchestrator_run_history_digest_ok["recommended_action"] == "observe"
+    assert orchestrator_run_history_digest_ok["message"] == "ok"
+    assert orchestrator_run_history_digest_ok["latest_record_age_seconds"] >= 0.0
+    assert orchestrator_run_history_digest_ok["is_stale"] is False
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "0",
+    )
+    orchestrator_run_history_digest_above_threshold_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert orchestrator_run_history_digest_above_threshold_response.status_code == 200
+    orchestrator_run_history_digest_above_threshold = orchestrator_run_history_digest_above_threshold_response.json()
+    assert orchestrator_run_history_digest_above_threshold["recommended_action"] == "auto_prune_runs"
+    assert orchestrator_run_history_digest_above_threshold["message"] == "above_prune_threshold"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "100",
+    )
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "0",
+    )
+    orchestrator_run_history_digest_stale_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert orchestrator_run_history_digest_stale_response.status_code == 200
+    orchestrator_run_history_digest_stale = orchestrator_run_history_digest_stale_response.json()
+    assert orchestrator_run_history_digest_stale["recommended_action"] == "run_auto_remediation_orchestrator_runs"
+    assert orchestrator_run_history_digest_stale["message"] == "stale"
+    assert orchestrator_run_history_digest_stale["is_stale"] is True
+
+    with (
+        store.version_root
+        / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs.jsonl"
+    ).open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write("{bad-json\n")
+
+    orchestrator_run_history_digest_malformed_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert orchestrator_run_history_digest_malformed_response.status_code == 200
+    orchestrator_run_history_digest_malformed = orchestrator_run_history_digest_malformed_response.json()
+    assert orchestrator_run_history_digest_malformed["recommended_action"] == "auto_prune_runs"
+    assert orchestrator_run_history_digest_malformed["message"] == "malformed_detected"
+    assert orchestrator_run_history_digest_malformed["summary"]["malformed_line_count"] >= 1
 
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:

@@ -2278,6 +2278,17 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
     tmp_path,
 ) -> None:
     store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    no_records_digest = (
+        store.build_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_digest(
+            limit=20
+        )
+    )
+    assert no_records_digest.summary.total_records == 0
+    assert no_records_digest.recommended_action == "run_auto_remediation_orchestrator_runs"
+    assert no_records_digest.message == "no_records"
+    assert no_records_digest.is_stale is True
+    assert no_records_digest.latest_record_age_seconds == -1.0
+
     _ = store.ingest(
         BenchmarkIngestRequest(
             book_id="book-alert-governance-escalation-remediation-orchestrator-runs-auto-remediate",
@@ -2526,6 +2537,63 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
     assert auto_prune_not_needed.should_prune is False
     assert auto_prune_not_needed.prune is None
     assert auto_prune_not_needed.message == "below_threshold"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "3600",
+    )
+    digest_ok = (
+        store.build_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_digest(
+            limit=20
+        )
+    )
+    assert digest_ok.summary.total_records == 1
+    assert digest_ok.summary.malformed_line_count == 0
+    assert digest_ok.recommended_action == "observe"
+    assert digest_ok.message == "ok"
+    assert digest_ok.latest_record_age_seconds >= 0.0
+    assert digest_ok.is_stale is False
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "0",
+    )
+    digest_above_threshold = (
+        store.build_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_digest(
+            limit=20
+        )
+    )
+    assert digest_above_threshold.recommended_action == "auto_prune_runs"
+    assert digest_above_threshold.message == "above_prune_threshold"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "100",
+    )
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "0",
+    )
+    digest_stale = (
+        store.build_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_digest(
+            limit=20
+        )
+    )
+    assert digest_stale.recommended_action == "run_auto_remediation_orchestrator_runs"
+    assert digest_stale.message == "stale"
+    assert digest_stale.is_stale is True
+
+    with orchestrator_run_history_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    digest_malformed = (
+        store.build_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_digest(
+            limit=20
+        )
+    )
+    assert digest_malformed.recommended_action == "auto_prune_runs"
+    assert digest_malformed.message == "malformed_detected"
+    assert digest_malformed.summary.malformed_line_count >= 1
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:

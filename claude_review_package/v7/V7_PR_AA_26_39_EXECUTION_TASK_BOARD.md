@@ -593,6 +593,15 @@
 - [x] 支持脏行触发清理与清理后回读校验（`malformed_line_count -> 0`）
 - [x] 第52轮回归测试覆盖（orchestrator-runs auto-remediate run-history auto-prune store/api）
 
+## 生产化增强清单（第五十三轮）
+
+- [x] 编排执行轨迹历史 Digest 能力：`build_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_digest`
+- [x] Digest 接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest`
+- [x] 支持编排执行轨迹新鲜度阈值治理：`AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_STALE_SECONDS`
+- [x] Digest 联动执行轨迹清理阈值策略（`above_prune_threshold` / `malformed_detected`）
+- [x] 输出推荐动作（`run_auto_remediation_orchestrator_runs/auto_prune_runs/observe`）
+- [x] 第53轮回归测试覆盖（orchestrator-runs auto-remediate run-history digest store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
