@@ -56,3 +56,16 @@ Please additionally review remediation history auto-prune behavior:
 - Correlate with:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/prune
+
+## Round-41 Additional Review Targets
+
+Please additionally review remediation history digest behavior:
+
+- GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/digest
+  - Validate no_records/stale/threshold/malformed decision branches.
+  - Validate recommended_action contract and message routing.
+  - Validate latest_record age calculation and stale-threshold env override behavior.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediate

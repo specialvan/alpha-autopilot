@@ -478,6 +478,15 @@
 - [x] 支持脏行触发清理与清理后回读校验（`malformed_line_count -> 0`）
 - [x] 第40轮回归测试覆盖（governance escalation auto-remediation auto-prune store/api）
 
+## 生产化增强清单（第四十一轮）
+
+- [x] 治理升级事件自愈历史 Digest 能力：`build_maintenance_alert_governance_escalation_remediations_digest`
+- [x] 自愈历史 Digest 接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/digest`
+- [x] 支持自愈历史新鲜度阈值治理：`AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATIONS_STALE_SECONDS`
+- [x] Digest 联动自愈历史清理阈值策略（`above_prune_threshold` / `malformed_detected`）
+- [x] 输出推荐动作（`run_auto_remediate_escalations/auto_prune_remediations/observe`）
+- [x] 第41轮回归测试覆盖（governance escalation auto-remediation digest store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

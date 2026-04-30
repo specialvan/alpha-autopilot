@@ -54,6 +54,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -951,6 +952,20 @@ def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_au
         operation=lambda: _benchmark_library.auto_prune_maintenance_alert_governance_escalation_remediations(
             dry_run=dry_run,
         ),
+    )
+
+
+@router.get(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/digest",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_digest(
+    limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/digest",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_digest",
+        operation=lambda: _benchmark_library.build_maintenance_alert_governance_escalation_remediations_digest(limit=limit),
     )
 
 

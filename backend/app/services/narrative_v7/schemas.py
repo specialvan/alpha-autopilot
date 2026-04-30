@@ -740,6 +740,7 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
     governance_escalations_prune_keep_last: int = Field(default=0, ge=0)
     governance_escalation_remediations_prune_trigger_count: int = Field(default=0, ge=0)
     governance_escalation_remediations_prune_keep_last: int = Field(default=0, ge=0)
+    governance_escalation_remediations_stale_seconds: int = Field(default=0, ge=0)
     governance_escalations_emit_cooldown_seconds: int = Field(default=0, ge=0)
     governance_runs_max_retry_attempts: int = Field(default=0, ge=0)
     governance_runs_escalation_failure_streak: int = Field(default=0, ge=0)
@@ -1106,6 +1107,18 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse(
     malformed_line_count: int = Field(default=0, ge=0)
     should_prune: bool = False
     prune: BenchmarkMaintenanceAlertGovernanceEscalationRemediationPruneResponse | None = None
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationDigestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    stale_threshold_seconds: int = Field(default=0, ge=0)
+    latest_record_age_seconds: float = Field(default=-1.0, ge=-1.0)
+    is_stale: bool = True
+    recommended_action: str = "observe"
+    summary: BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse
     message: str = ""
 
 
