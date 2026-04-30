@@ -1249,6 +1249,62 @@ def test_v7_api_supports_governance_runs_auto_prune(monkeypatch) -> None:
     assert no_prune["message"] == "below_threshold"
 
 
+def test_v7_api_supports_governance_runs_digest(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-runs-digest-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.63},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    ok_run = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-runs-digest-api-ok"
+    )
+    assert ok_run.status_code == 200
+
+    store = narrative_v7_route._benchmark_store
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_runs_digest_api_failure")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_STALE_SECONDS", "3600")
+
+    failed_run = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-runs-digest-api-failed"
+    )
+    assert failed_run.status_code == 500
+
+    digest_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/digest?limit=20"
+    )
+    assert digest_response.status_code == 200
+    digest = digest_response.json()
+    assert digest["summary"]["total_records"] == 2
+    assert digest["summary"]["failed_count"] == 1
+    assert digest["summary"]["latest_run"] is not None
+    assert digest["summary"]["latest_run"]["status"] == "failed"
+    assert digest["is_stale"] is False
+    assert digest["recommended_action"] == "retry_latest_failed_run"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

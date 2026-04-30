@@ -1114,6 +1114,55 @@ def test_benchmark_store_auto_prunes_governance_runs(monkeypatch, tmp_path) -> N
     assert not_needed.message == "below_threshold"
 
 
+def test_benchmark_store_builds_governance_runs_digest(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-runs-digest",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.64},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    _ = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        idempotency_key="governance-runs-digest-ok",
+    )
+
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_runs_digest_failure")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_STALE_SECONDS", "3600")
+
+    with pytest.raises(RuntimeError, match="forced_governance_runs_digest_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key="governance-runs-digest-failed",
+        )
+
+    digest = store.build_maintenance_alert_governance_runs_digest(limit=20)
+    assert digest.summary.total_records == 2
+    assert digest.summary.failed_count == 1
+    assert digest.summary.latest_run is not None
+    assert digest.summary.latest_run.status == "failed"
+    assert digest.is_stale is False
+    assert digest.recommended_action == "retry_latest_failed_run"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

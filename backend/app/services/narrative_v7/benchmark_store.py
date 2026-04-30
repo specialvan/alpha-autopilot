@@ -32,6 +32,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceRunDigestResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
     BenchmarkMaintenanceAlertGovernanceRunSummaryResponse,
@@ -1384,6 +1385,53 @@ class V7BenchmarkStore:
             should_prune=True,
             prune=prune,
             message="pruned" if not dry_run else "dry_run",
+        )
+
+    def build_maintenance_alert_governance_runs_digest(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceRunDigestResponse:
+        summary = self.summarize_maintenance_alert_governance_runs(limit=limit)
+        stale_threshold_seconds = _env_int("AA_V7_BENCH_GOVERNANCE_RUNS_STALE_SECONDS", 900, low=0)
+
+        latest_run_age_seconds = -1.0
+        is_stale = True
+        if summary.latest_run is not None:
+            parsed_latest = _parse_iso_utc(summary.latest_run.generated_at)
+            if parsed_latest is not None:
+                latest_run_age_seconds = max(0.0, (datetime.now(timezone.utc) - parsed_latest).total_seconds())
+                is_stale = latest_run_age_seconds > stale_threshold_seconds
+            else:
+                is_stale = True
+
+        if summary.latest_run is None:
+            recommended_action = "execute_governance_run"
+            message = "no_runs"
+        elif summary.latest_run.status == "failed":
+            recommended_action = "retry_latest_failed_run"
+            message = "failed_latest_run"
+        elif summary.malformed_line_count > 0:
+            recommended_action = "auto_prune_runs"
+            message = "malformed_detected"
+        elif summary.total_records > self._load_alert_governance_policy().governance_runs_prune_trigger_count:
+            recommended_action = "auto_prune_runs"
+            message = "above_prune_threshold"
+        elif is_stale:
+            recommended_action = "execute_governance_run"
+            message = "stale"
+        else:
+            recommended_action = "observe"
+            message = "ok"
+
+        return BenchmarkMaintenanceAlertGovernanceRunDigestResponse(
+            generated_at=_now_iso(),
+            stale_threshold_seconds=stale_threshold_seconds,
+            latest_run_age_seconds=latest_run_age_seconds,
+            is_stale=is_stale,
+            recommended_action=recommended_action,
+            summary=summary,
+            message=message,
         )
 
     def prune_maintenance_alert_governance_runs(

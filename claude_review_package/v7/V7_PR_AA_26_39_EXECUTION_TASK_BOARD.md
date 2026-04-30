@@ -340,6 +340,14 @@
 - [x] 自动清理输出 `should_prune` 与 `prune` 明细，便于值班联动
 - [x] 第25轮回归测试覆盖（governance runs auto-prune store/api）
 
+## 生产化增强清单（第二十六轮）
+
+- [x] 治理运行健康 Digest 能力：`build_maintenance_alert_governance_runs_digest`
+- [x] 治理运行 Digest 接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/digest`
+- [x] 支持新鲜度阈值治理：`AA_V7_BENCH_GOVERNANCE_RUNS_STALE_SECONDS`
+- [x] 输出推荐动作（`retry_latest_failed_run/auto_prune_runs/execute_governance_run/observe`）
+- [x] 第26轮回归测试覆盖（governance runs digest store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -350,5 +358,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`70 passed`
+- [x] 结果：`72 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

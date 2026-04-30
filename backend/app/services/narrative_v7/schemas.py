@@ -810,6 +810,18 @@ class BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceRunDigestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    stale_threshold_seconds: int = Field(default=0, ge=0)
+    latest_run_age_seconds: float = Field(default=-1.0, ge=-1.0)
+    is_stale: bool = True
+    recommended_action: str = "observe"
+    summary: BenchmarkMaintenanceAlertGovernanceRunSummaryResponse
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
