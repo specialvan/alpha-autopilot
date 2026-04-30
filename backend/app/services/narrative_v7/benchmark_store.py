@@ -33,6 +33,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceRunExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunDigestResponse,
+    BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
     BenchmarkMaintenanceAlertGovernanceRunSummaryResponse,
@@ -1431,6 +1432,70 @@ class V7BenchmarkStore:
             is_stale=is_stale,
             recommended_action=recommended_action,
             summary=summary,
+            message=message,
+        )
+
+    def auto_remediate_maintenance_alert_governance_runs(
+        self,
+        *,
+        dry_run: bool = True,
+        limit: int = 200,
+        alert_limit: int = 200,
+        archive_limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse:
+        query_limit = max(0, int(limit))
+        resolved_alert_limit = max(0, int(alert_limit))
+        resolved_archive_limit = max(0, int(archive_limit))
+
+        digest_before = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
+        action = str(digest_before.recommended_action or "observe")
+
+        executed = False
+        governance_run: BenchmarkMaintenanceAlertGovernanceRunResponse | None = None
+        auto_prune: BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse | None = None
+
+        if action == "retry_latest_failed_run":
+            latest_failed = digest_before.summary.latest_failed_run
+            if latest_failed is not None and not dry_run:
+                governance_run = self.run_maintenance_alert_governance(
+                    dry_run=False,
+                    alert_limit=resolved_alert_limit,
+                    archive_limit=resolved_archive_limit,
+                    retry_run_id=latest_failed.run_id,
+                )
+                executed = True
+        elif action == "auto_prune_runs":
+            auto_prune = self.auto_prune_maintenance_alert_governance_runs(dry_run=dry_run)
+            executed = bool(not dry_run and auto_prune.prune is not None and auto_prune.prune.pruned_count > 0)
+        elif action == "execute_governance_run":
+            if not dry_run:
+                governance_run = self.run_maintenance_alert_governance(
+                    dry_run=False,
+                    alert_limit=resolved_alert_limit,
+                    archive_limit=resolved_archive_limit,
+                )
+                executed = True
+
+        digest_after = self.build_maintenance_alert_governance_runs_digest(limit=query_limit)
+        if dry_run:
+            message = "dry_run"
+        elif executed:
+            message = "remediated"
+        else:
+            message = "no_action"
+
+        return BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            limit=query_limit,
+            alert_limit=resolved_alert_limit,
+            archive_limit=resolved_archive_limit,
+            action=action,
+            executed=executed,
+            governance_run=governance_run,
+            auto_prune=auto_prune,
+            digest_before=digest_before,
+            digest_after=digest_after,
             message=message,
         )
 

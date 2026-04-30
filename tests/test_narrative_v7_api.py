@@ -1305,6 +1305,64 @@ def test_v7_api_supports_governance_runs_digest(monkeypatch) -> None:
     assert digest["recommended_action"] == "retry_latest_failed_run"
 
 
+def test_v7_api_supports_governance_runs_auto_remediate(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-runs-auto-remediate-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.61},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    ok_run = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-runs-auto-remediate-api-ok"
+    )
+    assert ok_run.status_code == 200
+
+    store = narrative_v7_route._benchmark_store
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_runs_auto_remediate_api_failure")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+
+    failed_run = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-runs-auto-remediate-api-failed"
+    )
+    assert failed_run.status_code == 500
+
+    history_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/governance/runs?limit=20")
+    assert history_response.status_code == 200
+    failed_run_id = history_response.json()["records"][0]["run_id"]
+
+    remediate_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate"
+        "?dry_run=false&limit=20&alert_limit=20&archive_limit=20"
+    )
+    assert remediate_response.status_code == 200
+    remediate = remediate_response.json()
+    assert remediate["action"] == "retry_latest_failed_run"
+    assert remediate["executed"] is True
+    assert remediate["governance_run"] is not None
+    assert remediate["governance_run"]["retry_run_id"] == failed_run_id
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

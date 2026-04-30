@@ -1163,6 +1163,62 @@ def test_benchmark_store_builds_governance_runs_digest(monkeypatch, tmp_path) ->
     assert digest.recommended_action == "retry_latest_failed_run"
 
 
+def test_benchmark_store_auto_remediates_governance_runs(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-runs-auto-remediate",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.62},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    _ = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        idempotency_key="governance-runs-auto-remediate-ok",
+    )
+
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_runs_auto_remediate_failure")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+
+    with pytest.raises(RuntimeError, match="forced_governance_runs_auto_remediate_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key="governance-runs-auto-remediate-failed",
+        )
+
+    failed_history = store.list_maintenance_alert_governance_runs(limit=20)
+    failed_run_id = failed_history.records[0].run_id
+    assert failed_history.records[0].status == "failed"
+
+    remediated = store.auto_remediate_maintenance_alert_governance_runs(
+        dry_run=False,
+        limit=20,
+        alert_limit=20,
+        archive_limit=20,
+    )
+    assert remediated.action == "retry_latest_failed_run"
+    assert remediated.executed is True
+    assert remediated.governance_run is not None
+    assert remediated.governance_run.retry_run_id == failed_run_id
+    assert remediated.digest_after.summary.total_records >= failed_history.total_records + 1
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

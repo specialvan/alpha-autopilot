@@ -348,6 +348,14 @@
 - [x] 输出推荐动作（`retry_latest_failed_run/auto_prune_runs/execute_governance_run/observe`）
 - [x] 第26轮回归测试覆盖（governance runs digest store/api）
 
+## 生产化增强清单（第二十七轮）
+
+- [x] 治理运行一键自愈能力：`auto_remediate_maintenance_alert_governance_runs`
+- [x] 一键自愈接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate`
+- [x] 自愈策略基于 digest 推荐动作执行（失败优先重试）
+- [x] 支持 `dry_run/apply` 双路径，并输出 `digest_before/digest_after`
+- [x] 第27轮回归测试覆盖（governance runs auto-remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -358,5 +366,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`72 passed`
+- [x] 结果：`74 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

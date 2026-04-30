@@ -822,6 +822,23 @@ class BenchmarkMaintenanceAlertGovernanceRunDigestResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    limit: int = Field(default=0, ge=0)
+    alert_limit: int = Field(default=0, ge=0)
+    archive_limit: int = Field(default=0, ge=0)
+    action: str = "observe"
+    executed: bool = False
+    governance_run: BenchmarkMaintenanceAlertGovernanceRunResponse | None = None
+    auto_prune: BenchmarkMaintenanceAlertGovernanceRunAutoPruneResponse | None = None
+    digest_before: BenchmarkMaintenanceAlertGovernanceRunDigestResponse
+    digest_after: BenchmarkMaintenanceAlertGovernanceRunDigestResponse
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
