@@ -27,6 +27,9 @@ from .schemas import (
     BenchmarkMaintenanceAlertArchiveReadResponse,
     BenchmarkMaintenanceAlertArchiveCleanupResponse,
     BenchmarkMaintenanceAlertAutoArchiveResponse,
+    BenchmarkMaintenanceAlertGovernancePolicy,
+    BenchmarkMaintenanceAlertGovernanceReportResponse,
+    BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceAlertSummaryResponse,
@@ -958,9 +961,10 @@ class V7BenchmarkStore:
         )
 
     def auto_archive_maintenance_alerts(self, *, dry_run: bool = True) -> BenchmarkMaintenanceAlertAutoArchiveResponse:
-        trigger_count = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", 10000, low=0)
-        keep_last = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", 5000, low=0)
-        shard_size = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", 1000, low=1)
+        policy = self._load_alert_governance_policy()
+        trigger_count = policy.archive_trigger_count
+        keep_last = policy.archive_keep_last
+        shard_size = policy.archive_shard_size
 
         with self._lock:
             path = self._alerts_path()
@@ -1005,8 +1009,9 @@ class V7BenchmarkStore:
         )
 
     def cleanup_maintenance_alert_archives(self, *, dry_run: bool = True) -> BenchmarkMaintenanceAlertArchiveCleanupResponse:
-        ttl_days = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", 30, low=0)
-        max_shard_files = _env_int("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", 5000, low=0)
+        policy = self._load_alert_governance_policy()
+        ttl_days = policy.archive_ttl_days
+        max_shard_files = policy.archive_max_shard_files
         ttl_seconds = float(ttl_days) * 86400.0
         now_ts = datetime.now(timezone.utc).timestamp()
 
@@ -1080,6 +1085,69 @@ class V7BenchmarkStore:
             candidate_files=[path.name for path in candidates],
             removed_files=removed_files,
             message="dry_run" if dry_run else "cleaned",
+        )
+
+    def build_maintenance_alert_governance_report(
+        self,
+        *,
+        alert_limit: int = 200,
+        archive_limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceReportResponse:
+        limit_alert = max(0, int(alert_limit))
+        limit_archive = max(0, int(archive_limit))
+        policy = self._load_alert_governance_policy()
+        active_summary = self.summarize_maintenance_alerts(limit=limit_alert)
+        archive_index = self.list_maintenance_alert_archive_files(limit=limit_archive)
+        projected_auto_archive = self.auto_archive_maintenance_alerts(dry_run=True)
+        projected_archive_cleanup = self.cleanup_maintenance_alert_archives(dry_run=True)
+        return BenchmarkMaintenanceAlertGovernanceReportResponse(
+            generated_at=_now_iso(),
+            alert_limit=limit_alert,
+            archive_limit=limit_archive,
+            policy=policy,
+            active_summary=active_summary,
+            archive_index=archive_index,
+            projected_auto_archive=projected_auto_archive,
+            projected_archive_cleanup=projected_archive_cleanup,
+            message="ok",
+        )
+
+    def run_maintenance_alert_governance(
+        self,
+        *,
+        dry_run: bool = True,
+        alert_limit: int = 200,
+        archive_limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceRunResponse:
+        limit_alert = max(0, int(alert_limit))
+        limit_archive = max(0, int(archive_limit))
+        policy = self._load_alert_governance_policy()
+
+        active_summary_before = self.summarize_maintenance_alerts(limit=limit_alert)
+        archive_index_before = self.list_maintenance_alert_archive_files(limit=limit_archive)
+        auto_archive = self.auto_archive_maintenance_alerts(dry_run=dry_run)
+        archive_cleanup = self.cleanup_maintenance_alert_archives(dry_run=dry_run)
+        active_summary_after = self.summarize_maintenance_alerts(limit=limit_alert)
+        archive_index_after = self.list_maintenance_alert_archive_files(limit=limit_archive)
+
+        performed_steps = [
+            "auto_archive:scheduled" if auto_archive.should_archive else "auto_archive:skipped",
+            "archive_cleanup:scheduled" if archive_cleanup.candidate_count > 0 else "archive_cleanup:noop",
+        ]
+        return BenchmarkMaintenanceAlertGovernanceRunResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            alert_limit=limit_alert,
+            archive_limit=limit_archive,
+            policy=policy,
+            performed_steps=performed_steps,
+            active_summary_before=active_summary_before,
+            active_summary_after=active_summary_after,
+            archive_index_before=archive_index_before,
+            archive_index_after=archive_index_after,
+            auto_archive=auto_archive,
+            archive_cleanup=archive_cleanup,
+            message="dry_run" if dry_run else "governed",
         )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
@@ -1220,6 +1288,16 @@ class V7BenchmarkStore:
             max_version_count_critical=_env_int("AA_V7_BENCH_SLA_MAX_VERSION_COUNT_CRITICAL", 2000, low=0),
             page_on_critical=_env_bool("AA_V7_BENCH_SLA_PAGE_ON_CRITICAL", True),
             ticket_on_warn=_env_bool("AA_V7_BENCH_SLA_TICKET_ON_WARN", True),
+        )
+
+    def _load_alert_governance_policy(self) -> BenchmarkMaintenanceAlertGovernancePolicy:
+        return BenchmarkMaintenanceAlertGovernancePolicy(
+            archive_trigger_count=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", 10000, low=0),
+            archive_keep_last=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", 5000, low=0),
+            archive_shard_size=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", 1000, low=1),
+            archive_ttl_days=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", 30, low=0),
+            archive_max_shard_files=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", 5000, low=0),
+            stale_threshold_seconds=_env_int("AA_V7_BENCH_ALERT_STALE_SECONDS", 900, low=0),
         )
 
     def _persist_rows(self, rows: list[dict[str, object]], *, trigger: str) -> str:

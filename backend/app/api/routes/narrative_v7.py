@@ -35,6 +35,8 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertArchiveReadResponse,
     BenchmarkMaintenanceAlertArchiveCleanupResponse,
     BenchmarkMaintenanceAlertAutoArchiveResponse,
+    BenchmarkMaintenanceAlertGovernanceReportResponse,
+    BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertExportResponse,
@@ -531,6 +533,38 @@ def benchmark_maintenance_alert_archive_cleanup(dry_run: bool = Query(default=Tr
         route="/api/narrative/v7/benchmark/maintenance/alerts/archive/cleanup",
         feature_name="benchmark_maintenance_alert_archive_cleanup",
         operation=lambda: _benchmark_library.cleanup_maintenance_alert_archives(dry_run=dry_run),
+    )
+
+
+@router.get("/benchmark/maintenance/alerts/governance/report", response_model=BenchmarkMaintenanceAlertGovernanceReportResponse)
+def benchmark_maintenance_alert_governance_report(
+    alert_limit: int = Query(default=200, ge=1, le=20000),
+    archive_limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertGovernanceReportResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/report",
+        feature_name="benchmark_maintenance_alert_governance_report",
+        operation=lambda: _benchmark_library.build_maintenance_alert_governance_report(
+            alert_limit=alert_limit,
+            archive_limit=archive_limit,
+        ),
+    )
+
+
+@router.post("/benchmark/maintenance/alerts/governance/run", response_model=BenchmarkMaintenanceAlertGovernanceRunResponse)
+def benchmark_maintenance_alert_governance_run(
+    dry_run: bool = Query(default=True),
+    alert_limit: int = Query(default=200, ge=1, le=20000),
+    archive_limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertGovernanceRunResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/run",
+        feature_name="benchmark_maintenance_alert_governance_run",
+        operation=lambda: _benchmark_library.run_maintenance_alert_governance(
+            dry_run=dry_run,
+            alert_limit=alert_limit,
+            archive_limit=archive_limit,
+        ),
     )
 
 

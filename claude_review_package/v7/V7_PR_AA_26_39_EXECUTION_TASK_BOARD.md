@@ -285,6 +285,15 @@
 - [x] 清理输出 `candidate_count / removed_count / ttl_candidate_count / max_shard_candidate_count`
 - [x] 第十九轮回归测试覆盖（archive cleanup policy store/api）
 
+## 生产化增强清单（第二十轮）
+
+- [x] 告警治理报告能力：`build_maintenance_alert_governance_report`
+- [x] 治理报告接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/report`
+- [x] 一键治理汇总能力：`run_maintenance_alert_governance`
+- [x] 一键治理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/run`
+- [x] 输出策略快照 + 执行前后快照 + 步骤执行轨迹（`performed_steps`）
+- [x] 第20轮回归测试覆盖（governance report/run store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -295,5 +304,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`56 passed`
+- [x] 结果：`58 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

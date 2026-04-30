@@ -821,6 +821,59 @@ def test_v7_api_supports_maintenance_alert_archive_cleanup(monkeypatch) -> None:
     assert files_response.json()["total_files"] <= 2
 
 
+def test_v7_api_supports_maintenance_alert_governance_report_and_run(monkeypatch) -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.69},
+        },
+    )
+
+    for _ in range(5):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    report_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/report?alert_limit=20&archive_limit=20"
+    )
+    assert report_response.status_code == 200
+    report = report_response.json()
+    assert report["policy"]["archive_trigger_count"] == 2
+    assert report["projected_auto_archive"]["should_archive"] is True
+
+    dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run?dry_run=true&alert_limit=20&archive_limit=20"
+    )
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["auto_archive"]["should_archive"] is True
+    assert dry_run["performed_steps"]
+
+    apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run?dry_run=false&alert_limit=20&archive_limit=20"
+    )
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["auto_archive"]["should_archive"] is True
+    assert applied["active_summary_after"]["total_valid_events"] <= 1
+
+    list_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts?limit=20")
+    assert list_response.status_code == 200
+    assert len(list_response.json()["alerts"]) <= 1
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

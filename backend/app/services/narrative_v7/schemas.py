@@ -684,3 +684,46 @@ class BenchmarkMaintenanceAlertAutoArchiveResponse(BaseModel):
     should_archive: bool = False
     archive: BenchmarkMaintenanceAlertArchiveResponse | None = None
     message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    archive_trigger_count: int = Field(default=0, ge=0)
+    archive_keep_last: int = Field(default=0, ge=0)
+    archive_shard_size: int = Field(default=0, ge=0)
+    archive_ttl_days: int = Field(default=0, ge=0)
+    archive_max_shard_files: int = Field(default=0, ge=0)
+    stale_threshold_seconds: int = Field(default=0, ge=0)
+
+
+class BenchmarkMaintenanceAlertGovernanceReportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    alert_limit: int = Field(default=0, ge=0)
+    archive_limit: int = Field(default=0, ge=0)
+    policy: BenchmarkMaintenanceAlertGovernancePolicy
+    active_summary: BenchmarkMaintenanceAlertSummaryResponse
+    archive_index: BenchmarkMaintenanceAlertArchiveListResponse
+    projected_auto_archive: BenchmarkMaintenanceAlertAutoArchiveResponse
+    projected_archive_cleanup: BenchmarkMaintenanceAlertArchiveCleanupResponse
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceRunResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    alert_limit: int = Field(default=0, ge=0)
+    archive_limit: int = Field(default=0, ge=0)
+    policy: BenchmarkMaintenanceAlertGovernancePolicy
+    performed_steps: list[str] = Field(default_factory=list)
+    active_summary_before: BenchmarkMaintenanceAlertSummaryResponse
+    active_summary_after: BenchmarkMaintenanceAlertSummaryResponse
+    archive_index_before: BenchmarkMaintenanceAlertArchiveListResponse
+    archive_index_after: BenchmarkMaintenanceAlertArchiveListResponse
+    auto_archive: BenchmarkMaintenanceAlertAutoArchiveResponse
+    archive_cleanup: BenchmarkMaintenanceAlertArchiveCleanupResponse
+    message: str = ""

@@ -13,6 +13,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertArchiveReadResponse,
     BenchmarkMaintenanceAlertArchiveCleanupResponse,
     BenchmarkMaintenanceAlertAutoArchiveResponse,
+    BenchmarkMaintenanceAlertGovernanceReportResponse,
+    BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -121,6 +123,27 @@ class BenchmarkLibrary:
 
     def cleanup_maintenance_alert_archives(self, *, dry_run: bool = True) -> BenchmarkMaintenanceAlertArchiveCleanupResponse:
         return self._store.cleanup_maintenance_alert_archives(dry_run=dry_run)
+
+    def build_maintenance_alert_governance_report(
+        self,
+        *,
+        alert_limit: int = 200,
+        archive_limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceReportResponse:
+        return self._store.build_maintenance_alert_governance_report(alert_limit=alert_limit, archive_limit=archive_limit)
+
+    def run_maintenance_alert_governance(
+        self,
+        *,
+        dry_run: bool = True,
+        alert_limit: int = 200,
+        archive_limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceRunResponse:
+        return self._store.run_maintenance_alert_governance(
+            dry_run=dry_run,
+            alert_limit=alert_limit,
+            archive_limit=archive_limit,
+        )
 
     def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
         return self._store.build_maintenance_alert_digest(limit=limit)

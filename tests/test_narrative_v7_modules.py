@@ -765,6 +765,43 @@ def test_benchmark_store_cleans_up_alert_archive_by_policy(monkeypatch, tmp_path
     assert archive_list.total_files <= 2
 
 
+def test_benchmark_store_builds_and_runs_alert_governance(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.68},
+        )
+    )
+    for _ in range(5):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    report = store.build_maintenance_alert_governance_report(alert_limit=20, archive_limit=20)
+    assert report.policy.archive_trigger_count == 2
+    assert report.projected_auto_archive.should_archive is True
+    assert report.projected_auto_archive.archive is not None
+
+    dry_run = store.run_maintenance_alert_governance(dry_run=True, alert_limit=20, archive_limit=20)
+    assert dry_run.dry_run is True
+    assert dry_run.auto_archive.should_archive is True
+    assert dry_run.performed_steps
+    assert dry_run.active_summary_after.total_valid_events == dry_run.active_summary_before.total_valid_events
+
+    applied = store.run_maintenance_alert_governance(dry_run=False, alert_limit=20, archive_limit=20)
+    assert applied.dry_run is False
+    assert applied.auto_archive.should_archive is True
+    assert applied.auto_archive.archive is not None
+    assert applied.active_summary_after.total_valid_events <= 1
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)
