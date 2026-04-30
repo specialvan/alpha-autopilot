@@ -551,6 +551,35 @@ def test_v7_api_supports_maintenance_alert_summary() -> None:
     ) == summary["window_event_count"]
 
 
+def test_v7_api_supports_maintenance_alert_digest() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-digest-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.67},
+        },
+    )
+    emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+    assert emit_response.status_code == 200
+
+    digest_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/digest?limit=20")
+    assert digest_response.status_code == 200
+    digest = digest_response.json()
+    assert digest["current_alert"]["level"] in {"ok", "warn", "critical"}
+    assert digest["summary"]["total_valid_events"] >= 1
+    assert digest["stale_threshold_seconds"] >= 0
+    assert digest["recommended_action"] in {
+        "observe",
+        "emit_fresh_alert",
+        "create_ticket",
+        "page_oncall",
+        "clean_alert_log",
+    }
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

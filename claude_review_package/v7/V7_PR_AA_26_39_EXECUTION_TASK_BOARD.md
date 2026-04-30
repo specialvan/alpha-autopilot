@@ -230,6 +230,15 @@
 - [x] 支持 `limit` 聚合窗口，便于运维看板按窗口消费
 - [x] 第十三轮回归测试覆盖（maintenance alert summary store/api）
 
+## 生产化增强清单（第十四轮）
+
+- [x] 告警 Digest 能力：`build_maintenance_alert_digest`
+- [x] 告警 Digest 接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/digest`
+- [x] 聚合输出：实时告警 + 历史摘要 + 告警新鲜度（stale）
+- [x] 支持 `AA_V7_BENCH_ALERT_STALE_SECONDS` 告警新鲜度阈值
+- [x] 输出推荐动作（`page_oncall/create_ticket/emit_fresh_alert/observe/clean_alert_log`）
+- [x] 第十四轮回归测试覆盖（maintenance alert digest store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -240,5 +249,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`42 passed`
+- [x] 结果：`44 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

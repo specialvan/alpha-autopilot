@@ -1,7 +1,7 @@
-# V7 Claude 评审验收提交清单（第十三轮生产化）
+# V7 Claude 评审验收提交清单（第十四轮生产化）
 
 - 日期：2026-04-30
-- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十三轮生产化增强做验收（维护告警摘要聚合 + 运维窗口统计）
+- 提交目标：请求 Claude 对 V7 阶段 `PR-AA-26~39` 第十四轮生产化增强做验收（维护告警 Digest + 告警新鲜度治理）
 
 ## 1. 需求与计划文档
 
@@ -24,13 +24,13 @@
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`42 passed`
+4. 结果：`44 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 4. 评审重点建议
 
-- `GET /benchmark/maintenance/alerts/summary` 是否正确输出窗口级别统计与动作统计
-- `latest_event`、`total_valid_events`、`malformed_line_count` 是否与事件日志内容一致
-- `limit` 聚合窗口行为是否可预测（窗口计数与级别计数口径一致）
-- 告警摘要接口与 `maintenance/alerts`、`maintenance/alert` 语义是否一致
+- `GET /benchmark/maintenance/alerts/digest` 是否稳定输出实时告警 + 历史摘要 + 推荐动作
+- `is_stale / latest_event_age_seconds / stale_threshold_seconds` 计算与阈值行为是否符合预期
+- `recommended_action` 分支（page/ticket/emit/observe/clean）是否可执行且无冲突
+- Digest 与 `maintenance/alerts/summary`、`maintenance/alert` 字段语义是否一致
 - 接口契约、异常路径与测试证据是否一致

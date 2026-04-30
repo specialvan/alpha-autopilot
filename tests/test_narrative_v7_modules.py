@@ -554,6 +554,31 @@ def test_benchmark_store_summarizes_maintenance_alert_events(tmp_path) -> None:
     assert (summary.ok_count + summary.warn_count + summary.critical_count) == summary.window_event_count
 
 
+def test_benchmark_store_builds_maintenance_alert_digest(tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-digest",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.66},
+        )
+    )
+    _ = store.emit_maintenance_alert(limit=20)
+
+    digest = store.build_maintenance_alert_digest(limit=20)
+    assert digest.current_alert.level in {"ok", "warn", "critical"}
+    assert digest.summary.total_valid_events >= 1
+    assert digest.stale_threshold_seconds >= 0
+    assert digest.recommended_action in {
+        "observe",
+        "emit_fresh_alert",
+        "create_ticket",
+        "page_oncall",
+        "clean_alert_log",
+    }
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

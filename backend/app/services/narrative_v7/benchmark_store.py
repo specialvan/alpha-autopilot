@@ -20,6 +20,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertEvent,
     BenchmarkMaintenanceAlertListResponse,
+    BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertPruneResponse,
     BenchmarkMaintenanceAlertSummaryResponse,
     BenchmarkMaintenanceReportResponse,
@@ -62,6 +63,21 @@ def _env_bool(name: str, default: bool) -> bool:
     if raw in {"0", "false", "no", "n", "off"}:
         return False
     return bool(default)
+
+
+def _parse_iso_utc(raw: str) -> datetime | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except Exception:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 @dataclass
@@ -742,6 +758,43 @@ class V7BenchmarkStore:
             breach_event_count=breach_event_count,
             latest_event=rows[0] if rows else None,
             message="ok",
+        )
+
+    def build_maintenance_alert_digest(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertDigestResponse:
+        current_alert = self.build_maintenance_alert(limit=limit)
+        summary = self.summarize_maintenance_alerts(limit=limit)
+        stale_threshold_seconds = _env_int("AA_V7_BENCH_ALERT_STALE_SECONDS", 900, low=0)
+
+        latest_event_age_seconds = -1.0
+        is_stale = True
+        if summary.latest_event is not None:
+            parsed_latest = _parse_iso_utc(summary.latest_event.generated_at)
+            if parsed_latest is not None:
+                latest_event_age_seconds = max(0.0, (datetime.now(timezone.utc) - parsed_latest).total_seconds())
+                is_stale = latest_event_age_seconds > stale_threshold_seconds
+            else:
+                is_stale = True
+
+        if current_alert.should_page:
+            recommended_action = "page_oncall"
+        elif current_alert.should_ticket:
+            recommended_action = "create_ticket"
+        elif is_stale:
+            recommended_action = "emit_fresh_alert"
+        elif summary.malformed_line_count > 0:
+            recommended_action = "clean_alert_log"
+        else:
+            recommended_action = "observe"
+
+        return BenchmarkMaintenanceAlertDigestResponse(
+            generated_at=_now_iso(),
+            stale_threshold_seconds=stale_threshold_seconds,
+            latest_event_age_seconds=latest_event_age_seconds,
+            is_stale=is_stale,
+            recommended_action=recommended_action,
+            current_alert=current_alert,
+            summary=summary,
+            message="ok" if summary.latest_event is not None else "no_alert_event",
         )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:

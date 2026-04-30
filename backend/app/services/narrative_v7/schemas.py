@@ -563,3 +563,16 @@ class BenchmarkMaintenanceAlertSummaryResponse(BaseModel):
     breach_event_count: int = Field(default=0, ge=0)
     latest_event: BenchmarkMaintenanceAlertEvent | None = None
     message: str = ""
+
+
+class BenchmarkMaintenanceAlertDigestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    stale_threshold_seconds: int = Field(default=0, ge=0)
+    latest_event_age_seconds: float = Field(default=-1.0, ge=-1.0)
+    is_stale: bool = True
+    recommended_action: str = "observe"
+    current_alert: BenchmarkMaintenanceAlertResponse
+    summary: BenchmarkMaintenanceAlertSummaryResponse
+    message: str = ""
