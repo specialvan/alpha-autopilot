@@ -12,6 +12,7 @@
 - [x] V7 API 路由创建：`/api/narrative/v7/*`
 - [x] V7 配置开关入场：`backend/app/core/config.py`
 - [x] V7 单元与 API 测试补齐：`tests/test_narrative_v7_*.py`
+- [x] V7 生产化增强（feature flag 生效、异常处理、运行观测、benchmark 原子写）
 
 ## PR-AA-26 NarrativeMarketState 基座
 
@@ -121,9 +122,25 @@
 - [x] `tests/test_narrative_v7_modules.py`
 - [x] `tests/test_narrative_v7_api.py`
 
+## 生产化增强清单（第二轮）
+
+- [x] 全局开关 `v7_enabled` 在路由层生效
+- [x] 分项开关 `v7_opening_gate_enabled / v7_antipattern_guard_enabled / v7_deadlock_router_enabled` 生效
+- [x] 统一路由执行包装：错误捕获 + 延迟统计 + http 状态归档
+- [x] 观测接口 `/api/narrative/v7/observability`
+- [x] benchmark 入库重复冲突 409、空样本 422
+- [x] benchmark 文件写入改为原子替换（temp file -> replace）
+- [x] benchmark 查询新增 `corridor_ready` 与 `warnings`
+- [x] 新增生产化回归测试（feature flag / observability / duplicate conflict / empty payload）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
 - [x] `V7_DEVELOPMENT_PLAN_PR_2026_04_30.md`（已存在）
 - [x] `V7_PR_AA_26_39_EXECUTION_TASK_BOARD.md`（本文件）
 - [x] `CODEX_V7_GOVERNANCE_PACKAGE/*`（治理包全量）
+
+## 当前验证结果
+
+- [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
+- [x] 结果：`16 passed`

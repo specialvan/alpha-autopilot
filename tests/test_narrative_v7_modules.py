@@ -2,6 +2,7 @@
 
 from backend.app.services.narrative_v7.antipattern_registry import AntiPatternRegistry
 from backend.app.services.narrative_v7.benchmark_store import V7BenchmarkStore
+from backend.app.services.narrative_v7.decision_controller import DecisionFeedbackController
 from backend.app.services.narrative_v7.deadlock_router import DeadlockRouter
 from backend.app.services.narrative_v7.expectation_debt import ExpectationDebtManager
 from backend.app.services.narrative_v7.nqm_sampler import NQMSampler
@@ -13,9 +14,14 @@ from backend.app.services.narrative_v7.schemas import (
     BenchmarkQueryRequest,
     DeadlockCheckRequest,
     DeadlockUnitSnapshot,
+    DecisionRequest,
+    DecisionState,
+    NovelProjectState,
     HookGuardRequest,
     NQMSampleRequest,
     NQMVector,
+    NarrativeMarketState,
+    NarrativeMetricOHLCV,
     OpeningGateRequest,
 )
 from backend.app.services.narrative_v7.threshold_band import ThresholdBandEngine
@@ -156,3 +162,23 @@ def test_benchmark_store_ingest_query_and_retract(tmp_path) -> None:
     assert store.retract("book-001") is True
     query_after = store.query(BenchmarkQueryRequest(channel="fantasy", genre_track="fast"))
     assert query_after.source_count == 0
+
+
+def test_decision_controller_returns_override_route_when_confirmed() -> None:
+    controller = DecisionFeedbackController()
+    vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)
+    market_state = NarrativeMarketState(
+        project_state=NovelProjectState(project_id="demo"),
+        benchmark_state=BenchmarkParameterSet(high_threshold=0.78, low_threshold=0.52, opening_gate_t8=0.6),
+        decision_state=DecisionState(),
+        story_state={"chapter_index": 1},
+    )
+    result = controller.decide(
+        DecisionRequest(
+            market_state=market_state,
+            vector=vector,
+            ohlcv=NarrativeMetricOHLCV(open=0.5, high=0.5, low=0.4, close=0.4, volume=100),
+            override_confirmed=True,
+        )
+    )
+    assert result.decision.route_id == "R-OVERRIDE"

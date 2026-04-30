@@ -6,8 +6,10 @@ import pytest
 
 import backend.app.api.routes.narrative_v7 as narrative_v7_route
 from backend.app.api.routes.narrative_v7 import router as narrative_v7_router
+from backend.app.core.config import settings
 from backend.app.services.narrative_v7.benchmark_library import BenchmarkLibrary
 from backend.app.services.narrative_v7.benchmark_store import V7BenchmarkStore
+from backend.app.services.narrative_v7.observability import V7RuntimeMetricsStore
 
 
 @pytest.fixture(autouse=True)
@@ -15,6 +17,15 @@ def _isolated_benchmark_store(tmp_path, monkeypatch) -> None:
     store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
     monkeypatch.setattr(narrative_v7_route, "_benchmark_store", store)
     monkeypatch.setattr(narrative_v7_route, "_benchmark_library", BenchmarkLibrary(store=store))
+    monkeypatch.setattr(
+        narrative_v7_route,
+        "_runtime_metrics_store",
+        V7RuntimeMetricsStore(path=tmp_path / "v7_runtime_metrics.jsonl"),
+    )
+    monkeypatch.setattr(settings, "v7_enabled", True)
+    monkeypatch.setattr(settings, "v7_opening_gate_enabled", True)
+    monkeypatch.setattr(settings, "v7_antipattern_guard_enabled", True)
+    monkeypatch.setattr(settings, "v7_deadlock_router_enabled", True)
 
 
 def _create_v7_only_client() -> TestClient:
@@ -181,7 +192,83 @@ def test_v7_api_supports_benchmark_ingest_query_and_retract() -> None:
     )
     assert query_response.status_code == 200
     assert query_response.json()["source_count"] == 1
+    assert query_response.json()["corridor_ready"] is False
+    assert "insufficient_samples_for_corridor" in query_response.json()["warnings"]
 
     retract_response = client.delete("/api/narrative/v7/benchmark/book-100")
     assert retract_response.status_code == 200
     assert retract_response.json()["retracted"] is True
+
+
+def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
+    client = _create_v7_only_client()
+    payload = {
+        "book_id": "book-dup",
+        "channel": "fantasy",
+        "genre_track": "fast",
+        "sample_payload": {"nqm_mean": 0.71},
+    }
+
+    first = client.post("/api/narrative/v7/benchmark/ingest", json=payload)
+    assert first.status_code == 200
+
+    duplicate = client.post("/api/narrative/v7/benchmark/ingest", json=payload)
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"] == "duplicate_book_id"
+
+
+def test_v7_api_respects_feature_flag_for_opening_gate(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "v7_opening_gate_enabled", False)
+    client = _create_v7_only_client()
+    response = client.post(
+        "/api/narrative/v7/opening-gate",
+        json={"text": "主角必须活下来。", "chapter_index": 1, "allow_override": False},
+    )
+    assert response.status_code == 503
+    assert response.json()["detail"] == "opening_gate_disabled"
+
+
+def test_v7_api_respects_global_v7_feature_flag(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "v7_enabled", False)
+    client = _create_v7_only_client()
+    response = client.post(
+        "/api/narrative/v7/sample",
+        json={"text": _sample_text(), "story_state": {}, "character_states": []},
+    )
+    assert response.status_code == 503
+    assert response.json()["detail"] == "v7_disabled"
+
+
+def test_v7_api_exposes_observability_snapshot() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/sample",
+        json={
+            "text": _sample_text(),
+            "story_state": {"chapter_index": 1, "prev_nqm_close": 0.63},
+            "character_states": [{"id": "c1"}],
+        },
+    )
+    _ = client.post(
+        "/api/narrative/v7/benchmark/query",
+        json={"channel": "fantasy", "genre_track": "fast"},
+    )
+
+    response = client.get("/api/narrative/v7/observability?limit=200")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["enabled"] is True
+    assert body["runtimeRows"] >= 2
+    routes = {item["route"] for item in body["routes"]}
+    assert "/api/narrative/v7/sample" in routes
+    assert "/api/narrative/v7/benchmark/query" in routes
+
+
+def test_v7_api_rejects_empty_benchmark_payload() -> None:
+    client = _create_v7_only_client()
+    response = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={"book_id": "book-empty", "channel": "fantasy", "genre_track": "fast", "sample_payload": {}},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "empty_sample_payload"

@@ -44,6 +44,7 @@
 19. `backend/app/api/routes/narrative_v7.py`
 20. `backend/app/main.py`
 21. `backend/app/core/config.py`
+22. `backend/app/services/narrative_v7/observability.py`
 
 ## 4. 测试清单
 
@@ -56,4 +57,5 @@
 - R-01~R-10 路由优先级是否合理
 - T8/T4/T9/W5/W6/A6 关键门禁是否具备最小可用性
 - Benchmark 入库与撤回是否满足审计回放要求
+- feature flag、错误码与 observability 是否达到生产级可运维要求
 - 下一轮从“骨架”到“生产级”的缺口优先级

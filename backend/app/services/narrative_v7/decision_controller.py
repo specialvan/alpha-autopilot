@@ -13,6 +13,16 @@ class DecisionFeedbackController:
         benchmark = payload.market_state.benchmark_state
         story_state = payload.market_state.story_state
         composite = vector.composite
+        if payload.override_confirmed:
+            decision = NarrativeDecision(
+                decision_type=DecisionType.OBSERVE,
+                risk_level=RiskLevel.P2,
+                route_id="R-OVERRIDE",
+                reasons=["Author override confirmed for current cycle"],
+                suggested_actions=["continue_generation", "collect_next_cycle_metrics"],
+                observe_next_metrics=["NQM", "T8", "T9", "A6"],
+            )
+            return DecisionResponse(decision=decision)
 
         # R-04: opening gate
         if int(story_state.get("chapter_index", 1)) <= 3 and vector.metrics.get("T8", 1.0) < benchmark.opening_gate_t8:
@@ -111,6 +121,16 @@ class DecisionFeedbackController:
             return DecisionResponse(decision=decision)
 
         if zone == "elastic_injection":
+            if composite >= benchmark.high_threshold - 0.02:
+                decision = NarrativeDecision(
+                    decision_type=DecisionType.BREAKOUT_FOLLOW,
+                    risk_level=RiskLevel.P2,
+                    route_id="R-02B",
+                    reasons=["Composite approaching breakout threshold within elastic zone"],
+                    suggested_actions=["prepare_breakout_confirmation", "avoid_oversteering"],
+                    observe_next_metrics=["NQM", "T5", "T7", "A5"],
+                )
+                return DecisionResponse(decision=decision)
             decision = NarrativeDecision(
                 decision_type=DecisionType.RETRACE_REPAIR,
                 risk_level=RiskLevel.P2,

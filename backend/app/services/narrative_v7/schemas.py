@@ -330,6 +330,7 @@ class BenchmarkIngestResponse(BaseModel):
     accepted: bool
     version: str
     recalibrated: bool
+    message: str = ""
 
 
 class BenchmarkQueryRequest(BaseModel):
@@ -344,3 +345,5 @@ class BenchmarkQueryResponse(BaseModel):
 
     benchmark: BenchmarkParameterSet
     source_count: int = Field(default=0, ge=0)
+    corridor_ready: bool = False
+    warnings: list[str] = Field(default_factory=list)
