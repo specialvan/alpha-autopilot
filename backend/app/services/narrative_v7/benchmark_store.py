@@ -48,6 +48,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -2036,6 +2037,51 @@ class V7BenchmarkStore:
             message="dry_run" if dry_run else "pruned",
         )
 
+    def auto_prune_maintenance_alert_governance_escalation_remediations(
+        self,
+        *,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse:
+        policy = self._load_alert_governance_policy()
+        trigger_count = policy.governance_escalation_remediations_prune_trigger_count
+        keep_last = policy.governance_escalation_remediations_prune_keep_last
+
+        with self._lock:
+            path = self._governance_escalation_remediations_path()
+            if path.exists():
+                rows, malformed_line_count = self._read_governance_escalation_remediation_run_records(path=path)
+            else:
+                rows = []
+                malformed_line_count = 0
+
+        total_records = len(rows)
+        should_prune = total_records > trigger_count or malformed_line_count > 0
+        if not should_prune:
+            return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse(
+                generated_at=_now_iso(),
+                dry_run=bool(dry_run),
+                trigger_count=trigger_count,
+                keep_last=keep_last,
+                total_records=total_records,
+                malformed_line_count=malformed_line_count,
+                should_prune=False,
+                prune=None,
+                message="below_threshold",
+            )
+
+        prune = self.prune_maintenance_alert_governance_escalation_remediations(keep_last=keep_last, dry_run=dry_run)
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            trigger_count=trigger_count,
+            keep_last=keep_last,
+            total_records=total_records,
+            malformed_line_count=malformed_line_count,
+            should_prune=True,
+            prune=prune,
+            message="pruned" if not dry_run else "dry_run",
+        )
+
     def auto_remediate_maintenance_alert_governance_runs(
         self,
         *,
@@ -2541,6 +2587,16 @@ class V7BenchmarkStore:
             ),
             governance_escalations_prune_keep_last=_env_int(
                 "AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST",
+                5000,
+                low=0,
+            ),
+            governance_escalation_remediations_prune_trigger_count=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATIONS_PRUNE_TRIGGER_COUNT",
+                10000,
+                low=0,
+            ),
+            governance_escalation_remediations_prune_keep_last=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATIONS_PRUNE_KEEP_LAST",
                 5000,
                 low=0,
             ),

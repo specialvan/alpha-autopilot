@@ -468,6 +468,16 @@
 - [x] 清理后历史可回读校验（记录数量与排序保持稳定）
 - [x] 第39轮回归测试覆盖（governance escalation auto-remediation prune store/api）
 
+## 生产化增强清单（第四十轮）
+
+- [x] 治理升级事件自愈历史自动清理策略：`auto_prune_maintenance_alert_governance_escalation_remediations`
+- [x] 自愈历史自动清理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune`
+- [x] 环境变量策略治理：`AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATIONS_PRUNE_TRIGGER_COUNT/KEEP_LAST`
+- [x] 自动清理支持 `dry_run/apply` 双路径
+- [x] 自动清理输出 `should_prune` 与 `prune` 明细，便于值班联动
+- [x] 支持脏行触发清理与清理后回读校验（`malformed_line_count -> 0`）
+- [x] 第40轮回归测试覆盖（governance escalation auto-remediation auto-prune store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

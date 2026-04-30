@@ -2225,6 +2225,63 @@ def test_v7_api_supports_governance_escalations_auto_remediate(monkeypatch) -> N
     assert len(remaining["records"]) == 1
     assert remaining["records"][0]["action"] == "auto_prune_escalations"
 
+    with (store.version_root / "_maintenance_alert_governance_escalation_remediations.jsonl").open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write("{bad-json\n")
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATIONS_PRUNE_TRIGGER_COUNT", "100")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATIONS_PRUNE_KEEP_LAST", "1")
+
+    auto_prune_dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune"
+        "?dry_run=true"
+    )
+    assert auto_prune_dry_run_response.status_code == 200
+    auto_prune_dry_run = auto_prune_dry_run_response.json()
+    assert auto_prune_dry_run["dry_run"] is True
+    assert auto_prune_dry_run["should_prune"] is True
+    assert auto_prune_dry_run["prune"] is not None
+    assert auto_prune_dry_run["prune"]["dry_run"] is True
+    assert auto_prune_dry_run["prune"]["total_records_before"] == 1
+    assert auto_prune_dry_run["prune"]["malformed_candidate_count"] >= 1
+    assert auto_prune_dry_run["prune"]["malformed_dropped_count"] == 0
+
+    auto_prune_apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune"
+        "?dry_run=false"
+    )
+    assert auto_prune_apply_response.status_code == 200
+    auto_prune_apply = auto_prune_apply_response.json()
+    assert auto_prune_apply["dry_run"] is False
+    assert auto_prune_apply["should_prune"] is True
+    assert auto_prune_apply["prune"] is not None
+    assert auto_prune_apply["prune"]["dry_run"] is False
+    assert auto_prune_apply["prune"]["total_records_before"] == 1
+    assert auto_prune_apply["prune"]["kept_count"] == 1
+    assert auto_prune_apply["prune"]["pruned_count"] == 0
+    assert auto_prune_apply["prune"]["malformed_candidate_count"] >= 1
+    assert auto_prune_apply["prune"]["malformed_dropped_count"] >= 1
+
+    post_auto_prune_list_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations?limit=20"
+    )
+    assert post_auto_prune_list_response.status_code == 200
+    post_auto_prune_list = post_auto_prune_list_response.json()
+    assert post_auto_prune_list["total_records"] == 1
+    assert post_auto_prune_list["malformed_line_count"] == 0
+
+    auto_prune_not_needed_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune"
+        "?dry_run=true"
+    )
+    assert auto_prune_not_needed_response.status_code == 200
+    auto_prune_not_needed = auto_prune_not_needed_response.json()
+    assert auto_prune_not_needed["should_prune"] is False
+    assert auto_prune_not_needed["prune"] is None
+    assert auto_prune_not_needed["message"] == "below_threshold"
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()

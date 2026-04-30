@@ -44,3 +44,15 @@ Please additionally review remediation history log lifecycle behavior:
 - Correlate with:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/export
+
+## Round-40 Additional Review Targets
+
+Please additionally review remediation history auto-prune behavior:
+
+- POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune
+  - Validate dry_run/apply semantics and should_prune gating.
+  - Validate env-policy routing (trigger_count/keep_last) and malformed-triggered pruning behavior.
+  - Validate prune detail fields (kept/pruned ids, malformed counters) and post-prune readback consistency.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/prune

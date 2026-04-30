@@ -53,6 +53,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -932,6 +933,22 @@ def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_pr
         feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_prune",
         operation=lambda: _benchmark_library.prune_maintenance_alert_governance_escalation_remediations(
             keep_last=keep_last,
+            dry_run=dry_run,
+        ),
+    )
+
+
+@router.post(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_auto_prune(
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-prune",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_auto_prune",
+        operation=lambda: _benchmark_library.auto_prune_maintenance_alert_governance_escalation_remediations(
             dry_run=dry_run,
         ),
     )
