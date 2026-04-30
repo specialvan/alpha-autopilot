@@ -45,6 +45,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationRunRecord,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationListResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1931,6 +1933,61 @@ class V7BenchmarkStore:
             total_records=total,
             malformed_line_count=malformed_line_count,
             records=window,
+            message="ok",
+        )
+
+    def summarize_maintenance_alert_governance_escalation_remediations(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse:
+        query_limit = max(0, int(limit))
+        with self._lock:
+            path = self._governance_escalation_remediations_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse(
+                    generated_at=_now_iso(),
+                    limit=query_limit,
+                    message="no_records",
+                )
+            rows, malformed_line_count = self._read_governance_escalation_remediation_run_records(path=path)
+
+        ordered_rows = self._order_governance_escalation_remediation_run_records(rows)
+        window = ordered_rows[:query_limit] if query_limit > 0 else ordered_rows
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            total_records=len(ordered_rows),
+            window_record_count=len(window),
+            malformed_line_count=malformed_line_count,
+            dry_run_count=sum(1 for item in window if item.dry_run),
+            apply_count=sum(1 for item in window if not item.dry_run),
+            executed_count=sum(1 for item in window if item.executed),
+            emitted_count=sum(1 for item in window if item.emitted),
+            pruned_count=sum(1 for item in window if item.pruned),
+            latest_record=ordered_rows[0] if ordered_rows else None,
+            message="ok",
+        )
+
+    def export_maintenance_alert_governance_escalation_remediations(
+        self,
+        *,
+        limit: int = 200,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse:
+        query_limit = max(0, int(limit))
+        summary = self.summarize_maintenance_alert_governance_escalation_remediations(limit=query_limit)
+        page = self.list_maintenance_alert_governance_escalation_remediations(limit=query_limit, cursor=cursor)
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            cursor=page.cursor,
+            next_cursor=page.next_cursor,
+            has_more=page.has_more,
+            total_records=page.total_records,
+            malformed_line_count=page.malformed_line_count,
+            summary=summary,
+            records=page.records,
             message="ok",
         )
 

@@ -2142,6 +2142,51 @@ def test_v7_api_supports_governance_escalations_auto_remediate(monkeypatch) -> N
     assert history["records"][1]["emitted"] is True
     assert history["records"][2]["dry_run"] is True
 
+    with (store.version_root / "_maintenance_alert_governance_escalation_remediations.jsonl").open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write("{bad-json\n")
+
+    summary_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/summary?limit=20"
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["total_records"] == 3
+    assert summary["window_record_count"] == 3
+    assert summary["malformed_line_count"] == 1
+    assert summary["dry_run_count"] == 1
+    assert summary["apply_count"] == 2
+    assert summary["executed_count"] == 2
+    assert summary["emitted_count"] == 1
+    assert summary["pruned_count"] == 1
+    assert summary["latest_record"] is not None
+    assert summary["latest_record"]["action"] == "auto_prune_escalations"
+
+    export_first_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/export?limit=2"
+    )
+    assert export_first_response.status_code == 200
+    export_first = export_first_response.json()
+    assert export_first["summary"]["total_records"] == 3
+    assert export_first["summary"]["malformed_line_count"] == 1
+    assert len(export_first["records"]) == 2
+    assert export_first["has_more"] is True
+    assert export_first["next_cursor"]
+
+    export_second_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/export"
+        f"?limit=2&cursor={export_first['next_cursor']}"
+    )
+    assert export_second_response.status_code == 200
+    export_second = export_second_response.json()
+    assert export_second["summary"]["total_records"] == 3
+    assert export_second["summary"]["malformed_line_count"] == 1
+    assert len(export_second["records"]) == 1
+    assert export_second["has_more"] is False
+    assert export_second["cursor"] == export_first["next_cursor"]
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()

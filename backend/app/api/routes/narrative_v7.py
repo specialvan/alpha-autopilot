@@ -50,6 +50,8 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationDigestResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationListResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -878,6 +880,38 @@ def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations(
         route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations",
         feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations",
         operation=lambda: _benchmark_library.list_maintenance_alert_governance_escalation_remediations(
+            limit=limit,
+            cursor=cursor,
+        ),
+    )
+
+
+@router.get(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/summary",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_summary(
+    limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationSummaryResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/summary",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_summary",
+        operation=lambda: _benchmark_library.summarize_maintenance_alert_governance_escalation_remediations(limit=limit),
+    )
+
+
+@router.get(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/export",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_export(
+    limit: int = Query(default=200, ge=1, le=20000),
+    cursor: str = Query(default=""),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationExportResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/export",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_export",
+        operation=lambda: _benchmark_library.export_maintenance_alert_governance_escalation_remediations(
             limit=limit,
             cursor=cursor,
         ),

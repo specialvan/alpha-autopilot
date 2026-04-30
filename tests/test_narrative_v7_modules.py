@@ -1819,6 +1819,39 @@ def test_benchmark_store_auto_remediates_governance_escalations(monkeypatch, tmp
     assert history.records[1].emitted is True
     assert history.records[2].dry_run is True
 
+    remediation_log = store.version_root / "_maintenance_alert_governance_escalation_remediations.jsonl"
+    with remediation_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    summary = store.summarize_maintenance_alert_governance_escalation_remediations(limit=20)
+    assert summary.total_records == 3
+    assert summary.window_record_count == 3
+    assert summary.malformed_line_count == 1
+    assert summary.dry_run_count == 1
+    assert summary.apply_count == 2
+    assert summary.executed_count == 2
+    assert summary.emitted_count == 1
+    assert summary.pruned_count == 1
+    assert summary.latest_record is not None
+    assert summary.latest_record.action == "auto_prune_escalations"
+
+    export_first = store.export_maintenance_alert_governance_escalation_remediations(limit=2)
+    assert export_first.summary.total_records == 3
+    assert export_first.summary.malformed_line_count == 1
+    assert len(export_first.records) == 2
+    assert export_first.has_more is True
+    assert export_first.next_cursor
+
+    export_second = store.export_maintenance_alert_governance_escalation_remediations(
+        limit=2,
+        cursor=export_first.next_cursor,
+    )
+    assert export_second.summary.total_records == 3
+    assert export_second.summary.malformed_line_count == 1
+    assert len(export_second.records) == 1
+    assert export_second.has_more is False
+    assert export_second.cursor == export_first.next_cursor
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
