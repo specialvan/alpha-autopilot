@@ -39,6 +39,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1660,6 +1661,51 @@ class V7BenchmarkStore:
             message="dry_run" if dry_run else "pruned",
         )
 
+    def auto_prune_maintenance_alert_governance_escalations(
+        self,
+        *,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse:
+        policy = self._load_alert_governance_policy()
+        trigger_count = policy.governance_escalations_prune_trigger_count
+        keep_last = policy.governance_escalations_prune_keep_last
+
+        with self._lock:
+            path = self._governance_escalations_path()
+            if path.exists():
+                rows, malformed_line_count = self._read_governance_escalation_events(path=path)
+            else:
+                rows = []
+                malformed_line_count = 0
+
+        total_events = len(rows)
+        should_prune = total_events > trigger_count or malformed_line_count > 0
+        if not should_prune:
+            return BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse(
+                generated_at=_now_iso(),
+                dry_run=bool(dry_run),
+                trigger_count=trigger_count,
+                keep_last=keep_last,
+                total_events=total_events,
+                malformed_line_count=malformed_line_count,
+                should_prune=False,
+                prune=None,
+                message="below_threshold",
+            )
+
+        prune = self.prune_maintenance_alert_governance_escalations(keep_last=keep_last, dry_run=dry_run)
+        return BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            trigger_count=trigger_count,
+            keep_last=keep_last,
+            total_events=total_events,
+            malformed_line_count=malformed_line_count,
+            should_prune=True,
+            prune=prune,
+            message="pruned" if not dry_run else "dry_run",
+        )
+
     def auto_remediate_maintenance_alert_governance_runs(
         self,
         *,
@@ -2089,6 +2135,16 @@ class V7BenchmarkStore:
             archive_max_shard_files=_env_int("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", 5000, low=0),
             governance_runs_prune_trigger_count=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_TRIGGER_COUNT", 10000, low=0),
             governance_runs_prune_keep_last=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_PRUNE_KEEP_LAST", 5000, low=0),
+            governance_escalations_prune_trigger_count=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT",
+                10000,
+                low=0,
+            ),
+            governance_escalations_prune_keep_last=_env_int(
+                "AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST",
+                5000,
+                low=0,
+            ),
             governance_runs_max_retry_attempts=_env_int("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", 3, low=1),
             governance_runs_escalation_failure_streak=_env_int(
                 "AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK",

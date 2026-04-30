@@ -1,6 +1,6 @@
-# V7 Claude 评审验收提交清单（第三十二轮生产化）
+# V7 Claude 评审验收提交清单（第三十三轮生产化）
 - 日期：2026-05-01
-- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第三十二轮生产化增强进行验收（治理升级事件日志生命周期治理：prune）。
+- 提交目标：请对 V7 阶段 `PR-AA-26~39` 第三十三轮生产化增强进行验收（治理升级事件日志自动清理策略）。
 
 ## 1. 需求与计划文档
 
@@ -18,25 +18,25 @@
 5. `tests/test_narrative_v7_modules.py`
 6. `tests/test_narrative_v7_api.py`
 
-## 3. 第三十二轮能力增强
+## 3. 第三十三轮能力增强
 
-1. 新增治理升级事件日志生命周期治理能力：`prune_maintenance_alert_governance_escalations`。
-2. 新增治理升级事件清理 API：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/prune`。
+1. 新增治理升级事件日志自动清理策略：`auto_prune_maintenance_alert_governance_escalations`。
+2. 新增自动清理 API：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune`。
 3. 支持 `dry_run/apply` 双路径，便于先验收再执行。
-4. 支持 `keep_last` 保留最近 N 条升级事件。
-5. 支持脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）。
+4. 支持策略化阈值环境变量：`AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT` 与 `AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST`。
+5. 输出 `should_prune` 与 `prune` 详情，便于值班联动与审计。
 
 ## 4. 测试清单
 
 1. `tests/test_narrative_v7_modules.py`
 2. `tests/test_narrative_v7_api.py`
 3. 执行命令：`pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-4. 结果：`84 passed`
+4. 结果：`90 passed`
 5. 编译检查：`python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`
 
 ## 5. 建议评审重点
 
-1. `escalations/prune` 的 `dry_run/apply` 语义是否清晰且可复现。
-2. `total_events_before/kept_count/candidate_count/pruned_count` 口径是否一致。
-3. 脏行处理是否满足治理要求（`malformed_candidate_count` 与 `malformed_dropped_count`）。
-4. 执行 prune 后，`GET /escalations` 的可见事件窗口是否符合保留策略。
+1. `escalations/auto-prune` 的 `dry_run/apply` 语义是否清晰且可复现。
+2. 策略阈值是否按环境变量正确生效（trigger/keep_last）。
+3. `total_events/malformed_line_count/should_prune` 与 `prune` 明细口径是否一致。
+4. 自动清理后 `GET /escalations` 结果是否与保留策略一致。

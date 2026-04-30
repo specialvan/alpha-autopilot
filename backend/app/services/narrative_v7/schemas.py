@@ -139,6 +139,19 @@ class StoryStateMarketAdaptResponse(BaseModel):
     defaults_applied: list[str] = Field(default_factory=list)
 
 
+class UnifiedDecisionPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1)
+    story_state: dict[str, Any] = Field(default_factory=dict)
+    character_states: list[dict[str, Any]] = Field(default_factory=list)
+    project_state: NovelProjectState | None = None
+    benchmark_state: BenchmarkParameterSet | None = None
+    metric_overrides: dict[str, float] = Field(default_factory=dict)
+    decision_state: DecisionState | None = None
+    override_confirmed: bool = False
+
+
 class NQMVector(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -207,6 +220,16 @@ class DecisionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: NarrativeDecision
+
+
+class UnifiedDecisionPreviewResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    market_state: NarrativeMarketState
+    vector: NQMVector
+    ohlcv: NarrativeMetricOHLCV
+    decision: NarrativeDecision
+    defaults_applied: list[str] = Field(default_factory=list)
 
 
 class OpeningGateRequest(BaseModel):
@@ -713,6 +736,8 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
     archive_max_shard_files: int = Field(default=0, ge=0)
     governance_runs_prune_trigger_count: int = Field(default=0, ge=0)
     governance_runs_prune_keep_last: int = Field(default=0, ge=0)
+    governance_escalations_prune_trigger_count: int = Field(default=0, ge=0)
+    governance_escalations_prune_keep_last: int = Field(default=0, ge=0)
     governance_runs_max_retry_attempts: int = Field(default=0, ge=0)
     governance_runs_escalation_failure_streak: int = Field(default=0, ge=0)
     stale_threshold_seconds: int = Field(default=0, ge=0)
@@ -935,6 +960,20 @@ class BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse(BaseModel):
     malformed_dropped_count: int = Field(default=0, ge=0)
     kept_event_ids: list[str] = Field(default_factory=list)
     pruned_event_ids: list[str] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    trigger_count: int = Field(default=0, ge=0)
+    keep_last: int = Field(default=0, ge=0)
+    total_events: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    should_prune: bool = False
+    prune: BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse | None = None
     message: str = ""
 
 

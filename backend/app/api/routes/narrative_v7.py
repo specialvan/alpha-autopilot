@@ -17,6 +17,7 @@ from ...services.narrative_v7 import (
     NQMSampler,
     OpeningGate,
     PacingInformationFlowController,
+    StoryStateMarketAdapter,
     SellingPointContractGuard,
     ThresholdBandEngine,
     build_v7_observability_snapshot,
@@ -45,6 +46,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationExportResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -84,11 +86,16 @@ from ...services.narrative_v7.schemas import (
     OpeningGateResponse,
     PacingRequest,
     PacingResponse,
+    StoryStateMarketAdaptRequest,
+    StoryStateMarketAdaptResponse,
+    UnifiedDecisionPreviewRequest,
+    UnifiedDecisionPreviewResponse,
 )
 
 router = APIRouter(prefix="/api/narrative/v7", tags=["narrative_v7"])
 
 _sampler = NQMSampler()
+_market_state_adapter = StoryStateMarketAdapter()
 _threshold_engine = ThresholdBandEngine()
 _decision_controller = DecisionFeedbackController(threshold_engine=_threshold_engine)
 _opening_gate = OpeningGate()
@@ -196,6 +203,59 @@ def sample_nqm(payload: NQMSampleRequest) -> NQMSampleResponse:
         route="/api/narrative/v7/sample",
         feature_name="sample",
         operation=lambda: _sampler.sample(payload),
+    )
+
+
+@router.post("/market-state/adapt", response_model=StoryStateMarketAdaptResponse)
+def adapt_market_state(payload: StoryStateMarketAdaptRequest) -> StoryStateMarketAdaptResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/market-state/adapt",
+        feature_name="market_state_adapter",
+        operation=lambda: _market_state_adapter.adapt(payload),
+    )
+
+
+@router.post("/decision/preview", response_model=UnifiedDecisionPreviewResponse)
+def decision_preview(payload: UnifiedDecisionPreviewRequest) -> UnifiedDecisionPreviewResponse:
+    def _op() -> UnifiedDecisionPreviewResponse:
+        adapted = _market_state_adapter.adapt(
+            StoryStateMarketAdaptRequest(
+                story_state=payload.story_state,
+                project_state=payload.project_state,
+                benchmark_state=payload.benchmark_state,
+                metric_overrides=payload.metric_overrides,
+                decision_state=payload.decision_state,
+            )
+        )
+        sample = _sampler.sample(
+            NQMSampleRequest(
+                text=payload.text,
+                story_state=adapted.market_state.story_state,
+                character_states=payload.character_states,
+                benchmark_parameters=adapted.market_state.benchmark_state,
+            )
+        )
+        decision = _decision_controller.decide(
+            DecisionRequest(
+                market_state=adapted.market_state,
+                vector=sample.vector,
+                ohlcv=sample.ohlcv,
+                override_confirmed=payload.override_confirmed,
+            )
+        )
+        return UnifiedDecisionPreviewResponse(
+            market_state=adapted.market_state,
+            vector=sample.vector,
+            ohlcv=sample.ohlcv,
+            decision=decision.decision,
+            defaults_applied=adapted.defaults_applied,
+        )
+
+    return _execute_with_metrics(
+        route="/api/narrative/v7/decision/preview",
+        feature_name="decision_preview",
+        operation=_op,
+        route_id_getter=lambda item: item.decision.route_id,
     )
 
 
@@ -750,6 +810,20 @@ def benchmark_maintenance_alert_governance_runs_escalations_prune(
             keep_last=keep_last,
             dry_run=dry_run,
         ),
+    )
+
+
+@router.post(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_prune(
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationAutoPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_prune",
+        operation=lambda: _benchmark_library.auto_prune_maintenance_alert_governance_escalations(dry_run=dry_run),
     )
 
 

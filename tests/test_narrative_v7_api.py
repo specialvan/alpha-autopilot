@@ -79,6 +79,87 @@ def test_v7_api_supports_sampling_and_threshold_preview() -> None:
     }
 
 
+def test_v7_api_supports_story_state_to_market_state_adapter_route() -> None:
+    client = _create_v7_only_client()
+
+    response = client.post(
+        "/api/narrative/v7/market-state/adapt",
+        json={
+            "story_state": {
+                "chapter_index": 9,
+                "stage": "mid_late",
+                "conflict_intensity": 0.72,
+                "foreshadowing_load": 0.38,
+                "payoff_pressure": 0.46,
+                "tags": ["death"],
+            },
+            "metric_overrides": {
+                "T8": 0.29,
+            },
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    market_state = body["market_state"]
+    assert market_state["story_state"]["chapter_index"] == 9
+    assert market_state["story_state"]["is_death_chapter"] is True
+    assert market_state["metric_state"]["T8"] == pytest.approx(0.29)
+    assert market_state["metric_state"]["T9"] == pytest.approx(0.72)
+    assert "defaults_applied" in body
+    assert body["defaults_applied"]
+
+
+def test_v7_api_supports_unified_decision_preview_route() -> None:
+    client = _create_v7_only_client()
+
+    response = client.post(
+        "/api/narrative/v7/decision/preview",
+        json={
+            "text": _sample_text(),
+            "story_state": {
+                "chapter_index": 2,
+                "stage": "early",
+                "conflict_intensity": 0.64,
+                "foreshadowing_load": 0.33,
+                "payoff_pressure": 0.41,
+            },
+            "character_states": [{"id": "c1"}, {"id": "c2"}],
+            "project_state": {
+                "project_id": "demo-prv",
+                "platform": "qidian",
+                "genre_track": "fast",
+                "reader_profile": "male",
+                "ip_flavor_tag": "xuanhuan",
+                "selling_point_contract": "高压逆袭",
+            },
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["market_state"]["story_state"]["chapter_index"] == 2
+    assert "composite" in body["vector"]
+    assert "close" in body["ohlcv"]
+    assert "route_id" in body["decision"]
+    assert body["defaults_applied"]
+
+
+def test_v7_api_unified_decision_preview_supports_override_short_circuit() -> None:
+    client = _create_v7_only_client()
+
+    response = client.post(
+        "/api/narrative/v7/decision/preview",
+        json={
+            "text": _sample_text(),
+            "story_state": {"chapter_index": 3, "stage": "early"},
+            "override_confirmed": True,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision"]["route_id"] == "R-OVERRIDE"
+    assert body["decision"]["decision_type"] == "observe"
+
+
 def test_v7_api_supports_opening_gate_and_decision_routes() -> None:
     client = _create_v7_only_client()
 
@@ -1746,6 +1827,95 @@ def test_v7_api_supports_governance_escalations_prune(monkeypatch) -> None:
     assert len(listed["events"]) == 1
 
 
+def test_v7_api_supports_governance_escalations_auto_prune(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-escalation-auto-prune-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.50},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+    store = narrative_v7_route._benchmark_store
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_auto_prune_api")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        failed_response = client.post(
+            "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+            f"?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-escalation-auto-prune-api-{index}"
+        )
+        assert failed_response.status_code == 500
+
+    manual_emit = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalation/emit?limit=20"
+    )
+    assert manual_emit.status_code == 200
+    assert manual_emit.json()["emitted"] is True
+
+    auto_emit = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/auto-remediate"
+        "?dry_run=false&limit=20&alert_limit=20&archive_limit=20"
+    )
+    assert auto_emit.status_code == 200
+    assert auto_emit.json()["escalation_event"] is not None
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT", "1")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST", "1")
+
+    dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune?dry_run=true"
+    )
+    assert dry_run_response.status_code == 200
+    dry_run = dry_run_response.json()
+    assert dry_run["dry_run"] is True
+    assert dry_run["should_prune"] is True
+    assert dry_run["prune"] is not None
+    assert dry_run["prune"]["dry_run"] is True
+    assert dry_run["prune"]["candidate_count"] >= 1
+
+    apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune?dry_run=false"
+    )
+    assert apply_response.status_code == 200
+    applied = apply_response.json()
+    assert applied["dry_run"] is False
+    assert applied["should_prune"] is True
+    assert applied["prune"] is not None
+    assert applied["prune"]["dry_run"] is False
+    assert applied["prune"]["pruned_count"] >= 1
+
+    list_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations?limit=20"
+    )
+    assert list_response.status_code == 200
+    assert list_response.json()["total_events"] <= 1
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT", "100")
+    no_prune_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune?dry_run=true"
+    )
+    assert no_prune_response.status_code == 200
+    no_prune = no_prune_response.json()
+    assert no_prune["should_prune"] is False
+    assert no_prune["prune"] is None
+    assert no_prune["message"] == "below_threshold"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {
@@ -1811,6 +1981,10 @@ def test_v7_api_exposes_observability_snapshot() -> None:
     assert "thresholds" in body
     assert body["thresholds"]["latencyP95Ms"] > 0
     assert body["thresholds"]["errorRate"] >= 0
+    envelope = body["unifiedEnvelope"]
+    assert envelope["schemaVersion"] == "obs-envelope.v1"
+    assert envelope["layer"] == "v7"
+    assert envelope["keyMetrics"]["runtimeRows"] >= 2
 
 
 def test_v7_api_rejects_empty_benchmark_payload() -> None:

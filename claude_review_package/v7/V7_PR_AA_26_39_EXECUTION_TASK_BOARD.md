@@ -403,6 +403,15 @@
 - [x] 支持脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）
 - [x] 第32轮回归测试覆盖（governance escalations prune store/api）
 
+## 生产化增强清单（第三十三轮）
+
+- [x] 治理升级事件日志自动清理策略：`auto_prune_maintenance_alert_governance_escalations`
+- [x] 自动清理接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-prune`
+- [x] 环境变量策略治理：`AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT/KEEP_LAST`
+- [x] 自动清理支持 `dry_run/apply` 双路径
+- [x] 自动清理输出 `should_prune` 与 `prune` 明细，便于值班联动
+- [x] 第33轮回归测试覆盖（governance escalations auto-prune store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -413,5 +422,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`84 passed`
+- [x] 结果：`90 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

@@ -9,6 +9,7 @@ from backend.app.services.narrative_v7.decision_controller import DecisionFeedba
 from backend.app.services.narrative_v7.decision_rules import DecisionRuleSet
 from backend.app.services.narrative_v7.deadlock_router import DeadlockRouter
 from backend.app.services.narrative_v7.expectation_debt import ExpectationDebtManager
+from backend.app.services.narrative_v7.market_state_adapter import StoryStateMarketAdapter
 from backend.app.services.narrative_v7.nqm_sampler import NQMSampler
 from backend.app.services.narrative_v7.opening_gate import OpeningGate
 from backend.app.services.narrative_v7.schemas import (
@@ -27,6 +28,7 @@ from backend.app.services.narrative_v7.schemas import (
     NarrativeMarketState,
     NarrativeMetricOHLCV,
     OpeningGateRequest,
+    StoryStateMarketAdaptRequest,
 )
 from backend.app.services.narrative_v7.threshold_band import ThresholdBandEngine
 
@@ -45,6 +47,32 @@ def test_v7_sampler_outputs_vector_and_ohlcv() -> None:
     assert len(response.vector.metrics) >= 28
     assert response.ohlcv.high >= response.ohlcv.low
     assert response.elapsed_ms >= 0.0
+
+
+def test_story_state_market_adapter_builds_market_state_with_defaults() -> None:
+    adapter = StoryStateMarketAdapter()
+    response = adapter.adapt(
+        StoryStateMarketAdaptRequest(
+            story_state={
+                "chapter_index": 7,
+                "stage": "middle",
+                "conflict_intensity": 0.68,
+                "foreshadowing_load": 0.42,
+                "payoff_pressure": 0.37,
+                "tags": ["death"],
+            }
+        )
+    )
+
+    market_state = response.market_state
+    assert market_state.story_state["chapter_index"] == 7
+    assert market_state.story_state["stage"] == "middle"
+    assert market_state.story_state["is_death_chapter"] is True
+    assert market_state.metric_state["T8"] == pytest.approx(0.42)
+    assert market_state.metric_state["T4"] == pytest.approx(0.37)
+    assert market_state.metric_state["T9"] == pytest.approx(0.68)
+    assert market_state.decision_state.last_composite > 0.0
+    assert response.defaults_applied
 
 
 def test_opening_gate_blocks_and_supports_override() -> None:
@@ -1551,6 +1579,73 @@ def test_benchmark_store_prunes_governance_escalation_events(monkeypatch, tmp_pa
     listed = store.list_maintenance_alert_governance_escalations(limit=20)
     assert listed.total_events == 1
     assert len(listed.events) == 1
+
+
+def test_benchmark_store_auto_prunes_governance_escalations(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-escalation-auto-prune",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.51},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_MAX_RETRY_ATTEMPTS", "5")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_RUNS_ESCALATION_FAILURE_STREAK", "2")
+
+    def always_fail_auto_archive(*, dry_run: bool = True):
+        raise RuntimeError("forced_governance_escalation_auto_prune")
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", always_fail_auto_archive)
+
+    for index in range(2):
+        with pytest.raises(RuntimeError, match="forced_governance_escalation_auto_prune"):
+            _ = store.run_maintenance_alert_governance(
+                dry_run=True,
+                alert_limit=20,
+                archive_limit=20,
+                idempotency_key=f"governance-escalation-auto-prune-{index}",
+            )
+
+    manual_emit = store.emit_maintenance_alert_governance_escalation(limit=20)
+    assert manual_emit.emitted is True
+    auto_emit = store.auto_remediate_maintenance_alert_governance_runs(
+        dry_run=False,
+        limit=20,
+        alert_limit=20,
+        archive_limit=20,
+    )
+    assert auto_emit.escalation_event is not None
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT", "1")
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_KEEP_LAST", "1")
+
+    dry_run = store.auto_prune_maintenance_alert_governance_escalations(dry_run=True)
+    assert dry_run.dry_run is True
+    assert dry_run.should_prune is True
+    assert dry_run.prune is not None
+    assert dry_run.prune.dry_run is True
+    assert dry_run.prune.candidate_count >= 1
+
+    applied = store.auto_prune_maintenance_alert_governance_escalations(dry_run=False)
+    assert applied.dry_run is False
+    assert applied.should_prune is True
+    assert applied.prune is not None
+    assert applied.prune.dry_run is False
+    assert applied.prune.pruned_count >= 1
+
+    listed = store.list_maintenance_alert_governance_escalations(limit=20)
+    assert listed.total_events <= 1
+
+    monkeypatch.setenv("AA_V7_BENCH_GOVERNANCE_ESCALATIONS_PRUNE_TRIGGER_COUNT", "100")
+    not_needed = store.auto_prune_maintenance_alert_governance_escalations(dry_run=True)
+    assert not_needed.should_prune is False
+    assert not_needed.prune is None
+    assert not_needed.message == "below_threshold"
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
