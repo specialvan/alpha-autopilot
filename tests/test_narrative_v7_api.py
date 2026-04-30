@@ -1069,6 +1069,74 @@ def test_v7_api_supports_governance_runs_prune(monkeypatch) -> None:
     assert len(history["records"]) == 1
 
 
+def test_v7_api_supports_governance_runs_summary(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(narrative_v7_router)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-governance-summary-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.71},
+        },
+    )
+    for _ in range(4):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    ok_one = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-summary-api-ok-1"
+    )
+    assert ok_one.status_code == 200
+
+    store = narrative_v7_route._benchmark_store
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_summary_failure_api")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+
+    failed = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-summary-api-failed"
+    )
+    assert failed.status_code == 500
+
+    ok_two = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/run"
+        "?dry_run=true&alert_limit=20&archive_limit=20&idempotency_key=governance-summary-api-ok-2"
+    )
+    assert ok_two.status_code == 200
+
+    summary_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/summary?limit=20"
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["total_records"] == 3
+    assert summary["window_record_count"] == 3
+    assert summary["succeeded_count"] == 2
+    assert summary["failed_count"] == 1
+    assert summary["latest_run"] is not None
+    assert summary["latest_failed_run"] is not None
+    assert summary["latest_failed_run"]["status"] == "failed"
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

@@ -963,6 +963,68 @@ def test_benchmark_store_prunes_governance_runs(monkeypatch, tmp_path) -> None:
     assert len(history.records) == 1
 
 
+def test_benchmark_store_summarizes_governance_runs(monkeypatch, tmp_path) -> None:
+    store = V7BenchmarkStore(path=tmp_path / "v7_benchmark_store.jsonl")
+    _ = store.ingest(
+        BenchmarkIngestRequest(
+            book_id="book-alert-governance-summary",
+            channel="fantasy",
+            genre_track="fast",
+            sample_payload={"nqm_mean": 0.70},
+        )
+    )
+    for _ in range(4):
+        _ = store.emit_maintenance_alert(limit=20)
+
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TRIGGER_COUNT", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_KEEP_LAST", "1")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_SHARD_SIZE", "2")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_TTL_DAYS", "365")
+    monkeypatch.setenv("AA_V7_BENCH_ALERT_ARCHIVE_MAX_SHARD_FILES", "100")
+
+    _ = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        idempotency_key="governance-summary-ok-1",
+    )
+
+    original_auto_archive = store.auto_archive_maintenance_alerts
+    call_counter = {"value": 0}
+
+    def flaky_auto_archive(*, dry_run: bool = True):
+        call_counter["value"] += 1
+        if call_counter["value"] == 1:
+            raise RuntimeError("forced_governance_summary_failure")
+        return original_auto_archive(dry_run=dry_run)
+
+    monkeypatch.setattr(store, "auto_archive_maintenance_alerts", flaky_auto_archive)
+
+    with pytest.raises(RuntimeError, match="forced_governance_summary_failure"):
+        _ = store.run_maintenance_alert_governance(
+            dry_run=True,
+            alert_limit=20,
+            archive_limit=20,
+            idempotency_key="governance-summary-failed",
+        )
+
+    _ = store.run_maintenance_alert_governance(
+        dry_run=True,
+        alert_limit=20,
+        archive_limit=20,
+        idempotency_key="governance-summary-ok-2",
+    )
+
+    summary = store.summarize_maintenance_alert_governance_runs(limit=20)
+    assert summary.total_records == 3
+    assert summary.window_record_count == 3
+    assert summary.succeeded_count == 2
+    assert summary.failed_count == 1
+    assert summary.latest_run is not None
+    assert summary.latest_failed_run is not None
+    assert summary.latest_failed_run.status == "failed"
+
+
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
     vector = NQMVector(metrics={key: 0.5 for key in NQMVector().metrics}, composite=0.4)

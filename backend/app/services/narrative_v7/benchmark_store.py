@@ -32,6 +32,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
+    BenchmarkMaintenanceAlertGovernanceRunSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
     BenchmarkMaintenanceAlertExportResponse,
     BenchmarkMaintenanceAlertPruneResponse,
@@ -1280,6 +1281,39 @@ class V7BenchmarkStore:
             total_records=total,
             malformed_line_count=malformed_line_count,
             records=window,
+            message="ok",
+        )
+
+    def summarize_maintenance_alert_governance_runs(
+        self,
+        *,
+        limit: int = 200,
+    ) -> BenchmarkMaintenanceAlertGovernanceRunSummaryResponse:
+        query_limit = max(0, int(limit))
+        with self._lock:
+            path = self._governance_runs_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(
+                    generated_at=_now_iso(),
+                    limit=query_limit,
+                    message="no_runs",
+                )
+            records, malformed_line_count = self._read_governance_run_records(path=path)
+
+        records.sort(key=lambda item: (item.generated_at, item.completed_at, item.run_id), reverse=True)
+        window = records[:query_limit] if query_limit > 0 else records
+        latest_failed_run = next((item for item in records if item.status == "failed"), None)
+
+        return BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            total_records=len(records),
+            window_record_count=len(window),
+            malformed_line_count=malformed_line_count,
+            succeeded_count=sum(1 for item in window if item.status == "succeeded"),
+            failed_count=sum(1 for item in window if item.status == "failed"),
+            latest_run=records[0] if records else None,
+            latest_failed_run=latest_failed_run,
             message="ok",
         )
 

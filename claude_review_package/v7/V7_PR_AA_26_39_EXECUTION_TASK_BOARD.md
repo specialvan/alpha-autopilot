@@ -315,6 +315,14 @@
 - [x] 运行日志排序稳定性增强（`generated_at/completed_at/run_id` 多键排序）
 - [x] 第22轮回归测试覆盖（governance runs prune store/api）
 
+## 生产化增强清单（第二十三轮）
+
+- [x] 治理运行历史摘要能力：`summarize_maintenance_alert_governance_runs`
+- [x] 治理运行摘要接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/summary`
+- [x] 摘要输出窗口统计（`succeeded_count / failed_count`）与脏行计数
+- [x] 摘要输出 `latest_run` 与 `latest_failed_run`，便于值班排障
+- [x] 第23轮回归测试覆盖（governance runs summary store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -325,5 +333,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`64 passed`
+- [x] 结果：`66 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

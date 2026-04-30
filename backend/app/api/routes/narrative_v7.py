@@ -39,6 +39,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
+    BenchmarkMaintenanceAlertGovernanceRunSummaryResponse,
     BenchmarkMaintenanceAlertDigestResponse,
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertExportResponse,
@@ -611,6 +612,17 @@ def benchmark_maintenance_alert_governance_runs_prune(
             keep_last=keep_last,
             dry_run=dry_run,
         ),
+    )
+
+
+@router.get("/benchmark/maintenance/alerts/governance/runs/summary", response_model=BenchmarkMaintenanceAlertGovernanceRunSummaryResponse)
+def benchmark_maintenance_alert_governance_runs_summary(
+    limit: int = Query(default=200, ge=1, le=20000),
+) -> BenchmarkMaintenanceAlertGovernanceRunSummaryResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/summary",
+        feature_name="benchmark_maintenance_alert_governance_runs_summary",
+        operation=lambda: _benchmark_library.summarize_maintenance_alert_governance_runs(limit=limit),
     )
 
 

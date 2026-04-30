@@ -764,6 +764,21 @@ class BenchmarkMaintenanceAlertGovernanceRunPruneResponse(BaseModel):
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceRunSummaryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    total_records: int = Field(default=0, ge=0)
+    window_record_count: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    succeeded_count: int = Field(default=0, ge=0)
+    failed_count: int = Field(default=0, ge=0)
+    latest_run: BenchmarkMaintenanceAlertGovernanceRunRecord | None = None
+    latest_failed_run: BenchmarkMaintenanceAlertGovernanceRunRecord | None = None
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
