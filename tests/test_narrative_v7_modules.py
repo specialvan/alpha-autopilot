@@ -2130,6 +2130,35 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediations(monk
     assert export_second.has_more is False
     assert export_second.cursor == export_first.next_cursor
 
+    prune_dry_run = store.prune_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(
+        keep_last=1,
+        dry_run=True,
+    )
+    assert prune_dry_run.dry_run is True
+    assert prune_dry_run.total_records_before == 3
+    assert prune_dry_run.kept_count == 1
+    assert prune_dry_run.candidate_count == 2
+    assert prune_dry_run.pruned_count == 0
+    assert prune_dry_run.malformed_candidate_count == 1
+    assert prune_dry_run.malformed_dropped_count == 0
+
+    prune_apply = store.prune_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(
+        keep_last=1,
+        dry_run=False,
+    )
+    assert prune_apply.dry_run is False
+    assert prune_apply.total_records_before == 3
+    assert prune_apply.kept_count == 1
+    assert prune_apply.pruned_count == 2
+    assert prune_apply.malformed_candidate_count == 1
+    assert prune_apply.malformed_dropped_count == 1
+    assert len(prune_apply.pruned_run_ids) == 2
+
+    remaining_runs = store.list_maintenance_alert_governance_escalation_remediation_auto_remediate_runs(limit=20)
+    assert remaining_runs.total_records == 1
+    assert remaining_runs.malformed_line_count == 0
+    assert len(remaining_runs.records) == 1
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()

@@ -1200,6 +1200,23 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunEx
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    keep_last: int = Field(default=0, ge=0)
+    total_records_before: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    pruned_count: int = Field(default=0, ge=0)
+    malformed_candidate_count: int = Field(default=0, ge=0)
+    malformed_dropped_count: int = Field(default=0, ge=0)
+    kept_run_ids: list[str] = Field(default_factory=list)
+    pruned_run_ids: list[str] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

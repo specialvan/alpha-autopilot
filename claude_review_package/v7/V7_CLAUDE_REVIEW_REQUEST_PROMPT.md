@@ -106,3 +106,15 @@ Please additionally review orchestrator-run summary/export behavior:
 - Correlate with:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate
+
+## Round-45 Additional Review Targets
+
+Please additionally review orchestrator-run prune behavior:
+
+- POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/prune
+  - Validate dry_run/apply semantics and keep_last retention behavior.
+  - Validate malformed_candidate_count and malformed_dropped_count accounting.
+  - Validate kept/pruned run-id lists align with run-list endpoint after pruning.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/export

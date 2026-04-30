@@ -2520,6 +2520,43 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediations(monkeypa
     assert export_second["has_more"] is False
     assert export_second["cursor"] == export_first["next_cursor"]
 
+    prune_dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/prune"
+        "?keep_last=1&dry_run=true"
+    )
+    assert prune_dry_run_response.status_code == 200
+    prune_dry_run = prune_dry_run_response.json()
+    assert prune_dry_run["dry_run"] is True
+    assert prune_dry_run["total_records_before"] == 3
+    assert prune_dry_run["kept_count"] == 1
+    assert prune_dry_run["candidate_count"] == 2
+    assert prune_dry_run["pruned_count"] == 0
+    assert prune_dry_run["malformed_candidate_count"] == 1
+    assert prune_dry_run["malformed_dropped_count"] == 0
+
+    prune_apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/prune"
+        "?keep_last=1&dry_run=false"
+    )
+    assert prune_apply_response.status_code == 200
+    prune_apply = prune_apply_response.json()
+    assert prune_apply["dry_run"] is False
+    assert prune_apply["total_records_before"] == 3
+    assert prune_apply["kept_count"] == 1
+    assert prune_apply["pruned_count"] == 2
+    assert prune_apply["malformed_candidate_count"] == 1
+    assert prune_apply["malformed_dropped_count"] == 1
+    assert len(prune_apply["pruned_run_ids"]) == 2
+
+    remaining_runs_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs?limit=20"
+    )
+    assert remaining_runs_response.status_code == 200
+    remaining_runs = remaining_runs_response.json()
+    assert remaining_runs["total_records"] == 1
+    assert remaining_runs["malformed_line_count"] == 0
+    assert len(remaining_runs["records"]) == 1
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
