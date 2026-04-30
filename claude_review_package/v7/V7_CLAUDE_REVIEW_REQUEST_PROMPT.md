@@ -118,3 +118,15 @@ Please additionally review orchestrator-run prune behavior:
 - Correlate with:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/export
+
+## Round-46 Additional Review Targets
+
+Please additionally review orchestrator-run auto-prune behavior:
+
+- POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-prune
+  - Validate dry_run/apply semantics and should_prune gating.
+  - Validate env-policy routing (trigger_count/keep_last) and malformed-triggered pruning behavior.
+  - Validate prune detail fields and post-prune run-list readback consistency.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/prune
