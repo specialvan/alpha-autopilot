@@ -9,6 +9,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertEmitResponse,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertPruneResponse,
+    BenchmarkMaintenanceAlertSummaryResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkVersionAutoRemediateResponse,
     BenchmarkQueryRequest,
@@ -83,3 +84,6 @@ class BenchmarkLibrary:
         dry_run: bool = True,
     ) -> BenchmarkMaintenanceAlertPruneResponse:
         return self._store.prune_maintenance_alerts(keep_last=keep_last, dry_run=dry_run)
+
+    def summarize_maintenance_alerts(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertSummaryResponse:
+        return self._store.summarize_maintenance_alerts(limit=limit)

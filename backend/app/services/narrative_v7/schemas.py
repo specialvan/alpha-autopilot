@@ -545,3 +545,21 @@ class BenchmarkMaintenanceAlertPruneResponse(BaseModel):
     kept_event_ids: list[str] = Field(default_factory=list)
     pruned_event_ids: list[str] = Field(default_factory=list)
     message: str = ""
+
+
+class BenchmarkMaintenanceAlertSummaryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    limit: int = Field(default=0, ge=0)
+    total_valid_events: int = Field(default=0, ge=0)
+    window_event_count: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    ok_count: int = Field(default=0, ge=0)
+    warn_count: int = Field(default=0, ge=0)
+    critical_count: int = Field(default=0, ge=0)
+    page_event_count: int = Field(default=0, ge=0)
+    ticket_event_count: int = Field(default=0, ge=0)
+    breach_event_count: int = Field(default=0, ge=0)
+    latest_event: BenchmarkMaintenanceAlertEvent | None = None
+    message: str = ""

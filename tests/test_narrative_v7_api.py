@@ -519,6 +519,38 @@ def test_v7_api_supports_maintenance_alert_prune() -> None:
     assert len(list_response.json()["alerts"]) == 1
 
 
+def test_v7_api_supports_maintenance_alert_summary() -> None:
+    client = _create_v7_only_client()
+    _ = client.post(
+        "/api/narrative/v7/benchmark/ingest",
+        json={
+            "book_id": "book-alert-summary-api",
+            "channel": "fantasy",
+            "genre_track": "fast",
+            "sample_payload": {"nqm_mean": 0.68},
+        },
+    )
+
+    for _ in range(3):
+        emit_response = client.post("/api/narrative/v7/benchmark/maintenance/alert/emit?limit=20")
+        assert emit_response.status_code == 200
+
+    store = narrative_v7_route._benchmark_store
+    with (store.version_root / "_maintenance_alerts.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    summary_response = client.get("/api/narrative/v7/benchmark/maintenance/alerts/summary?limit=2")
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["window_event_count"] == 2
+    assert summary["total_valid_events"] >= 3
+    assert summary["malformed_line_count"] >= 1
+    assert summary["latest_event"] is not None
+    assert (
+        summary["ok_count"] + summary["warn_count"] + summary["critical_count"]
+    ) == summary["window_event_count"]
+
+
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
     payload = {

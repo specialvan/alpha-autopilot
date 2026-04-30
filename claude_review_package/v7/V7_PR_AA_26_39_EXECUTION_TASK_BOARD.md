@@ -221,6 +221,15 @@
 - [x] 支持脏行统计与清理（`malformed_candidate_count / malformed_dropped_count`）
 - [x] 第十二轮回归测试覆盖（maintenance alert prune store/api）
 
+## 生产化增强清单（第十三轮）
+
+- [x] 告警事件摘要聚合能力：`summarize_maintenance_alerts`
+- [x] 告警摘要接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/summary`
+- [x] 输出窗口统计（`ok/warn/critical`）与动作统计（`page/ticket/breach`）
+- [x] 输出 `latest_event`、`total_valid_events`、`malformed_line_count`
+- [x] 支持 `limit` 聚合窗口，便于运维看板按窗口消费
+- [x] 第十三轮回归测试覆盖（maintenance alert summary store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）
@@ -231,5 +240,5 @@
 ## 当前验证结果
 
 - [x] `pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q`
-- [x] 结果：`40 passed`
+- [x] 结果：`42 passed`
 - [x] `python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py`

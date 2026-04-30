@@ -21,6 +21,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertEvent,
     BenchmarkMaintenanceAlertListResponse,
     BenchmarkMaintenanceAlertPruneResponse,
+    BenchmarkMaintenanceAlertSummaryResponse,
     BenchmarkMaintenanceReportResponse,
     BenchmarkMaintenanceSlaPolicy,
     BenchmarkParameterSet,
@@ -703,6 +704,44 @@ class V7BenchmarkStore:
             kept_event_ids=[item.event_id for item in kept],
             pruned_event_ids=pruned_event_ids,
             message="dry_run" if dry_run else "pruned",
+        )
+
+    def summarize_maintenance_alerts(self, *, limit: int = 200) -> BenchmarkMaintenanceAlertSummaryResponse:
+        query_limit = max(0, int(limit))
+        with self._lock:
+            path = self._alerts_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertSummaryResponse(
+                    generated_at=_now_iso(),
+                    limit=query_limit,
+                    message="no_alerts",
+                )
+            rows, malformed_line_count = self._read_alert_events(path=path)
+
+        rows.sort(key=lambda item: item.generated_at, reverse=True)
+        window = rows[:query_limit] if query_limit > 0 else rows
+
+        ok_count = sum(1 for item in window if item.level == "ok")
+        warn_count = sum(1 for item in window if item.level == "warn")
+        critical_count = sum(1 for item in window if item.level == "critical")
+        page_event_count = sum(1 for item in window if item.should_page)
+        ticket_event_count = sum(1 for item in window if item.should_ticket)
+        breach_event_count = sum(1 for item in window if item.breaches)
+
+        return BenchmarkMaintenanceAlertSummaryResponse(
+            generated_at=_now_iso(),
+            limit=query_limit,
+            total_valid_events=len(rows),
+            window_event_count=len(window),
+            malformed_line_count=malformed_line_count,
+            ok_count=ok_count,
+            warn_count=warn_count,
+            critical_count=critical_count,
+            page_event_count=page_event_count,
+            ticket_event_count=ticket_event_count,
+            breach_event_count=breach_event_count,
+            latest_event=rows[0] if rows else None,
+            message="ok",
         )
 
     def _state_version(self, rows: list[dict[str, object]]) -> str:
