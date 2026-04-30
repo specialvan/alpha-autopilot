@@ -122,6 +122,23 @@ class NarrativeMarketState(BaseModel):
     decision_state: DecisionState = Field(default_factory=DecisionState)
 
 
+class StoryStateMarketAdaptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    story_state: dict[str, Any] = Field(default_factory=dict)
+    project_state: NovelProjectState | None = None
+    benchmark_state: BenchmarkParameterSet | None = None
+    metric_overrides: dict[str, float] = Field(default_factory=dict)
+    decision_state: DecisionState | None = None
+
+
+class StoryStateMarketAdaptResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    market_state: NarrativeMarketState
+    defaults_applied: list[str] = Field(default_factory=list)
+
+
 class NQMVector(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -901,6 +918,23 @@ class BenchmarkMaintenanceAlertGovernanceEscalationExportResponse(BaseModel):
     malformed_line_count: int = Field(default=0, ge=0)
     summary: BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse
     events: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent] = Field(default_factory=list)
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    keep_last: int = Field(default=0, ge=0)
+    total_events_before: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    pruned_count: int = Field(default=0, ge=0)
+    malformed_candidate_count: int = Field(default=0, ge=0)
+    malformed_dropped_count: int = Field(default=0, ge=0)
+    kept_event_ids: list[str] = Field(default_factory=list)
+    pruned_event_ids: list[str] = Field(default_factory=list)
     message: str = ""
 
 

@@ -44,6 +44,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationExportResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -730,6 +731,24 @@ def benchmark_maintenance_alert_governance_runs_escalations_export(
         operation=lambda: _benchmark_library.export_maintenance_alert_governance_escalations(
             limit=limit,
             cursor=cursor,
+        ),
+    )
+
+
+@router.post(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/prune",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_prune(
+    keep_last: int = Query(default=500, ge=0, le=200000),
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/prune",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_prune",
+        operation=lambda: _benchmark_library.prune_maintenance_alert_governance_escalations(
+            keep_last=keep_last,
+            dry_run=dry_run,
         ),
     )
 

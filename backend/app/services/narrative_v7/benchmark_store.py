@@ -38,6 +38,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationListResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationExportResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -1615,6 +1616,50 @@ class V7BenchmarkStore:
             message="ok",
         )
 
+    def prune_maintenance_alert_governance_escalations(
+        self,
+        *,
+        keep_last: int,
+        dry_run: bool = True,
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse:
+        keep_count = max(0, int(keep_last))
+        with self._lock:
+            path = self._governance_escalations_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse(
+                    generated_at=_now_iso(),
+                    dry_run=bool(dry_run),
+                    keep_last=keep_count,
+                    message="no_escalations",
+                )
+
+            rows, malformed_candidate_count = self._read_governance_escalation_events(path=path)
+            ordered_rows = self._order_governance_escalation_events(rows)
+            kept = ordered_rows[:keep_count]
+            candidates = ordered_rows[keep_count:]
+
+            pruned_event_ids: list[str] = []
+            malformed_dropped_count = 0
+            if not dry_run:
+                self._write_governance_escalation_events(path=path, events=kept)
+                pruned_event_ids = [item.event_id for item in candidates]
+                malformed_dropped_count = malformed_candidate_count
+
+        return BenchmarkMaintenanceAlertGovernanceEscalationPruneResponse(
+            generated_at=_now_iso(),
+            dry_run=bool(dry_run),
+            keep_last=keep_count,
+            total_events_before=len(rows),
+            kept_count=len(kept),
+            candidate_count=len(candidates),
+            pruned_count=len(pruned_event_ids),
+            malformed_candidate_count=malformed_candidate_count,
+            malformed_dropped_count=malformed_dropped_count,
+            kept_event_ids=[item.event_id for item in kept],
+            pruned_event_ids=pruned_event_ids,
+            message="dry_run" if dry_run else "pruned",
+        )
+
     def auto_remediate_maintenance_alert_governance_runs(
         self,
         *,
@@ -1969,6 +2014,21 @@ class V7BenchmarkStore:
             except Exception:
                 malformed_count += 1
         return rows, malformed_count
+
+    def _write_governance_escalation_events(
+        self,
+        *,
+        path: Path,
+        events: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent],
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_suffix(f"{path.suffix}.tmp")
+        serialized = [json.dumps(item.model_dump(mode="json"), ensure_ascii=False) for item in events]
+        payload = "\n".join(serialized)
+        if payload:
+            payload += "\n"
+        temp_path.write_text(payload, encoding="utf-8")
+        temp_path.replace(path)
 
     def _read_governance_escalation_events(
         self,
