@@ -659,6 +659,15 @@
 - [x] 输出推荐动作（`run_auto_remediation_orchestrator_runs_auto_remediate_runs/auto_prune_runs/observe`）
 - [x] 第59轮回归测试覆盖（orchestrator-runs auto-remediate-runs history digest store/api）
 
+## 生产化增强清单（第六十轮）
+
+- [x] 编排执行轨迹自愈执行历史一键自愈能力：`auto_remediate_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs`
+- [x] 一键自愈接口：`POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate`
+- [x] 自愈策略基于执行历史 digest 推荐动作执行（`run_auto_remediation_orchestrator_runs_auto_remediate_runs/auto_prune_runs/observe`）
+- [x] 支持 `dry_run/apply` 双路径，并输出 `digest_before/digest_after`
+- [x] 输出执行细节（`remediated_orchestrator_runs_auto_remediate_runs/pruned_run_history/orchestrator_runs_auto_remediate_runs_auto_remediate/run_history_auto_prune`）
+- [x] 第60轮回归测试覆盖（orchestrator-runs auto-remediate-runs history auto-remediate store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

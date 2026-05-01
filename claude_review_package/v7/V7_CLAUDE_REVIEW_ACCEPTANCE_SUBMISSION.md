@@ -356,3 +356,20 @@
 - Verification:
   - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
   - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
+
+## Round-60 Delta (2026-05-01)
+
+- Scope: add one-click auto-remediation orchestrator for orchestrator-run auto-remediate-runs execution-history governance.
+- New API:
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate
+- Orchestration behavior:
+  - action=run_auto_remediation_orchestrator_runs_auto_remediate_runs -> invokes upstream orchestrator-runs auto-remediate chain
+  - action=auto_prune_runs -> invokes execution-history auto-prune chain
+  - action=observe -> no-op
+- Response contract:
+  - executed/remediated_orchestrator_runs_auto_remediate_runs/pruned_run_history
+  - orchestrator_runs_auto_remediate_runs_auto_remediate/run_history_auto_prune details
+  - digest_before/digest_after for audit replay
+- Verification:
+  - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
+  - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass

@@ -2886,6 +2886,94 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
     assert auto_remediate_run_history_digest_malformed.message == "malformed_detected"
     assert auto_remediate_run_history_digest_malformed.summary.malformed_line_count >= 1
 
+    auto_remediate_run_history_auto_remediate_prune_apply = (
+        store.auto_remediate_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=False,
+            limit=20,
+        )
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply.action == "auto_prune_runs"
+    assert auto_remediate_run_history_auto_remediate_prune_apply.executed is True
+    assert (
+        auto_remediate_run_history_auto_remediate_prune_apply.remediated_orchestrator_runs_auto_remediate_runs
+        is False
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply.pruned_run_history is True
+    assert (
+        auto_remediate_run_history_auto_remediate_prune_apply.orchestrator_runs_auto_remediate_runs_auto_remediate
+        is None
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply.run_history_auto_prune is not None
+    assert auto_remediate_run_history_auto_remediate_prune_apply.run_history_auto_prune.prune is not None
+    assert (
+        auto_remediate_run_history_auto_remediate_prune_apply.run_history_auto_prune.prune.malformed_dropped_count
+        >= 1
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply.message == "remediated"
+
+    auto_remediate_run_history_auto_remediate_orchestrator_dry_run = (
+        store.auto_remediate_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=True,
+            limit=20,
+        )
+    )
+    assert (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run.action
+        == "run_auto_remediation_orchestrator_runs_auto_remediate_runs"
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run.executed is False
+    assert (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run.remediated_orchestrator_runs_auto_remediate_runs
+        is False
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run.pruned_run_history is False
+    assert (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run.orchestrator_runs_auto_remediate_runs_auto_remediate
+        is not None
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run.run_history_auto_prune is None
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run.message == "dry_run"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "3600",
+    )
+    auto_remediate_run_history_auto_remediate_observe_apply = (
+        store.auto_remediate_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=False,
+            limit=20,
+        )
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply.action == "observe"
+    assert auto_remediate_run_history_auto_remediate_observe_apply.executed is False
+    assert (
+        auto_remediate_run_history_auto_remediate_observe_apply.remediated_orchestrator_runs_auto_remediate_runs
+        is False
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply.pruned_run_history is False
+    assert (
+        auto_remediate_run_history_auto_remediate_observe_apply.orchestrator_runs_auto_remediate_runs_auto_remediate
+        is None
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply.run_history_auto_prune is None
+    assert auto_remediate_run_history_auto_remediate_observe_apply.message == "no_action"
+
+    auto_remediate_runs_auto_remediate_runs_history_log = (
+        store.version_root
+        / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs.jsonl"
+    )
+    assert auto_remediate_runs_auto_remediate_runs_history_log.exists()
+    assert (
+        len(
+            [
+                line
+                for line in auto_remediate_runs_auto_remediate_runs_history_log.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+        )
+        >= 3
+    )
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()

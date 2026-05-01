@@ -3387,6 +3387,106 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
     assert auto_remediate_run_history_digest_malformed["message"] == "malformed_detected"
     assert auto_remediate_run_history_digest_malformed["summary"]["malformed_line_count"] >= 1
 
+    auto_remediate_run_history_auto_remediate_prune_apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate"
+        "?dry_run=false&limit=20"
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply_response.status_code == 200
+    auto_remediate_run_history_auto_remediate_prune_apply = (
+        auto_remediate_run_history_auto_remediate_prune_apply_response.json()
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply["action"] == "auto_prune_runs"
+    assert auto_remediate_run_history_auto_remediate_prune_apply["executed"] is True
+    assert (
+        auto_remediate_run_history_auto_remediate_prune_apply["remediated_orchestrator_runs_auto_remediate_runs"]
+        is False
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply["pruned_run_history"] is True
+    assert (
+        auto_remediate_run_history_auto_remediate_prune_apply["orchestrator_runs_auto_remediate_runs_auto_remediate"]
+        is None
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply["run_history_auto_prune"] is not None
+    assert auto_remediate_run_history_auto_remediate_prune_apply["run_history_auto_prune"]["prune"] is not None
+    assert (
+        auto_remediate_run_history_auto_remediate_prune_apply["run_history_auto_prune"]["prune"][
+            "malformed_dropped_count"
+        ]
+        >= 1
+    )
+    assert auto_remediate_run_history_auto_remediate_prune_apply["message"] == "remediated"
+
+    auto_remediate_run_history_auto_remediate_orchestrator_dry_run_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate"
+        "?dry_run=true&limit=20"
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run_response.status_code == 200
+    auto_remediate_run_history_auto_remediate_orchestrator_dry_run = (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run_response.json()
+    )
+    assert (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run["action"]
+        == "run_auto_remediation_orchestrator_runs_auto_remediate_runs"
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run["executed"] is False
+    assert (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run[
+            "remediated_orchestrator_runs_auto_remediate_runs"
+        ]
+        is False
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run["pruned_run_history"] is False
+    assert (
+        auto_remediate_run_history_auto_remediate_orchestrator_dry_run[
+            "orchestrator_runs_auto_remediate_runs_auto_remediate"
+        ]
+        is not None
+    )
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run["run_history_auto_prune"] is None
+    assert auto_remediate_run_history_auto_remediate_orchestrator_dry_run["message"] == "dry_run"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "3600",
+    )
+    auto_remediate_run_history_auto_remediate_observe_apply_response = client.post(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate"
+        "?dry_run=false&limit=20"
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply_response.status_code == 200
+    auto_remediate_run_history_auto_remediate_observe_apply = (
+        auto_remediate_run_history_auto_remediate_observe_apply_response.json()
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply["action"] == "observe"
+    assert auto_remediate_run_history_auto_remediate_observe_apply["executed"] is False
+    assert (
+        auto_remediate_run_history_auto_remediate_observe_apply["remediated_orchestrator_runs_auto_remediate_runs"]
+        is False
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply["pruned_run_history"] is False
+    assert (
+        auto_remediate_run_history_auto_remediate_observe_apply["orchestrator_runs_auto_remediate_runs_auto_remediate"]
+        is None
+    )
+    assert auto_remediate_run_history_auto_remediate_observe_apply["run_history_auto_prune"] is None
+    assert auto_remediate_run_history_auto_remediate_observe_apply["message"] == "no_action"
+
+    auto_remediate_runs_auto_remediate_runs_history_log = (
+        store.version_root
+        / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs.jsonl"
+    )
+    assert auto_remediate_runs_auto_remediate_runs_history_log.exists()
+    assert (
+        len(
+            [
+                line
+                for line in auto_remediate_runs_auto_remediate_runs_history_log.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+        )
+        >= 3
+    )
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()

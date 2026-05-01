@@ -1550,6 +1550,47 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAu
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateResponse(
+    BaseModel
+):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    dry_run: bool
+    limit: int = Field(default=0, ge=0)
+    action: str = "observe"
+    executed: bool = False
+    remediated_orchestrator_runs_auto_remediate_runs: bool = False
+    pruned_run_history: bool = False
+    orchestrator_runs_auto_remediate_runs_auto_remediate: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateResponse | None = (
+        None
+    )
+    run_history_auto_prune: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoPruneResponse | None = (
+        None
+    )
+    digest_before: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunDigestResponse
+    digest_after: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunDigestResponse
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord(
+    BaseModel
+):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    generated_at: str
+    dry_run: bool
+    limit: int = Field(default=0, ge=0)
+    action: str = "observe"
+    executed: bool = False
+    remediated_orchestrator_runs_auto_remediate_runs: bool = False
+    pruned_run_history: bool = False
+    digest_before_message: str = ""
+    digest_after_message: str = ""
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
