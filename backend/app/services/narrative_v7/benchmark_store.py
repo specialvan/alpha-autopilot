@@ -67,6 +67,8 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoPruneResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunDigestResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -2842,7 +2844,7 @@ class V7BenchmarkStore:
         else:
             message = "no_action"
 
-        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateResponse(
+        response = BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateResponse(
             generated_at=_now_iso(),
             dry_run=bool(dry_run),
             limit=query_limit,
@@ -2855,6 +2857,70 @@ class V7BenchmarkStore:
             digest_before=digest_before,
             digest_after=digest_after,
             message=message,
+        )
+        run_record = BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord(
+            run_id=_new_timestamped_id("bm-governance-escalation-remediation-orchestrator-runs-auto-remediate-runs-auto-remediate-"),
+            generated_at=response.generated_at,
+            dry_run=bool(dry_run),
+            limit=query_limit,
+            action=action,
+            executed=executed,
+            remediated_orchestrator_runs=remediated_orchestrator_runs,
+            pruned_run_history=pruned_run_history,
+            digest_before_message=digest_before.message,
+            digest_after_message=digest_after.message,
+            message=message,
+        )
+        with self._lock:
+            self._append_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_record(
+                path=self._governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_path(),
+                record=run_record,
+            )
+        return response
+
+    def list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+        self,
+        *,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse:
+        query_limit = max(0, int(limit))
+        offset = _parse_cursor_offset(cursor)
+        with self._lock:
+            path = self._governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse(
+                    limit=query_limit,
+                    cursor=str(offset),
+                    records=[],
+                    message="no_records",
+                )
+            rows, malformed_line_count = (
+                self._read_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+                    path=path
+                )
+            )
+
+        ordered_rows = (
+            self._order_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+                rows
+            )
+        )
+        total = len(ordered_rows)
+        start = min(offset, total)
+        end = min(total, start + query_limit) if query_limit > 0 else total
+        window = ordered_rows[start:end]
+        has_more = end < total
+        next_cursor = str(end) if has_more else ""
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse(
+            limit=query_limit,
+            cursor=str(start),
+            next_cursor=next_cursor,
+            has_more=has_more,
+            total_records=total,
+            malformed_line_count=malformed_line_count,
+            records=window,
+            message="ok",
         )
 
     def auto_remediate_maintenance_alert_governance_runs(
@@ -3092,6 +3158,12 @@ class V7BenchmarkStore:
     def _governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_path(self) -> Path:
         return self.version_root / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs.jsonl"
 
+    def _governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_path(self) -> Path:
+        return (
+            self.version_root
+            / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs.jsonl"
+        )
+
     def _next_governance_run_id(self) -> str:
         return _new_timestamped_id("bm-governance-run-")
 
@@ -3150,6 +3222,17 @@ class V7BenchmarkStore:
         *,
         path: Path,
         record: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunRecord,
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record.model_dump(mode="json"), ensure_ascii=False))
+            handle.write("\n")
+
+    def _append_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_record(
+        self,
+        *,
+        path: Path,
+        record: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord,
     ) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as handle:
@@ -3270,6 +3353,35 @@ class V7BenchmarkStore:
                 malformed_count += 1
         return rows, malformed_count
 
+    def _read_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+        self,
+        *,
+        path: Path,
+    ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord], int]:
+        rows: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord] = []
+        malformed_count = 0
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except Exception:
+                malformed_count += 1
+                continue
+            if not isinstance(payload, dict):
+                malformed_count += 1
+                continue
+            try:
+                rows.append(
+                    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord.model_validate(
+                        payload
+                    )
+                )
+            except Exception:
+                malformed_count += 1
+        return rows, malformed_count
+
     def _read_governance_run_records(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertGovernanceRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = []
         malformed_count = 0
@@ -3357,6 +3469,23 @@ class V7BenchmarkStore:
         self,
         records: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunRecord],
     ) -> list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunRecord]:
+        indexed = list(enumerate(records))
+        indexed.sort(
+            key=lambda item: (
+                item[1].generated_at,
+                item[1].run_id,
+                item[0],
+            ),
+            reverse=True,
+        )
+        return [item[1] for item in indexed]
+
+    def _order_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+        self,
+        records: list[
+            BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord
+        ],
+    ) -> list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord]:
         indexed = list(enumerate(records))
         indexed.sort(
             key=lambda item: (
