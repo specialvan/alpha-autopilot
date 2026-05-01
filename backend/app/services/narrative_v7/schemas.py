@@ -762,6 +762,12 @@ class BenchmarkMaintenanceAlertGovernancePolicy(BaseModel):
             ge=0,
         )
     )
+    governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_stale_seconds: int = (
+        Field(
+            default=0,
+            ge=0,
+        )
+    )
     governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_stale_seconds: int = Field(
         default=0,
         ge=0,
@@ -1527,6 +1533,20 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAu
     prune: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunPruneResponse | None = (
         None
     )
+    message: str = ""
+
+
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunDigestResponse(
+    BaseModel
+):
+    model_config = ConfigDict(extra="forbid")
+
+    generated_at: str
+    stale_threshold_seconds: int = Field(default=0, ge=0)
+    latest_record_age_seconds: float = Field(default=-1.0, ge=-1.0)
+    is_stale: bool = True
+    recommended_action: str = "observe"
+    summary: BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunSummaryResponse
     message: str = ""
 
 

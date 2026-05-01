@@ -341,3 +341,18 @@
 - Verification:
   - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
   - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass
+
+## Round-59 Delta (2026-05-01)
+
+- Scope: add digest observability for orchestrator-run auto-remediate-runs execution history.
+- New API:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest
+- New policy env var:
+  - AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_STALE_SECONDS
+- Digest outputs:
+  - stale_threshold_seconds/latest_record_age_seconds/is_stale
+  - recommended_action: run_auto_remediation_orchestrator_runs_auto_remediate_runs | auto_prune_runs | observe
+  - summary snapshot with malformed and volume counters
+- Verification:
+  - pytest tests/test_narrative_v7_modules.py tests/test_narrative_v7_api.py -q -> 105 passed
+  - python -m compileall backend/app/services/narrative_v7 backend/app/api/routes/narrative_v7.py -> pass

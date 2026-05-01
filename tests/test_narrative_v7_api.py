@@ -3321,6 +3321,72 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
     assert auto_remediate_run_history_auto_prune_not_needed["prune"] is None
     assert auto_remediate_run_history_auto_prune_not_needed["message"] == "below_threshold"
 
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "3600",
+    )
+    auto_remediate_run_history_digest_ok_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert auto_remediate_run_history_digest_ok_response.status_code == 200
+    auto_remediate_run_history_digest_ok = auto_remediate_run_history_digest_ok_response.json()
+    assert auto_remediate_run_history_digest_ok["summary"]["total_records"] == 1
+    assert auto_remediate_run_history_digest_ok["summary"]["malformed_line_count"] == 0
+    assert auto_remediate_run_history_digest_ok["recommended_action"] == "observe"
+    assert auto_remediate_run_history_digest_ok["message"] == "ok"
+    assert auto_remediate_run_history_digest_ok["latest_record_age_seconds"] >= 0.0
+    assert auto_remediate_run_history_digest_ok["is_stale"] is False
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "0",
+    )
+    auto_remediate_run_history_digest_above_threshold_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert auto_remediate_run_history_digest_above_threshold_response.status_code == 200
+    auto_remediate_run_history_digest_above_threshold = auto_remediate_run_history_digest_above_threshold_response.json()
+    assert auto_remediate_run_history_digest_above_threshold["recommended_action"] == "auto_prune_runs"
+    assert auto_remediate_run_history_digest_above_threshold["message"] == "above_prune_threshold"
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "100",
+    )
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_STALE_SECONDS",
+        "0",
+    )
+    auto_remediate_run_history_digest_stale_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert auto_remediate_run_history_digest_stale_response.status_code == 200
+    auto_remediate_run_history_digest_stale = auto_remediate_run_history_digest_stale_response.json()
+    assert (
+        auto_remediate_run_history_digest_stale["recommended_action"]
+        == "run_auto_remediation_orchestrator_runs_auto_remediate_runs"
+    )
+    assert auto_remediate_run_history_digest_stale["message"] == "stale"
+    assert auto_remediate_run_history_digest_stale["is_stale"] is True
+
+    with (
+        store.version_root
+        / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs.jsonl"
+    ).open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write("{bad-json\n")
+
+    auto_remediate_run_history_digest_malformed_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest?limit=20"
+    )
+    assert auto_remediate_run_history_digest_malformed_response.status_code == 200
+    auto_remediate_run_history_digest_malformed = auto_remediate_run_history_digest_malformed_response.json()
+    assert auto_remediate_run_history_digest_malformed["recommended_action"] == "auto_prune_runs"
+    assert auto_remediate_run_history_digest_malformed["message"] == "malformed_detected"
+    assert auto_remediate_run_history_digest_malformed["summary"]["malformed_line_count"] >= 1
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()
