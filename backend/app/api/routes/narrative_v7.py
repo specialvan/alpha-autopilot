@@ -73,6 +73,7 @@ from ...services.narrative_v7.schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunSummaryResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunExportResponse,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunResponse,
@@ -1293,6 +1294,24 @@ def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_au
         operation=lambda: _benchmark_library.export_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
             limit=limit,
             cursor=cursor,
+        ),
+    )
+
+
+@router.post(
+    "/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/prune",
+    response_model=BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunPruneResponse,
+)
+def benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs_prune(
+    keep_last: int = Query(default=500, ge=0, le=200000),
+    dry_run: bool = Query(default=True),
+) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunPruneResponse:
+    return _execute_with_metrics(
+        route="/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/prune",
+        feature_name="benchmark_maintenance_alert_governance_runs_escalations_auto_remediations_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs_prune",
+        operation=lambda: _benchmark_library.prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            keep_last=keep_last,
+            dry_run=dry_run,
         ),
     )
 
