@@ -3159,6 +3159,47 @@ def test_v7_api_auto_remediates_governance_escalation_auto_remediation_orchestra
     assert auto_remediate_run_history_after_malformed["total_records"] == 3
     assert auto_remediate_run_history_after_malformed["malformed_line_count"] >= 1
 
+    auto_remediate_run_history_summary_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/summary?limit=20"
+    )
+    assert auto_remediate_run_history_summary_response.status_code == 200
+    auto_remediate_run_history_summary = auto_remediate_run_history_summary_response.json()
+    assert auto_remediate_run_history_summary["total_records"] == 3
+    assert auto_remediate_run_history_summary["window_record_count"] == 3
+    assert auto_remediate_run_history_summary["malformed_line_count"] >= 1
+    assert auto_remediate_run_history_summary["dry_run_count"] == 1
+    assert auto_remediate_run_history_summary["apply_count"] == 2
+    assert auto_remediate_run_history_summary["executed_count"] == 1
+    assert auto_remediate_run_history_summary["remediated_orchestrator_runs_count"] == 0
+    assert auto_remediate_run_history_summary["pruned_run_history_count"] == 1
+    assert auto_remediate_run_history_summary["latest_record"] is not None
+    assert auto_remediate_run_history_summary["latest_record"]["action"] == "observe"
+
+    auto_remediate_run_history_export_first_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/export?limit=1"
+    )
+    assert auto_remediate_run_history_export_first_response.status_code == 200
+    auto_remediate_run_history_export_first = auto_remediate_run_history_export_first_response.json()
+    assert auto_remediate_run_history_export_first["summary"]["total_records"] == 3
+    assert auto_remediate_run_history_export_first["summary"]["malformed_line_count"] >= 1
+    assert len(auto_remediate_run_history_export_first["records"]) == 1
+    assert auto_remediate_run_history_export_first["has_more"] is True
+    assert auto_remediate_run_history_export_first["next_cursor"]
+
+    auto_remediate_run_history_export_second_response = client.get(
+        "/api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/export"
+        f"?limit=1&cursor={auto_remediate_run_history_export_first['next_cursor']}"
+    )
+    assert auto_remediate_run_history_export_second_response.status_code == 200
+    auto_remediate_run_history_export_second = auto_remediate_run_history_export_second_response.json()
+    assert auto_remediate_run_history_export_second["summary"]["total_records"] == 3
+    assert auto_remediate_run_history_export_second["summary"]["malformed_line_count"] >= 1
+    assert len(auto_remediate_run_history_export_second["records"]) == 1
+    assert (
+        auto_remediate_run_history_export_second["cursor"]
+        == auto_remediate_run_history_export_first["next_cursor"]
+    )
+
 
 def test_v7_api_returns_conflict_for_duplicate_benchmark_ingest() -> None:
     client = _create_v7_only_client()

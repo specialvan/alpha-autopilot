@@ -240,3 +240,15 @@ Please additionally review orchestrator-run auto-remediate run-history auto-reme
 - Correlate with:
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/digest
+
+## Round-56 Additional Review Targets
+
+Please additionally review orchestrator-run auto-remediate-runs history summary/export behavior:
+
+- GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/summary
+  - Validate aggregate counters and latest_record consistency.
+- GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/export
+  - Validate summary + paged record packing and cursor continuity.
+- Correlate with:
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate
