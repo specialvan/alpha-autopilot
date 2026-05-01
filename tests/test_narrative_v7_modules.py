@@ -2752,6 +2752,80 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
     assert auto_remediate_run_history_after_prune.total_records == 1
     assert auto_remediate_run_history_after_prune.malformed_line_count == 0
 
+    with auto_remediate_run_history_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "100",
+    )
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_PRUNE_KEEP_LAST",
+        "1",
+    )
+
+    auto_remediate_run_history_auto_prune_dry_run = (
+        store.auto_prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=True
+        )
+    )
+    assert auto_remediate_run_history_auto_prune_dry_run.dry_run is True
+    assert auto_remediate_run_history_auto_prune_dry_run.should_prune is True
+    assert auto_remediate_run_history_auto_prune_dry_run.prune is not None
+    assert auto_remediate_run_history_auto_prune_dry_run.prune.dry_run is True
+    assert auto_remediate_run_history_auto_prune_dry_run.prune.total_records_before == 1
+    assert auto_remediate_run_history_auto_prune_dry_run.prune.malformed_candidate_count >= 1
+    assert auto_remediate_run_history_auto_prune_dry_run.prune.malformed_dropped_count == 0
+
+    auto_remediate_run_history_auto_prune_apply = (
+        store.auto_prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=False
+        )
+    )
+    assert auto_remediate_run_history_auto_prune_apply.dry_run is False
+    assert auto_remediate_run_history_auto_prune_apply.should_prune is True
+    assert auto_remediate_run_history_auto_prune_apply.prune is not None
+    assert auto_remediate_run_history_auto_prune_apply.prune.dry_run is False
+    assert auto_remediate_run_history_auto_prune_apply.prune.total_records_before == 1
+    assert auto_remediate_run_history_auto_prune_apply.prune.kept_count == 1
+    assert auto_remediate_run_history_auto_prune_apply.prune.pruned_count == 0
+    assert auto_remediate_run_history_auto_prune_apply.prune.malformed_candidate_count >= 1
+    assert auto_remediate_run_history_auto_prune_apply.prune.malformed_dropped_count >= 1
+
+    auto_remediate_run_history_after_auto_prune = (
+        store.list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            limit=20
+        )
+    )
+    assert auto_remediate_run_history_after_auto_prune.total_records == 1
+    assert auto_remediate_run_history_after_auto_prune.malformed_line_count == 0
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "0",
+    )
+    auto_remediate_run_history_threshold_auto_prune = (
+        store.auto_prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=True
+        )
+    )
+    assert auto_remediate_run_history_threshold_auto_prune.should_prune is True
+    assert auto_remediate_run_history_threshold_auto_prune.prune is not None
+    assert auto_remediate_run_history_threshold_auto_prune.malformed_line_count == 0
+
+    monkeypatch.setenv(
+        "AA_V7_BENCH_GOVERNANCE_ESCALATION_REMEDIATION_AUTO_REMEDIATE_RUN_AUTO_REMEDIATE_RUNS_AUTO_REMEDIATE_RUNS_PRUNE_TRIGGER_COUNT",
+        "100",
+    )
+    auto_remediate_run_history_auto_prune_not_needed = (
+        store.auto_prune_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs(
+            dry_run=True
+        )
+    )
+    assert auto_remediate_run_history_auto_prune_not_needed.should_prune is False
+    assert auto_remediate_run_history_auto_prune_not_needed.prune is None
+    assert auto_remediate_run_history_auto_prune_not_needed.message == "below_threshold"
+
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:
     controller = DecisionFeedbackController()
