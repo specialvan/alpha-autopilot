@@ -76,6 +76,7 @@ from .schemas import (
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunDigestResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord,
+    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse,
     BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse,
     BenchmarkMaintenanceAlertGovernanceRunPruneResponse,
     BenchmarkMaintenanceAlertGovernanceRunRecord,
@@ -3266,6 +3267,51 @@ class V7BenchmarkStore:
             )
         return response
 
+    def list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs(
+        self,
+        *,
+        limit: int = 100,
+        cursor: str = "",
+    ) -> BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse:
+        query_limit = max(0, int(limit))
+        offset = _parse_cursor_offset(cursor)
+        with self._lock:
+            path = self._governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs_path()
+            if not path.exists():
+                return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse(
+                    limit=query_limit,
+                    cursor=str(offset),
+                    records=[],
+                    message="no_records",
+                )
+            rows, malformed_line_count = (
+                self._read_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+                    path=path
+                )
+            )
+
+        ordered_rows = (
+            self._order_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+                rows
+            )
+        )
+        total = len(ordered_rows)
+        start = min(offset, total)
+        end = min(total, start + query_limit) if query_limit > 0 else total
+        window = ordered_rows[start:end]
+        has_more = end < total
+        next_cursor = str(end) if has_more else ""
+        return BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse(
+            limit=query_limit,
+            cursor=str(start),
+            next_cursor=next_cursor,
+            has_more=has_more,
+            total_records=total,
+            malformed_line_count=malformed_line_count,
+            records=window,
+            message="ok",
+        )
+
     def auto_remediate_maintenance_alert_governance_runs(
         self,
         *,
@@ -3761,6 +3807,40 @@ class V7BenchmarkStore:
                 malformed_count += 1
         return rows, malformed_count
 
+    def _read_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+        self,
+        *,
+        path: Path,
+    ) -> tuple[
+        list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord],
+        int,
+    ]:
+        rows: list[
+            BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord
+        ] = []
+        malformed_count = 0
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except Exception:
+                malformed_count += 1
+                continue
+            if not isinstance(payload, dict):
+                malformed_count += 1
+                continue
+            try:
+                rows.append(
+                    BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord.model_validate(
+                        payload
+                    )
+                )
+            except Exception:
+                malformed_count += 1
+        return rows, malformed_count
+
     def _read_governance_run_records(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertGovernanceRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = []
         malformed_count = 0
@@ -3868,7 +3948,24 @@ class V7BenchmarkStore:
         indexed.sort(
             key=lambda item: (
                 item[1].generated_at,
-                item[1].run_id,
+                item[0],
+            ),
+            reverse=True,
+        )
+        return [item[1] for item in indexed]
+
+    def _order_governance_escalation_remediation_auto_remediate_run_auto_remediate_run_auto_remediate_run_auto_remediate_run_records(
+        self,
+        records: list[
+            BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord
+        ],
+    ) -> list[
+        BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord
+    ]:
+        indexed = list(enumerate(records))
+        indexed.sort(
+            key=lambda item: (
+                item[1].generated_at,
                 item[0],
             ),
             reverse=True,

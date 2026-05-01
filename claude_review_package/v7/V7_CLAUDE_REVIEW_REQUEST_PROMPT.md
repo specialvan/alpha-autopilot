@@ -300,3 +300,15 @@ Please additionally review orchestrator-run auto-remediate-runs history auto-rem
 - Correlate with:
   - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest
   - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-prune
+
+## Round-61 Additional Review Targets
+
+Please additionally review orchestrator-run auto-remediate-runs history auto-remediate-runs history behavior:
+
+- GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs
+  - Validate record ordering and pagination continuity.
+  - Validate action/executed/remediated_orchestrator_runs_auto_remediate_runs/pruned_run_history flags and digest-message trace fields.
+  - Validate malformed-line accounting and readback stability.
+- Correlate with:
+  - POST /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate
+  - GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/digest

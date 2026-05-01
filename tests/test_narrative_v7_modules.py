@@ -2963,16 +2963,33 @@ def test_benchmark_store_auto_remediates_governance_escalation_remediation_auto_
         / "_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs.jsonl"
     )
     assert auto_remediate_runs_auto_remediate_runs_history_log.exists()
-    assert (
-        len(
-            [
-                line
-                for line in auto_remediate_runs_auto_remediate_runs_history_log.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            ]
+    auto_remediate_runs_auto_remediate_runs_history = (
+        store.list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs(
+            limit=20
         )
-        >= 3
     )
+    assert auto_remediate_runs_auto_remediate_runs_history.total_records == 3
+    assert any(
+        item.action == "auto_prune_runs" for item in auto_remediate_runs_auto_remediate_runs_history.records
+    )
+    assert any(
+        item.action == "run_auto_remediation_orchestrator_runs_auto_remediate_runs"
+        for item in auto_remediate_runs_auto_remediate_runs_history.records
+    )
+    assert any(item.action == "observe" for item in auto_remediate_runs_auto_remediate_runs_history.records)
+    assert any(item.dry_run for item in auto_remediate_runs_auto_remediate_runs_history.records)
+    assert any(item.executed for item in auto_remediate_runs_auto_remediate_runs_history.records)
+
+    with auto_remediate_runs_auto_remediate_runs_history_log.open("a", encoding="utf-8") as handle:
+        handle.write("{bad-json\n")
+
+    auto_remediate_runs_auto_remediate_runs_history_after_malformed = (
+        store.list_maintenance_alert_governance_escalation_remediation_auto_remediate_run_auto_remediate_runs_auto_remediate_runs_auto_remediate_runs(
+            limit=20
+        )
+    )
+    assert auto_remediate_runs_auto_remediate_runs_history_after_malformed.total_records == 3
+    assert auto_remediate_runs_auto_remediate_runs_history_after_malformed.malformed_line_count >= 1
 
 
 def test_decision_controller_returns_override_route_when_confirmed() -> None:

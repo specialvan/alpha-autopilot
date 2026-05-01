@@ -668,6 +668,15 @@
 - [x] 输出执行细节（`remediated_orchestrator_runs_auto_remediate_runs/pruned_run_history/orchestrator_runs_auto_remediate_runs_auto_remediate/run_history_auto_prune`）
 - [x] 第60轮回归测试覆盖（orchestrator-runs auto-remediate-runs history auto-remediate store/api）
 
+## 生产化增强清单（第六十一轮）
+
+- [x] 编排执行轨迹自愈执行历史自愈轨迹落盘消费能力（auto-remediate runs history）
+- [x] 轨迹查询接口：`GET /api/narrative/v7/benchmark/maintenance/alerts/governance/runs/escalations/auto-remediations/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs/auto-remediate/runs`
+- [x] 轨迹字段输出：`action/executed/remediated_orchestrator_runs_auto_remediate_runs/pruned_run_history/digest_before_message/digest_after_message`
+- [x] 支持 `limit/cursor` 分页消费与脏行计数（`malformed_line_count`）
+- [x] 将 dry-run 与 apply 执行轨迹统一纳入审计闭环
+- [x] 第61轮回归测试覆盖（orchestrator-runs auto-remediate-runs history auto-remediate-runs history store/api）
+
 ## 后续验收文档清单（提交 Claude 评审）
 
 - [x] `V7_CLAUDE_REVIEW_ACCEPTANCE_SUBMISSION.md`（本次新增）

@@ -1591,6 +1591,23 @@ class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAu
     message: str = ""
 
 
+class BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunListResponse(
+    BaseModel
+):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(default=0, ge=0)
+    cursor: str = ""
+    next_cursor: str = ""
+    has_more: bool = False
+    total_records: int = Field(default=0, ge=0)
+    malformed_line_count: int = Field(default=0, ge=0)
+    records: list[
+        BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord
+    ] = Field(default_factory=list)
+    message: str = ""
+
+
 class BenchmarkMaintenanceAlertGovernanceRunAutoRemediateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
