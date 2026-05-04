@@ -222,3 +222,32 @@
   - `pytest -q tests/test_narrative_v6_api.py tests/test_narrative_v6_observability.py tests/test_narrative_v7_api.py tests/test_narrative_v7_modules.py` -> `106 passed`
   - `npm --prefix ui-react run test` -> `7 files passed, 20 tests passed`
   - `npm --prefix ui-react run build` -> `build success`
+
+## V8.1 Villain Feedback Control Core Update (2026-05-04)
+
+- Status: implemented as a standalone increment-layer control core under `backend/app/services/narrative_v8/`.
+- Boundary kept intact:
+  - no API route registration
+  - no UI wiring
+  - no `writer` or LLM invocation
+  - no persistence coupling
+  - no default-path impact on existing `v1/v2/v4/v6/v7`
+- Delivered modules:
+  - `schemas.py`
+  - `knife_library.py`
+  - `constraints.py`
+  - `selection.py`
+  - `flavor.py`
+  - `ledger.py`
+  - `controller.py`
+- Delivered engineering gates:
+  - focused V8 pytest suite under `tests/test_narrative_v8_*.py`
+  - layered gate `python scripts/run_layered_tests.py v8`
+  - acceptance report script `python scripts/run_v8_acceptance_review.py`
+- Evidence:
+  - `pytest tests/test_narrative_v8_schemas.py tests/test_narrative_v8_knife_library.py tests/test_narrative_v8_selection.py tests/test_narrative_v8_flavor.py tests/test_narrative_v8_ledger.py tests/test_narrative_v8_controller.py tests/test_narrative_v8_integration.py -q` -> `46 passed`
+  - `python scripts/run_layered_tests.py v8` -> `48 passed`
+  - `python scripts/run_v8_acceptance_review.py` -> report `artifacts/acceptance/v8-acceptance-20260504T104703Z.md`
+- Rollback / impact note:
+  - V8 remains isolated and can be ignored by all existing runtime paths.
+  - Current rollback is trivial because no caller is wired into baseline routes yet.

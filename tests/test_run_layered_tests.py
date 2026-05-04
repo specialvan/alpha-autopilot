@@ -28,7 +28,7 @@ def test_resolve_layers_returns_path_based_commands_in_order() -> None:
 
     assert [command.name for command in commands] == ["core", "frontend"]
     assert commands[0].cwd == repo_root
-    assert commands[0].argv[0] == "pytest"
+    assert commands[0].argv[:3] == (sys.executable, "-m", "pytest")
     assert "tests/test_alpha_autopilot_v2_domain.py" in commands[0].argv
     assert commands[1].cwd == repo_root / "ui-react"
     assert commands[1].argv[:3] == ("npm", "test", "--")
@@ -53,6 +53,8 @@ def test_run_layers_prints_and_executes_selected_commands(monkeypatch, capsys) -
     assert calls == [
         (
             (
+                sys.executable,
+                "-m",
                 "pytest",
                 "tests/test_alpha_autopilot_v2_golden_cases.py",
                 "tests/test_alpha_autopilot_v2_rule_fixtures_runtime.py",
@@ -69,7 +71,7 @@ def test_run_layers_prints_and_executes_selected_commands(monkeypatch, capsys) -
 
     output = capsys.readouterr().out
     assert "quality:" in output
-    assert "pytest tests/test_alpha_autopilot_v2_golden_cases.py" in output
+    assert "-m pytest tests/test_alpha_autopilot_v2_golden_cases.py" in output
 
 
 def test_run_layers_uses_windows_npm_cmd_when_needed(monkeypatch) -> None:
@@ -128,3 +130,10 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
     assert "tests/test_narrative_v6_observability.py" in layer_tests
     assert "tests/test_narrative_v6_api.py" in layer_tests
     assert "tests/test_run_v6_acceptance_review.py" in layer_tests
+    assert "tests/test_narrative_v8_schemas.py" in layer_tests
+    assert "tests/test_narrative_v8_knife_library.py" in layer_tests
+    assert "tests/test_narrative_v8_selection.py" in layer_tests
+    assert "tests/test_narrative_v8_flavor.py" in layer_tests
+    assert "tests/test_narrative_v8_ledger.py" in layer_tests
+    assert "tests/test_narrative_v8_controller.py" in layer_tests
+    assert "tests/test_narrative_v8_integration.py" in layer_tests

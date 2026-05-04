@@ -166,3 +166,24 @@
 - 真实章节上下文 API 替换 `mapped_chapter`
 - 更细粒度留存反馈闭环（动态调权与长期追踪）
 - 跨题材和长序列压力场景扩展验证
+
+## V8.1 Standalone Control Core Track (2026-05-04)
+
+- Classification: `Increment`, isolated from baseline defaults.
+- Delivered implementation:
+  - `backend/app/services/narrative_v8/__init__.py`
+  - `backend/app/services/narrative_v8/schemas.py`
+  - `backend/app/services/narrative_v8/knife_library.py`
+  - `backend/app/services/narrative_v8/constraints.py`
+  - `backend/app/services/narrative_v8/selection.py`
+  - `backend/app/services/narrative_v8/flavor.py`
+  - `backend/app/services/narrative_v8/ledger.py`
+  - `backend/app/services/narrative_v8/controller.py`
+  - focused V8 tests and acceptance gates
+- Engineering entry points:
+  - `python scripts/run_layered_tests.py v8`
+  - `python scripts/run_v8_acceptance_review.py`
+- Remaining before any consumer integration:
+  - add explicit caller-level feature flag if V8 is later exposed through API/UI/workbench
+  - define route-level rollback gate before any default-path wiring
+  - keep current standalone core detached from persistence and writer flows

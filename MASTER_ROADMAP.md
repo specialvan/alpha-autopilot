@@ -296,3 +296,19 @@
 - P0/P1/P2 已全部完成并通过专项测试
 - `T01` 到 `T08` 已全部 `ACCEPTED`
 - 阶段执行与验收证据见 `claude_review_package/V6/` 文档包
+
+## 9. V8.1 Standalone Villain Feedback Control Core (2026-05-04)
+
+- Layer classification: `Increment`, standalone, default-off by architecture.
+- Host alignment: `backend/app/services/narrative_v8/`.
+- Scope position:
+  - adjacent to the phase-3 generation-control direction
+  - not wired into baseline routes or UI surfaces
+  - intended as a reusable control core for later consumers
+- Current state:
+  - implementation complete for schema, library, constraints, selection, flavor, ledger, and controller layers
+  - differential and integration tests are in place
+  - layered regression entry and acceptance-report script are in place
+- Mainline decision:
+  - not a mainline candidate yet because API/UI/writer/storage consumers are intentionally out of scope
+  - baseline rollback risk is currently near-zero because no default path calls V8

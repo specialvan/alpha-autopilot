@@ -10,6 +10,8 @@ from typing import Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_EXE = sys.executable
+PYTEST_CMD = (PYTHON_EXE, "-m", "pytest")
 
 
 @dataclass(frozen=True)
@@ -34,7 +36,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
         name="core",
         cwd=REPO_ROOT,
         argv=(
-            "pytest",
+            *PYTEST_CMD,
             "tests/test_alpha_autopilot_v2_domain.py",
             "tests/test_alpha_autopilot_v3_pipeline.py",
             "tests/test_alpha_autopilot_v3_taxonomy_and_models.py",
@@ -45,7 +47,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
         name="quality",
         cwd=REPO_ROOT,
         argv=(
-            "pytest",
+            *PYTEST_CMD,
             "tests/test_alpha_autopilot_v2_golden_cases.py",
             "tests/test_alpha_autopilot_v2_rule_fixtures_runtime.py",
             "tests/test_alpha_autopilot_v2_validation_assets.py",
@@ -60,7 +62,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
         name="api",
         cwd=REPO_ROOT,
         argv=(
-            "pytest",
+            *PYTEST_CMD,
             "tests/test_narrative_v2_api.py",
             "tests/test_narrative_v2_app_wiring.py",
             "tests/test_narrative_v2_backend_app_route.py",
@@ -89,7 +91,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
         name="import",
         cwd=REPO_ROOT,
         argv=(
-            "pytest",
+            *PYTEST_CMD,
             "tests/test_alpha_autopilot_v3_plotpilot_import.py",
             "tests/test_narrative_v2_imported_contexts.py",
             "tests/test_narrative_v2_workbench_quality_enrichment.py",
@@ -99,7 +101,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
         name="v4",
         cwd=REPO_ROOT,
         argv=(
-            "pytest",
+            *PYTEST_CMD,
             "tests/test_alpha_autopilot_v4_modules.py",
             "backend/tests/test_narrative_v4_api.py",
         ),
@@ -108,7 +110,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
         name="v6",
         cwd=REPO_ROOT,
         argv=(
-            "pytest",
+            *PYTEST_CMD,
             "tests/test_narrative_seed_extractor.py",
             "tests/test_character_parameterizer.py",
             "tests/test_parallel_plot_simulation.py",
@@ -122,6 +124,21 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
             "tests/test_narrative_v6_observability.py",
             "tests/test_narrative_v6_api.py",
             "tests/test_run_v6_acceptance_review.py",
+        ),
+    ),
+    "v8": LayerCommand(
+        name="v8",
+        cwd=REPO_ROOT,
+        argv=(
+            *PYTEST_CMD,
+            "tests/test_narrative_v8_schemas.py",
+            "tests/test_narrative_v8_knife_library.py",
+            "tests/test_narrative_v8_selection.py",
+            "tests/test_narrative_v8_flavor.py",
+            "tests/test_narrative_v8_ledger.py",
+            "tests/test_narrative_v8_controller.py",
+            "tests/test_narrative_v8_integration.py",
+            "tests/test_run_v8_acceptance_review.py",
         ),
     ),
 }
