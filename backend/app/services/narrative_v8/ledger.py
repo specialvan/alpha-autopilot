@@ -1,19 +1,45 @@
 from __future__ import annotations
 
-from .schemas import (
-    HookLedgerState,
-    LedgerSnapshot,
-    NarrativeLedgerState,
-    PsychologicalLedgerState,
-    RelationshipLedgerState,
-    StateLedgerShift,
-)
+from .schemas import FlavorRender, FutureHook, HookLedgerState, LedgerSnapshot, NarrativeLedgerState, PsychologicalLedgerState, RelationshipLedgerState, StateLedgerShift
 
 
 LEDGER_LOW = -3
 LEDGER_HIGH = 3
 HIGH_MAGNITUDE_THRESHOLD = 1
 MAX_HIGH_MAGNITUDE_DELTAS = 2
+
+
+def build_state_shift(flavor: FlavorRender, future_hooks: tuple[FutureHook, ...]) -> StateLedgerShift:
+    relationship: dict[str, object] = {}
+    narrative: dict[str, object] = {}
+    psychological: dict[str, object] = {}
+    hook: dict[str, object] = {}
+
+    if flavor.state_shift_focus == "relationship":
+        relationship = {"debt_delta": 2, "dependency_delta": 1}
+        if flavor.pressure_channel == "guilt_pull":
+            relationship["trust_delta"] = -1
+    elif flavor.state_shift_focus == "narrative":
+        narrative = {"explanation_control_delta": 2, "witness_alignment_delta": 1}
+        if flavor.pressure_channel in {"self_image", "status_gap", "witness_pressure"}:
+            narrative["reputation_delta"] = 1
+    elif flavor.state_shift_focus == "psychological":
+        psychological = {"identity_destabilization_delta": 2, "shame_load_delta": 1}
+        if flavor.pressure_channel == "memory_reframe":
+            psychological["wound_activation_delta"] = 1
+    else:
+        hook = {"planted_hooks": future_hooks}
+        relationship = {"debt_delta": 1}
+
+    if future_hooks and flavor.state_shift_focus != "hook":
+        hook = {"planted_hooks": future_hooks}
+
+    return StateLedgerShift(
+        relationship=relationship,
+        narrative=narrative,
+        psychological=psychological,
+        hook=hook,
+    )
 
 
 def apply_state_shift(snapshot: LedgerSnapshot, shift: StateLedgerShift) -> LedgerSnapshot:

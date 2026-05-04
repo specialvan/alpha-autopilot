@@ -77,6 +77,7 @@ def build_scene(
     stake: str = "reputation",
     visibility: str = "public",
     observers: tuple[dict[str, object], ...],
+    current_control_state: str = "harmless",
     existing_state: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
@@ -95,6 +96,7 @@ def build_scene(
         "visibility": visibility,
         "time_pressure": "mid",
         "current_phase": "pressure_test",
+        "current_control_state": current_control_state,
         "existing_state": existing_state or {},
     }
 
@@ -320,6 +322,7 @@ def test_integration_no_fit_fallback_keeps_knife_ids_empty() -> None:
     assert result.packet.decision.primary_knife_id is None
     assert result.packet.decision.secondary_knife_id is None
     assert result.packet.decision.selected_signals == ()
+    assert result.packet.transition.next_state != "collapsed"
 
 
 def test_integration_layered_ledger_update_carries_forward_existing_hooks() -> None:
@@ -412,3 +415,71 @@ def test_integration_state_shift_focus_matches_actual_packet_emphasis() -> None:
     focus = max(totals, key=totals.get)
 
     assert focus == result.packet.flavor_render.state_shift_focus
+
+
+def test_integration_current_control_state_changes_transition_outcome() -> None:
+    villain = build_villain(
+        villain_id="villain-transition-shift",
+        preferred=("self_image_feeding", "courteous_humiliation"),
+    )
+    target = build_target()
+
+    suspicious_result = build_villain_feedback(
+        build_input(
+            villain,
+            target,
+            build_scene(
+                villain_id="villain-transition-shift",
+                observers=networked_observers(),
+                current_control_state="suspicious",
+            ),
+        )
+    )
+    harmless_result = build_villain_feedback(
+        build_input(
+            villain,
+            target,
+            build_scene(
+                villain_id="villain-transition-shift",
+                observers=networked_observers(),
+                current_control_state="harmless",
+            ),
+        )
+    )
+
+    assert suspicious_result.packet.transition.next_state != harmless_result.packet.transition.next_state
+
+
+def test_integration_output_can_carry_control_state_forward_into_next_scene() -> None:
+    villain = build_villain(
+        villain_id="villain-carry-forward",
+        preferred=("self_image_feeding", "courteous_humiliation"),
+    )
+    target = build_target()
+
+    first_result = build_villain_feedback(
+        build_input(
+            villain,
+            target,
+            build_scene(
+                villain_id="villain-carry-forward",
+                observers=networked_observers(),
+                current_control_state="suspicious",
+            ),
+        )
+    )
+
+    followup_result = build_villain_feedback(
+        build_input(
+            villain,
+            target,
+            build_scene(
+                villain_id="villain-carry-forward",
+                observers=networked_observers(),
+                current_control_state=first_result.next_control_state,
+                existing_state=first_result.next_snapshot.model_dump(),
+            ),
+        )
+    )
+
+    assert followup_result.packet.transition.prior_state == first_result.next_control_state

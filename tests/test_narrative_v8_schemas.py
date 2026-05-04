@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from backend.app.services.narrative_v8.schemas import (
+    BuildVillainFeedbackOutput,
     DecisionLayer,
     FlavorRender,
     FutureHook,
@@ -18,6 +19,7 @@ from backend.app.services.narrative_v8.schemas import (
     RelationshipLedgerState,
     SceneContext,
     StateLedgerShift,
+    TransitionLayer,
     VillainFeedbackPacket,
     VillainProfile,
 )
@@ -111,6 +113,7 @@ def build_scene_payload(*, visibility: str = "public", observers: tuple[dict[str
         "visibility": visibility,
         "time_pressure": "mid",
         "current_phase": "pressure_test",
+        "current_control_state": "suspicious",
         "existing_state": build_snapshot_payload(),
     }
 
@@ -159,6 +162,18 @@ def build_state_shift_payload() -> dict[str, object]:
     }
 
 
+def build_transition_payload() -> dict[str, object]:
+    return {
+        "prior_state": "suspicious",
+        "next_state": "upgraded",
+        "failure_mode": None,
+        "recovery_mode": None,
+        "upgrade_trigger": "higher_order_path_found",
+        "upgrade_path": "more_systemic",
+        "transition_reason": "public control path found a stronger structural route",
+    }
+
+
 def build_flavor_render_payload() -> dict[str, object]:
     return {
         "tone": "冷静收网",
@@ -198,9 +213,18 @@ def build_packet_payload() -> dict[str, object]:
             "why_this_villain_style": "她更擅长把羞耻包装成秩序维护",
         },
         "state_shift": build_state_shift_payload(),
+        "transition": build_transition_payload(),
         "future_hooks": (build_hook_payload(),),
         "risk_if_exposed": ("若上位者识破，她会被视为操弄舆论",),
         "flavor_render": build_flavor_render_payload(),
+    }
+
+
+def build_output_payload() -> dict[str, object]:
+    return {
+        "packet": build_packet_payload(),
+        "next_snapshot": build_snapshot_payload(),
+        "next_control_state": "upgraded",
     }
 
 
@@ -227,6 +251,25 @@ def test_schema_rejects_public_scene_without_observers() -> None:
         SceneContext(**payload)
 
 
+def test_schema_rejects_scene_without_current_control_state() -> None:
+    payload = build_scene_payload(
+        visibility="public",
+        observers=(
+            {
+                "id": "observer-judge",
+                "role": "judge",
+                "alignment": "unknown",
+                "importance": 3,
+                "visibility_impact": 3,
+            },
+        ),
+    )
+    payload.pop("current_control_state")
+
+    with pytest.raises(ValidationError):
+        SceneContext(**payload)
+
+
 def test_schema_accepts_layered_state_ledger_shift() -> None:
     shift = StateLedgerShift(**build_state_shift_payload())
 
@@ -238,8 +281,23 @@ def test_schema_accepts_structured_villain_feedback_packet() -> None:
     packet = VillainFeedbackPacket(**build_packet_payload())
 
     assert packet.decision.primary_knife_id == "self_image_feeding"
+    assert packet.transition.next_state == "upgraded"
     assert packet.flavor_render.state_shift_focus == "narrative"
     assert "state_shift" in packet.flavor_render.structural_targets
+
+
+def test_schema_accepts_output_with_explicit_next_control_state() -> None:
+    output = BuildVillainFeedbackOutput(**build_output_payload())
+
+    assert output.next_control_state == output.packet.transition.next_state
+
+
+def test_schema_rejects_output_when_next_control_state_disagrees_with_transition() -> None:
+    payload = build_output_payload()
+    payload["next_control_state"] = "suspicious"
+
+    with pytest.raises(ValidationError):
+        BuildVillainFeedbackOutput(**payload)
 
 
 def test_schema_rejects_flat_old_style_packet_payload() -> None:
@@ -272,3 +330,23 @@ def test_schema_rejects_flavor_render_without_enough_structural_targets() -> Non
 
     with pytest.raises(ValidationError):
         FlavorRender(**payload)
+
+
+def test_schema_rejects_transition_upgrade_path_without_trigger() -> None:
+    payload = build_transition_payload()
+    payload["upgrade_trigger"] = None
+
+    with pytest.raises(ValidationError):
+        TransitionLayer(**payload)
+
+
+def test_schema_rejects_collapsed_transition_with_active_recovery() -> None:
+    payload = build_transition_payload()
+    payload["next_state"] = "collapsed"
+    payload["upgrade_trigger"] = None
+    payload["upgrade_path"] = None
+    payload["recovery_mode"] = "lower_intensity"
+    payload["failure_mode"] = "shell_exposed"
+
+    with pytest.raises(ValidationError):
+        TransitionLayer(**payload)

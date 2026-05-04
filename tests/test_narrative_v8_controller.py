@@ -78,25 +78,28 @@ def build_input() -> BuildVillainFeedbackInput:
             "visibility": "public",
             "time_pressure": "mid",
             "current_phase": "pressure_test",
+            "current_control_state": "suspicious",
             "existing_state": {},
         },
         knife_library=build_default_knife_library(),
     )
 
 
-def test_controller_returns_structured_packet_plus_next_snapshot() -> None:
+def test_controller_returns_structured_packet_plus_next_snapshot_and_next_control_state() -> None:
     result = build_villain_feedback(build_input())
 
     assert result.packet.villain_id == "villain-controller"
     assert result.packet.target_id == "target-controller"
     assert result.next_snapshot.narrative.explanation_control >= 0
+    assert result.next_control_state == result.packet.transition.next_state
 
 
-def test_controller_emits_decision_explanation_state_shift_and_future_hooks_as_separate_layers() -> None:
+def test_controller_emits_decision_explanation_transition_state_shift_and_future_hooks_as_separate_layers() -> None:
     result = build_villain_feedback(build_input())
 
     assert result.packet.decision.selection_mode == "scored_fit"
     assert result.packet.explanation.external_move
+    assert result.packet.transition.prior_state == "suspicious"
     assert result.packet.state_shift.narrative.explanation_control_delta >= 0
     assert result.packet.future_hooks
 
@@ -126,6 +129,13 @@ def test_controller_delegates_hard_filtering_to_selection_helpers() -> None:
 
 def test_controller_delegates_state_application_to_ledger_helpers() -> None:
     with patch("backend.app.services.narrative_v8.controller.apply_state_shift", wraps=build_villain_feedback.__globals__["apply_state_shift"]) as spy:
+        build_villain_feedback(build_input())
+
+    assert spy.call_count == 1
+
+
+def test_controller_delegates_transition_derivation_to_transition_helpers() -> None:
+    with patch("backend.app.services.narrative_v8.controller.derive_transition_outcome", wraps=build_villain_feedback.__globals__["derive_transition_outcome"]) as spy:
         build_villain_feedback(build_input())
 
     assert spy.call_count == 1

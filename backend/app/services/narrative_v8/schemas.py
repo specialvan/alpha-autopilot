@@ -35,6 +35,45 @@ ControlPhase: TypeAlias = Literal[
     "conversion",
     "harvest",
 ]
+ControlSurfaceState: TypeAlias = Literal[
+    "harmless",
+    "suspicious",
+    "distrusted",
+    "repair_attempt",
+    "partially_restored",
+    "upgraded",
+    "more_hidden",
+    "stronger",
+    "hardened",
+    "collapsed",
+]
+FailureMode: TypeAlias = Literal[
+    "shell_exposed",
+    "pace_lost",
+    "position_locked",
+    "narrative_lost",
+]
+RecoveryMode: TypeAlias = Literal[
+    "re_feel_vulnerability",
+    "lower_intensity",
+    "retreat_to_safer_role",
+    "change_scene",
+    "re_establish_decorum",
+    "re_establish_narrative_control",
+]
+UpgradeTrigger: TypeAlias = Literal[
+    "primitive_stalled",
+    "shell_seen_through",
+    "higher_order_path_found",
+]
+UpgradePath: TypeAlias = Literal[
+    "more_hidden",
+    "more_sparse",
+    "more_systemic",
+    "more_enduring",
+    "more_complex",
+    "outsourced_interpretation",
+]
 StructuralTarget: TypeAlias = Literal[
     "external_move",
     "risk_if_exposed",
@@ -305,6 +344,7 @@ class SceneContext(NarrativeV8BaseModel):
     visibility: SceneVisibility
     time_pressure: TimePressure
     current_phase: ControlPhase
+    current_control_state: ControlSurfaceState
     existing_state: LedgerSnapshot = Field(default_factory=LedgerSnapshot)
 
     @model_validator(mode="after")
@@ -375,6 +415,24 @@ class ExplanationLayer(NarrativeV8BaseModel):
     why_this_villain_style: str = Field(min_length=1)
 
 
+class TransitionLayer(NarrativeV8BaseModel):
+    prior_state: ControlSurfaceState
+    next_state: ControlSurfaceState
+    failure_mode: FailureMode | None = None
+    recovery_mode: RecoveryMode | None = None
+    upgrade_trigger: UpgradeTrigger | None = None
+    upgrade_path: UpgradePath | None = None
+    transition_reason: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_transition_consistency(self) -> "TransitionLayer":
+        if self.upgrade_path is not None and self.upgrade_trigger is None:
+            raise ValueError("upgrade_path requires upgrade_trigger")
+        if self.next_state == "collapsed" and self.recovery_mode is not None:
+            raise ValueError("collapsed transition must not carry recovery_mode")
+        return self
+
+
 class FlavorRender(NarrativeV8BaseModel):
     tone: str = Field(min_length=1)
     aesthetic: tuple[str, ...]
@@ -431,6 +489,7 @@ class VillainFeedbackPacket(NarrativeV8BaseModel):
     scene_arena: ArenaType
     decision: DecisionLayer
     explanation: ExplanationLayer
+    transition: TransitionLayer
     state_shift: StateLedgerShift
     future_hooks: tuple[FutureHook, ...] = ()
     risk_if_exposed: tuple[str, ...] = ()
@@ -455,3 +514,10 @@ class BuildVillainFeedbackInput(NarrativeV8BaseModel):
 class BuildVillainFeedbackOutput(NarrativeV8BaseModel):
     packet: VillainFeedbackPacket
     next_snapshot: LedgerSnapshot
+    next_control_state: ControlSurfaceState
+
+    @model_validator(mode="after")
+    def _validate_control_surface_handoff(self) -> "BuildVillainFeedbackOutput":
+        if self.next_control_state != self.packet.transition.next_state:
+            raise ValueError("next_control_state must match packet.transition.next_state")
+        return self

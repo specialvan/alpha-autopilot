@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .schemas import FlavorRender, KnifePrimitive, SceneContext, VillainProfile
+from .schemas import DecisionLayer, ExplanationLayer, FlavorRender, FutureHook, KnifePrimitive, SceneContext, VillainProfile
 
 
 PUBLIC_PRESSURE_KNIVES = {"self_image_feeding", "courteous_humiliation", "high_ground_pity"}
@@ -109,6 +109,63 @@ def build_state_shift_emphasis(flavor: FlavorRender) -> dict[str, int]:
         emphasis["hook"] += 1
 
     return emphasis
+
+
+def build_future_hooks(
+    *,
+    knife: KnifePrimitive,
+    flavor: FlavorRender,
+    villain: VillainProfile,
+    scene: SceneContext,
+) -> tuple[FutureHook, ...]:
+    hook_id = f"{villain.id}-{knife.id}-{flavor.hook_style}-{scene.current_phase}"
+    recovery_condition = (
+        "wait for witnesses to reinterpret the exchange or for the target to defend face"
+        if scene.visibility == "public"
+        else "wait for the target to re-enter the dependency boundary"
+    )
+    return (
+        FutureHook(
+            id=hook_id,
+            source_knife_id=knife.id,
+            description=build_hook_seed(knife, flavor),
+            payoff_window=_resolve_payoff_window(villain.time_horizon),
+            recovery_condition=recovery_condition,
+        ),
+    )
+
+
+def build_explanation(
+    *,
+    decision: DecisionLayer,
+    knife: KnifePrimitive,
+    flavor: FlavorRender,
+    villain: VillainProfile,
+    scene: SceneContext,
+) -> ExplanationLayer:
+    if decision.selection_mode == "fallback":
+        return ExplanationLayer(
+            external_move=_build_fallback_external_move(decision, scene),
+            inner_drive=f"{villain.private_drive[0]} still dominates the read, but she chooses not to land a knife yet",
+            target_misread="the target mistakes the pause for safety instead of a reset in control posture",
+            why_now=f"the current {scene.visibility} arena and {scene.stake} pressure do not support a stable knife",
+            why_this_choice=decision.fallback_reason or "no stable knife survived the control gates",
+            why_this_villain_style=(
+                f"she keeps the {villain.public_mask[0]} shell intact and converts initiative into delayed control"
+            ),
+        )
+
+    primary_signal = decision.selected_signals[0]
+    return ExplanationLayer(
+        external_move=build_external_move_envelope(knife, flavor),
+        inner_drive=f"{villain.private_drive[0]} and {villain.private_drive[-1]} jointly drive this move",
+        target_misread=_describe_target_misread(flavor),
+        why_now=f"the {scene.visibility} arena and {scene.stake} stakes open a real window for {knife.name}",
+        why_this_choice="; ".join(primary_signal.reasons),
+        why_this_villain_style=(
+            f"the {villain.public_mask[0]} surface stays aligned with the {flavor.delivery_surface} delivery style"
+        ),
+    )
 
 
 def _build_tone(villain: VillainProfile, knife: KnifePrimitive, scene: SceneContext) -> str:
@@ -274,3 +331,35 @@ def _select_state_shift_focus(
     if villain.flavor_profile.control_preference in {"private_invasion", "emotional_absorption"}:
         return "relationship"
     return "relationship"
+
+
+def _build_fallback_external_move(decision: DecisionLayer, scene: SceneContext) -> str:
+    action = decision.fallback_action or "gather_information"
+    if action == "reduce_exposure":
+        return f"she retracts the public motion and leaves only the least actionable {scene.stake} posture behind"
+    if action == "defer_to_public_mask":
+        return "she retreats into the safest public mask and leaves no clean proof of intent"
+    if action == "hold_position":
+        return "she holds position without adding force and waits for a steadier opening"
+    return "she does not land a knife yet and instead redirects the room toward safer information gathering"
+
+
+def _describe_target_misread(flavor: FlavorRender) -> str:
+    mapping = {
+        "self_image": "the target mistakes face maintenance for self-directed choice",
+        "witness_pressure": "the target reads observers as passive onlookers instead of active judges",
+        "guilt_pull": "the target mistakes guilt for a debt that must be paid immediately",
+        "status_gap": "the target mistakes a concession for real balance",
+        "dependency_pull": "the target mistakes soothing for understanding",
+        "memory_reframe": "the target mistakes reframing for genuine recognition of old hurt",
+    }
+    return mapping[flavor.pressure_channel]
+
+
+def _resolve_payoff_window(time_horizon: str) -> str:
+    mapping = {
+        "short": "near",
+        "mid": "mid",
+        "long": "long",
+    }
+    return mapping[time_horizon]

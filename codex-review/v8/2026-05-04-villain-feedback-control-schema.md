@@ -32,7 +32,8 @@
 4. `backend/app/services/narrative_v8/selection.py`
 5. `backend/app/services/narrative_v8/flavor.py`
 6. `backend/app/services/narrative_v8/ledger.py`
-7. `backend/app/services/narrative_v8/controller.py`
+7. `backend/app/services/narrative_v8/transitions.py`
+8. `backend/app/services/narrative_v8/controller.py`
 
 理由：
 
@@ -256,6 +257,7 @@ class SceneContext(BaseModel):
     visibility: "SceneVisibility"
     time_pressure: "TimePressure"
     current_phase: "ControlPhase"
+    current_control_state: "ControlSurfaceState"
     existing_state: "LedgerSnapshot"
 ```
 
@@ -366,9 +368,78 @@ class StateLedgerShift(BaseModel):
 3. 账本记录的是“局势偏移”，不是事件流水。
 4. `hook` 层只能处理未来钩子、回收钩子、延迟 payoff，不和关系层混写。
 
+### 4.4 失手 / 修复 / 升级 / 状态迁移层
+
+Claude 固定过的证据链不只要求“有 ledger”，还要求把 `failure_mode / recovery_mode / upgrade_trigger / upgrade_path / transition_state` 明确成一等结构，而不是散在叙述里。
+
+```python
+ControlSurfaceState = Literal[
+    "harmless",
+    "suspicious",
+    "distrusted",
+    "repair_attempt",
+    "partially_restored",
+    "upgraded",
+    "more_hidden",
+    "stronger",
+    "hardened",
+    "collapsed",
+]
+
+FailureMode = Literal[
+    "shell_exposed",
+    "pace_lost",
+    "position_locked",
+    "narrative_lost",
+]
+
+RecoveryMode = Literal[
+    "re_feel_vulnerability",
+    "lower_intensity",
+    "retreat_to_safer_role",
+    "change_scene",
+    "re_establish_decorum",
+    "re_establish_narrative_control",
+]
+
+UpgradeTrigger = Literal[
+    "primitive_stalled",
+    "shell_seen_through",
+    "higher_order_path_found",
+]
+
+UpgradePath = Literal[
+    "more_hidden",
+    "more_sparse",
+    "more_systemic",
+    "more_enduring",
+    "more_complex",
+    "outsourced_interpretation",
+]
+
+
+class TransitionLayer(BaseModel):
+    prior_state: ControlSurfaceState
+    next_state: ControlSurfaceState
+    failure_mode: FailureMode | None = None
+    recovery_mode: RecoveryMode | None = None
+    upgrade_trigger: UpgradeTrigger | None = None
+    upgrade_path: UpgradePath | None = None
+    transition_reason: str
+```
+
+这一层的工程约束必须写死：
+
+1. `current_control_state` 必须作为 `SceneContext` 输入的一部分，而不是让 controller 自己猜。
+2. `failure_mode`、`recovery_mode`、`upgrade_trigger` 不能靠解释层文案代替。
+3. `fallback` 只代表本次不稳定落刀，不等于自动进入 `collapsed`。
+4. `TransitionLayer` 必须写出 `prior_state -> next_state`，不能只说“风险增大了”。
+5. `upgrade_path` 不能脱离 `upgrade_trigger` 单独出现。
+6. `collapsed` 状态不能同时伪装成 `recovery_mode` 已成立。
+
 ## 5. 结构化输出包
 
-旧版 `VillainFeedbackPacket` 太叙述化。`v8.1` 必须拆成“决策层 + 解释层 + 状态层 + 钩子层 + 风味层”。
+旧版 `VillainFeedbackPacket` 太叙述化。`v8.1` 必须拆成“决策层 + 解释层 + 迁移层 + 状态层 + 钩子层 + 风味层”。
 
 ```python
 class SelectedKnifeSignal(BaseModel):
@@ -471,6 +542,7 @@ class VillainFeedbackPacket(BaseModel):
     scene_arena: ArenaType
     decision: DecisionLayer
     explanation: ExplanationLayer
+    transition: TransitionLayer
     state_shift: StateLedgerShift
     future_hooks: tuple["FutureHook", ...]
     risk_if_exposed: tuple[str, ...]
@@ -539,6 +611,7 @@ class FutureHook(BaseModel):
 -> 输出 decision layer 与 rejected reasons
 -> 做风味重绘
 -> 生成 explanation layer
+-> 结合 current_control_state、暴露风险、修复动作、升级触发信号生成 transition layer
 -> 生成分层 state_shift
 -> 产出 future hooks
 -> 应用 shift 得到 next LedgerSnapshot
@@ -604,6 +677,9 @@ class BuildVillainFeedbackOutput(BaseModel):
 9. `selection_mode="fallback"` 时，`primary_knife_id` 与 `secondary_knife_id` 必须为空，`selected_signals` 必须为空。
 10. `FlavorRender.structural_targets` 必须显式标记至少 2 个被改写的结构面。
 11. `FlavorRender` 必须改变结构化输出，而不只是改变叙述语气。
+12. `TransitionLayer` 必须显式写出 `prior_state`、`next_state`、`transition_reason`。
+13. `upgrade_trigger` / `upgrade_path` 不能只写进评语，必须进入结构层。
+14. 失败、修复、升级、坍塌的状态迁移不能继续停留在 controller 口头逻辑里。
 
 ## 9. 当前建议的最小落点
 
@@ -615,14 +691,16 @@ class BuildVillainFeedbackOutput(BaseModel):
 4. `backend/app/services/narrative_v8/selection.py`
 5. `backend/app/services/narrative_v8/flavor.py`
 6. `backend/app/services/narrative_v8/ledger.py`
-7. `backend/app/services/narrative_v8/controller.py`
-8. `backend/app/services/narrative_v8/__init__.py`
-9. `tests/test_narrative_v8_schemas.py`
-10. `tests/test_narrative_v8_knife_library.py`
-11. `tests/test_narrative_v8_selection.py`
-12. `tests/test_narrative_v8_flavor.py`
-13. `tests/test_narrative_v8_ledger.py`
-14. `tests/test_narrative_v8_controller.py`
+7. `backend/app/services/narrative_v8/transitions.py`
+8. `backend/app/services/narrative_v8/controller.py`
+9. `backend/app/services/narrative_v8/__init__.py`
+10. `tests/test_narrative_v8_schemas.py`
+11. `tests/test_narrative_v8_knife_library.py`
+12. `tests/test_narrative_v8_selection.py`
+13. `tests/test_narrative_v8_flavor.py`
+14. `tests/test_narrative_v8_ledger.py`
+15. `tests/test_narrative_v8_transitions.py`
+16. `tests/test_narrative_v8_controller.py`
 
 ## 10. 一句话 handoff
 

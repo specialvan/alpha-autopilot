@@ -67,6 +67,7 @@ def build_scene(
         visibility=visibility,
         time_pressure="mid",
         current_phase="pressure_test",
+        current_control_state="harmless",
         existing_state={},
     )
 

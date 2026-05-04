@@ -92,6 +92,7 @@ def build_scene(
     observers: tuple[dict[str, object], ...],
     asymmetry: int = 2,
     time_pressure: str = "mid",
+    current_control_state: str = "harmless",
 ) -> SceneContext:
     return SceneContext(
         arena=arena,
@@ -109,6 +110,7 @@ def build_scene(
         visibility=visibility,
         time_pressure=time_pressure,
         current_phase="pressure_test",
+        current_control_state=current_control_state,
         existing_state={},
     )
 
