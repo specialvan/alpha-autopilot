@@ -386,3 +386,70 @@ def test_selection_no_fit_path_returns_structured_fallback_without_fake_knife() 
     assert result.decision.selected_signals == ()
     assert result.decision.fallback_action is not None
     assert result.decision.fallback_reason
+
+
+def test_selection_public_suspicious_no_fit_uses_public_mask_fallback() -> None:
+    result = select_knives(
+        build_villain(
+            villain_id="villain-public-fallback",
+            preferred=("courteous_humiliation",),
+            secondary=(),
+            forbidden=("relationship_withdrawal",),
+        ),
+        build_target(
+            witness_sensitivity="low",
+            weak_points=("certainty",),
+            core_need="distance",
+            social_priorities=(),
+            identity_anchor="模糊",
+        ),
+        build_scene(
+            visibility="public",
+            stake="reputation",
+            observers=(
+                {
+                    "id": "observer-transmitter",
+                    "role": "transmitter",
+                    "alignment": "unknown",
+                    "importance": 2,
+                    "visibility_impact": 2,
+                },
+            ),
+            current_control_state="suspicious",
+        ),
+        library=build_default_knife_library(),
+        compatibility_graph=build_compatibility_graph(),
+    )
+
+    assert result.decision.selection_mode == "fallback"
+    assert result.decision.fallback_action == "defer_to_public_mask"
+
+
+def test_selection_private_suspicious_no_fit_prefers_hold_position_over_generic_probe() -> None:
+    result = select_knives(
+        build_villain(
+            villain_id="villain-private-fallback",
+            preferred=("courteous_humiliation",),
+            secondary=(),
+            forbidden=("relationship_withdrawal",),
+        ),
+        build_target(
+            witness_sensitivity="low",
+            weak_points=("certainty",),
+            core_need="distance",
+            social_priorities=(),
+            identity_anchor="模糊",
+        ),
+        build_scene(
+            arena="qingzhai",
+            stake="bond",
+            visibility="private",
+            observers=(),
+            current_control_state="suspicious",
+        ),
+        library=build_default_knife_library(),
+        compatibility_graph=build_compatibility_graph(),
+    )
+
+    assert result.decision.selection_mode == "fallback"
+    assert result.decision.fallback_action == "hold_position"

@@ -297,18 +297,22 @@
 - `T01` 到 `T08` 已全部 `ACCEPTED`
 - 阶段执行与验收证据见 `claude_review_package/V6/` 文档包
 
-## 9. V8.1 Standalone Villain Feedback Control Core (2026-05-04)
+## 9. V8.2 Standalone Villain Feedback Control Core (2026-05-05)
 
 - Layer classification: `Increment`, standalone, default-off by architecture.
 - Host alignment: `backend/app/services/narrative_v8/`.
 - Scope position:
   - adjacent to the phase-3 generation-control direction
-  - not wired into baseline routes or UI surfaces
+  - wired only into the `v2` workbench context enrichment path behind `v8_workbench_enabled`
+  - not wired into baseline recommendation routes or dashboard defaults
   - intended as a reusable control core for later consumers
 - Current state:
-  - implementation complete for schema, library, constraints, selection, flavor, ledger, and controller layers
-  - differential and integration tests are in place
-  - layered regression entry and acceptance-report script are in place
+  - `V8.1` schema/selector/controller baseline has been tightened into a `V8.2` runtime that now includes helper-owned `fallbacks.py`, `transition_policy.py`, and `transitions.py`
+  - `SceneContext.current_control_state`, `VillainFeedbackPacket.transition`, `BuildVillainFeedbackOutput.next_control_state`, and `BuildVillainFeedbackOutput.build_followup_scene(...)` are now aligned as the standalone control-surface handoff
+  - transition upgrades are now gated by explicit observer-topology and public-trace rules instead of a single soft upgrade window
+  - first external consumer wiring now lands in `/api/v2/workbench/contexts` as `v8_preview`, summarized through `workbench_bridge.py`
+  - differential, transition, fallback, controller, and integration tests are in place
+  - layered regression entry and acceptance-report script are in place and cover the expanded V8 helper surface
 - Mainline decision:
-  - not a mainline candidate yet because API/UI/writer/storage consumers are intentionally out of scope
-  - baseline rollback risk is currently near-zero because no default path calls V8
+  - not a mainline candidate yet because only a guarded `v2` workbench consumer is wired; broader API/UI/writer/storage rollout remains out of scope
+  - baseline rollback risk remains low because non-workbench default paths do not call V8 and the workbench caller is gated by `v8_workbench_enabled`

@@ -121,7 +121,7 @@ class V4AlertChannel:
         if not self.state_path.exists():
             return None
         try:
-            payload = json.loads(self.state_path.read_text(encoding="utf-8"))
+            payload = json.loads(self.state_path.read_text(encoding="utf-8-sig"))
         except Exception:
             return None
         if not isinstance(payload, dict):

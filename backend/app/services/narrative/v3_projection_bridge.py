@@ -29,7 +29,7 @@ def load_matrix_projection(paths: Iterable[Path]) -> tuple[list[dict[str, Any]],
         if not path.exists():
             continue
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except Exception:
             continue
         if not isinstance(payload, list):

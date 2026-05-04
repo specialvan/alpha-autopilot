@@ -223,12 +223,13 @@
   - `npm --prefix ui-react run test` -> `7 files passed, 20 tests passed`
   - `npm --prefix ui-react run build` -> `build success`
 
-## V8.1 Villain Feedback Control Core Update (2026-05-04)
+## V8.2 Villain Feedback Control Core Update (2026-05-05)
 
-- Status: implemented as a standalone increment-layer control core under `backend/app/services/narrative_v8/`.
+- Status: `V8.1` standalone core has been tightened into a `V8.2` runtime-aligned increment control core under `backend/app/services/narrative_v8/`.
 - Boundary kept intact:
-  - no API route registration
-  - no UI wiring
+  - no dedicated V8 route registration
+  - no baseline dashboard or recommendation-path replacement
+  - only controlled enrichment on existing `/api/v2/workbench/contexts`
   - no `writer` or LLM invocation
   - no persistence coupling
   - no default-path impact on existing `v1/v2/v4/v6/v7`
@@ -239,15 +240,28 @@
   - `selection.py`
   - `flavor.py`
   - `ledger.py`
+  - `fallbacks.py`
+  - `transition_policy.py`
+  - `transitions.py`
   - `controller.py`
+  - `BuildVillainFeedbackOutput.build_followup_scene(...)` handoff path in `schemas.py`
 - Delivered engineering gates:
   - focused V8 pytest suite under `tests/test_narrative_v8_*.py`
   - layered gate `python scripts/run_layered_tests.py v8`
   - acceptance report script `python scripts/run_v8_acceptance_review.py`
+- First external consumer wiring:
+  - `backend/app/services/narrative_v8/workbench_bridge.py`
+  - `backend/app/services/narrative_v2/workbench_service.py`
+  - `backend/app/services/narrative_v2/schemas.py` (`v8_preview`)
+  - `backend/app/core/config.py` (`v8_workbench_enabled`)
 - Evidence:
-  - `pytest tests/test_narrative_v8_schemas.py tests/test_narrative_v8_knife_library.py tests/test_narrative_v8_selection.py tests/test_narrative_v8_flavor.py tests/test_narrative_v8_ledger.py tests/test_narrative_v8_controller.py tests/test_narrative_v8_integration.py -q` -> `46 passed`
-  - `python scripts/run_layered_tests.py v8` -> `48 passed`
-  - `python scripts/run_v8_acceptance_review.py` -> report `artifacts/acceptance/v8-acceptance-20260504T104703Z.md`
+  - `pytest tests/test_narrative_v8_workbench_preview.py tests/test_narrative_v2_workbench_context_api.py tests/test_narrative_v2_workbench_quality_enrichment.py tests/test_run_layered_tests.py tests/test_run_v8_acceptance_review.py -q` -> `22 passed`
+  - `python scripts/run_layered_tests.py api import v8` -> `api: 24 passed`, `import: 20 passed`, `v8: 84 passed`
+  - `python scripts/run_v8_acceptance_review.py` -> report `artifacts/acceptance/v8-acceptance-20260504T185216Z.md`
+- Residual guard items:
+  - transition thresholds are now locked into explicit topology-gated policy rules, and benchmark breadth now covers public-network upgrade, private-recovery fallback, and disabled rollback workbench paths, but broader topology coverage is still bounded
+  - `next_control_state` and `build_followup_scene(...)` now feed a first external consumer through `/api/v2/workbench/contexts` `v8_preview`, gated by `v8_workbench_enabled`, but broader caller adoption still needs guardrails
+  - controller/helper boundaries are now guarded by delegate, transition pass-through, workbench preview, and integration regression tests, but future consumers still need to preserve those owners
 - Rollback / impact note:
-  - V8 remains isolated and can be ignored by all existing runtime paths.
-  - Current rollback is trivial because no caller is wired into baseline routes yet.
+  - V8 remains isolated from baseline recommendation and default runtime paths.
+  - Current rollback remains trivial because the only wired caller is workbench preview enrichment and it can be disabled through `v8_workbench_enabled`.

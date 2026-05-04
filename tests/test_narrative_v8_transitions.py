@@ -103,10 +103,10 @@ def build_scored_decision() -> DecisionLayer:
     )
 
 
-def build_fallback_decision() -> DecisionLayer:
+def build_fallback_decision(*, fallback_action: str = "reduce_exposure") -> DecisionLayer:
     return DecisionLayer(
         selection_mode="fallback",
-        fallback_action="reduce_exposure",
+        fallback_action=fallback_action,
         fallback_reason="no knife survived hard filters without exposure cost",
         rejected_knives=(),
     )
@@ -140,6 +140,18 @@ def test_transition_turns_suspicious_fallback_into_repair_attempt_not_collapse()
     assert result.next_state == "repair_attempt"
     assert result.recovery_mode == "lower_intensity"
     assert result.failure_mode == "pace_lost"
+
+
+def test_transition_public_mask_fallback_uses_narrative_repair_shell() -> None:
+    result = derive_transition_outcome(
+        scene=build_scene(current_control_state="suspicious"),
+        decision=build_fallback_decision(fallback_action="defer_to_public_mask"),
+        flavor=build_flavor(),
+    )
+
+    assert result.next_state == "repair_attempt"
+    assert result.recovery_mode == "retreat_to_safer_role"
+    assert result.failure_mode == "narrative_lost"
 
 
 def test_transition_restores_repair_attempt_into_partially_restored() -> None:

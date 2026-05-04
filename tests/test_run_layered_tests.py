@@ -114,6 +114,7 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
     assert "tests/test_alpha_autopilot_v3_retention_metrics.py" in layer_tests
     assert "tests/test_alpha_autopilot_v3_qc_report.py" in layer_tests
     assert "tests/test_narrative_v2_decision_contract.py" in layer_tests
+    assert "tests/test_narrative_v2_workbench_context_api.py" in layer_tests
     assert "tests/test_narrative_v2_workbench_quality_enrichment.py" in layer_tests
     assert "tests/test_alpha_autopilot_v4_modules.py" in layer_tests
     assert "backend/tests/test_narrative_v4_api.py" in layer_tests
@@ -131,6 +132,10 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
     assert "tests/test_narrative_v6_api.py" in layer_tests
     assert "tests/test_run_v6_acceptance_review.py" in layer_tests
     assert "tests/test_narrative_v8_schemas.py" in layer_tests
+    assert "tests/test_narrative_v8_fallbacks.py" in layer_tests
+    assert "tests/test_narrative_v8_transition_policy.py" in layer_tests
+    assert "tests/test_narrative_v8_transitions.py" in layer_tests
+    assert "tests/test_narrative_v8_workbench_preview.py" in layer_tests
     assert "tests/test_narrative_v8_knife_library.py" in layer_tests
     assert "tests/test_narrative_v8_selection.py" in layer_tests
     assert "tests/test_narrative_v8_flavor.py" in layer_tests

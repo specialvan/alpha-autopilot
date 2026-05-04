@@ -23,11 +23,15 @@ def test_v6_acceptance_review_commands_cover_required_gates() -> None:
     module = load_module()
     commands = module._commands(Path(r"D:\workspace\alpha-autopilot"))
     joined = [" ".join(item.argv) for item in commands]
+    argv_sets = [set(item.argv) for item in commands]
 
     assert any("tests/test_graph_rag_retrieval.py" in row for row in joined)
     assert any("tests/test_v6_graph_memory_store.py" in row for row in joined)
     assert any("tests/test_narrative_v6_observability.py" in row for row in joined)
-    assert any("scripts/run_layered_tests.py v6 api v4 frontend" in row for row in joined)
+    assert any(
+        {"scripts/run_layered_tests.py", "v6", "api", "v4", "frontend"}.issubset(argv_set)
+        for argv_set in argv_sets
+    )
     assert any("npm --prefix ui-react run build" in row for row in joined)
 
 

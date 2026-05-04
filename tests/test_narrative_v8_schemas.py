@@ -292,6 +292,58 @@ def test_schema_accepts_output_with_explicit_next_control_state() -> None:
     assert output.next_control_state == output.packet.transition.next_state
 
 
+def test_schema_output_can_build_followup_scene_context() -> None:
+    output = BuildVillainFeedbackOutput(**build_output_payload())
+    scene = SceneContext(
+        **build_scene_payload(
+            visibility="public",
+            observers=(
+                {
+                    "id": "observer-judge",
+                    "role": "judge",
+                    "alignment": "unknown",
+                    "importance": 3,
+                    "visibility_impact": 3,
+                },
+            ),
+        )
+    )
+
+    followup = output.build_followup_scene(
+        scene,
+        updates={"current_phase": "containment", "time_pressure": "high"},
+    )
+
+    assert followup.current_control_state == output.next_control_state
+    assert followup.existing_state == output.next_snapshot
+    assert followup.current_phase == "containment"
+    assert followup.time_pressure == "high"
+
+
+def test_schema_output_rejects_followup_scene_override_of_handoff_fields() -> None:
+    output = BuildVillainFeedbackOutput(**build_output_payload())
+    scene = SceneContext(
+        **build_scene_payload(
+            visibility="public",
+            observers=(
+                {
+                    "id": "observer-judge",
+                    "role": "judge",
+                    "alignment": "unknown",
+                    "importance": 3,
+                    "visibility_impact": 3,
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(ValueError, match="handoff-managed fields"):
+        output.build_followup_scene(
+            scene,
+            updates={"current_control_state": "harmless"},
+        )
+
+
 def test_schema_rejects_output_when_next_control_state_disagrees_with_transition() -> None:
     payload = build_output_payload()
     payload["next_control_state"] = "suspicious"

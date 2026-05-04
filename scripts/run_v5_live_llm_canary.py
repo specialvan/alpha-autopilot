@@ -125,7 +125,7 @@ class RemoteLLMClient:
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 raw = response.read()
                 latency_ms = (perf_counter() - started) * 1000.0
-                parsed = json.loads(raw.decode("utf-8"))
+                parsed = json.loads(raw.decode("utf-8-sig"))
                 self.call_records.append(
                     LLMCallRecord(
                         purpose=purpose,

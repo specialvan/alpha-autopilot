@@ -8,6 +8,7 @@ from ..narrative.dashboard_service import build_dashboard
 from ..narrative.history_service import HistoryService
 from ..narrative_v4 import build_v4_workbench_preview
 from ..narrative_v4.memory_store import V4MemoryStore, create_default_v4_memory_store
+from ..narrative_v8 import build_v8_workbench_preview
 from ..narrative.state_builder import base_state
 from .imported_contexts import (
     load_imported_workbench_contexts,
@@ -47,6 +48,9 @@ class NarrativeV2WorkbenchService:
     online_report_backoff_seconds: float = field(
         default_factory=lambda: settings.plotpilot_report_api_backoff_seconds,
     )
+    v8_preview_enabled: bool = field(
+        default_factory=lambda: settings.v8_workbench_enabled,
+    )
 
     def list_contexts(
         self,
@@ -83,7 +87,11 @@ class NarrativeV2WorkbenchService:
             if isinstance(contexts, list):
                 payload = dict(online_contexts)
                 payload["contexts"] = [
-                    _context_with_v4_preview(item, memory_store=self.memory_store)
+                    _context_with_previews(
+                        item,
+                        memory_store=self.memory_store,
+                        v8_preview_enabled=self.v8_preview_enabled,
+                    )
                     for item in contexts
                     if isinstance(item, dict)
                 ]
@@ -116,7 +124,11 @@ class NarrativeV2WorkbenchService:
             if isinstance(contexts, list):
                 payload = dict(report_contexts)
                 payload["contexts"] = [
-                    _context_with_v4_preview(item, memory_store=self.memory_store)
+                    _context_with_previews(
+                        item,
+                        memory_store=self.memory_store,
+                        v8_preview_enabled=self.v8_preview_enabled,
+                    )
                     for item in contexts
                     if isinstance(item, dict)
                 ]
@@ -139,7 +151,11 @@ class NarrativeV2WorkbenchService:
             if isinstance(contexts, list):
                 payload = dict(imported)
                 payload["contexts"] = [
-                    _context_with_v4_preview(item, memory_store=self.memory_store)
+                    _context_with_previews(
+                        item,
+                        memory_store=self.memory_store,
+                        v8_preview_enabled=self.v8_preview_enabled,
+                    )
                     for item in contexts
                     if isinstance(item, dict)
                 ]
@@ -184,7 +200,15 @@ class NarrativeV2WorkbenchService:
             "v3_feedback_history": _feedback_history_from_snapshots(history["historySnapshots"]),
         }
 
-        payload = {"contexts": [_context_with_v4_preview(context, memory_store=self.memory_store)]}
+        payload = {
+            "contexts": [
+                _context_with_previews(
+                    context,
+                    memory_store=self.memory_store,
+                    v8_preview_enabled=self.v8_preview_enabled,
+                )
+            ]
+        }
         if include_source_diagnostics:
             payload["source_diagnostics"] = _merge_source_diagnostics(
                 None,
@@ -196,10 +220,11 @@ class NarrativeV2WorkbenchService:
         return payload
 
 
-def _context_with_v4_preview(
+def _context_with_previews(
     context: dict[str, object],
     *,
     memory_store: V4MemoryStore,
+    v8_preview_enabled: bool,
 ) -> dict[str, object]:
     enriched = dict(context)
     try:
@@ -221,6 +246,26 @@ def _context_with_v4_preview(
                 "feedback_history_count": 0,
             },
             "v4_input_profile": {},
+        }
+    try:
+        enriched["v8_preview"] = build_v8_workbench_preview(
+            enriched,
+            preview_enabled=v8_preview_enabled,
+        )
+    except Exception:
+        enriched["v8_preview"] = {
+            "enabled": False,
+            "fallback_reason": "v8-preview-error",
+            "decision_mode": None,
+            "primary_knife_id": None,
+            "secondary_knife_id": None,
+            "fallback_action": None,
+            "next_control_state": None,
+            "transition": None,
+            "explanation": {},
+            "future_hooks": [],
+            "risk_if_exposed": [],
+            "v8_input_profile": {},
         }
     return enriched
 

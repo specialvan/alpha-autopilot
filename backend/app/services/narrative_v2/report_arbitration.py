@@ -172,7 +172,7 @@ def _build_candidate(
 
 def _load_json_dict(path: Path) -> dict[str, object] | None:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
         return None
     if isinstance(payload, dict):

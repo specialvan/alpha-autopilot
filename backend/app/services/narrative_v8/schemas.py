@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, TypeAlias
+from typing import Literal, Mapping, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -521,3 +521,24 @@ class BuildVillainFeedbackOutput(NarrativeV8BaseModel):
         if self.next_control_state != self.packet.transition.next_state:
             raise ValueError("next_control_state must match packet.transition.next_state")
         return self
+
+    def build_followup_scene(
+        self,
+        scene: SceneContext | dict[str, object],
+        *,
+        updates: Mapping[str, object] | None = None,
+    ) -> SceneContext:
+        update_payload = dict(updates or {})
+        blocked_fields = {"current_control_state", "existing_state"}.intersection(update_payload)
+        if blocked_fields:
+            blocked = ", ".join(sorted(blocked_fields))
+            raise ValueError(
+                f"handoff-managed fields must not be overridden manually: {blocked}"
+            )
+
+        base_scene = scene if isinstance(scene, SceneContext) else SceneContext.model_validate(scene)
+        payload = base_scene.model_dump()
+        payload.update(update_payload)
+        payload["current_control_state"] = self.next_control_state
+        payload["existing_state"] = self.next_snapshot.model_dump()
+        return SceneContext.model_validate(payload)

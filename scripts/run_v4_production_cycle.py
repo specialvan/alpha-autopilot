@@ -10,6 +10,8 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_EXE = sys.executable
+PYTEST_CMD = (PYTHON_EXE, "-m", "pytest")
 
 
 @dataclass(frozen=True)
@@ -45,13 +47,13 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                 TaskCommand(
                     name="layer_definition_guard",
                     cwd=repo_root,
-                    argv=("pytest", "tests/test_run_layered_tests.py", "-q"),
+                    argv=(*PYTEST_CMD, "tests/test_run_layered_tests.py", "-q"),
                 ),
                 TaskCommand(
                     name="v4_module_and_api",
                     cwd=repo_root,
                     argv=(
-                        "pytest",
+                        *PYTEST_CMD,
                         "tests/test_alpha_autopilot_v4_modules.py",
                         "backend/tests/test_narrative_v4_api.py",
                         "-q",
@@ -60,7 +62,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                 TaskCommand(
                     name="layered_v4_gate",
                     cwd=repo_root,
-                    argv=("python", "scripts/run_layered_tests.py", "v4"),
+                    argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v4"),
                 ),
             ),
         ),
@@ -73,7 +75,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                     name="dual_path_module_guard",
                     cwd=repo_root,
                     argv=(
-                        "pytest",
+                        *PYTEST_CMD,
                         "tests/test_alpha_autopilot_v4_modules.py::test_v4_bridge_result_contains_v3_context_and_qc_summary",
                         "tests/test_alpha_autopilot_v4_modules.py::test_v4_bridge_can_be_disabled_for_safe_fallback",
                         "-q",
@@ -83,9 +85,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                     name="dual_path_api_guard",
                     cwd=repo_root,
                     argv=(
-                        "python",
-                        "-m",
-                        "pytest",
+                        *PYTEST_CMD,
                         "backend/tests/test_narrative_v4_api.py::test_v4_plot_preview_endpoint_returns_payload_with_candidates_and_qc",
                         "backend/tests/test_narrative_v4_api.py::test_v4_plot_preview_endpoint_can_disable_v4_for_rollback",
                         "backend/tests/test_narrative_v4_api.py::test_v4_workbench_preview_endpoint_returns_structured_preview",
@@ -96,7 +96,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                 TaskCommand(
                     name="layered_v4_regression_gate",
                     cwd=repo_root,
-                    argv=("python", "scripts/run_layered_tests.py", "v4"),
+                    argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v4"),
                 ),
             ),
         ),
@@ -109,7 +109,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                     name="runtime_metrics_module_guard",
                     cwd=repo_root,
                     argv=(
-                        "pytest",
+                        *PYTEST_CMD,
                         "tests/test_alpha_autopilot_v4_modules.py::test_v4_observability_snapshot_reports_trend_and_alerts",
                         "tests/test_alpha_autopilot_v4_modules.py::test_v4_observability_snapshot_reports_runtime_threshold_alerts",
                         "-q",
@@ -119,9 +119,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                     name="runtime_metrics_api_guard",
                     cwd=repo_root,
                     argv=(
-                        "python",
-                        "-m",
-                        "pytest",
+                        *PYTEST_CMD,
                         "backend/tests/test_narrative_v4_api.py::test_v4_observability_snapshot_endpoint_returns_snapshot_and_routing",
                         "backend/tests/test_narrative_v4_api.py::test_v4_observability_snapshot_endpoint_emits_runtime_threshold_alerts",
                         "-q",
@@ -130,7 +128,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                 TaskCommand(
                     name="layered_v4_regression_gate",
                     cwd=repo_root,
-                    argv=("python", "scripts/run_layered_tests.py", "v4"),
+                    argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v4"),
                 ),
             ),
         ),
@@ -143,7 +141,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                     name="remote_alert_module_guard",
                     cwd=repo_root,
                     argv=(
-                        "pytest",
+                        *PYTEST_CMD,
                         "tests/test_alpha_autopilot_v4_modules.py::test_v4_alert_channel_routes_remote_targets_with_oncall_validation",
                         "tests/test_alpha_autopilot_v4_modules.py::test_v4_alert_channel_remote_failure_falls_back_to_local_sink",
                         "-q",
@@ -153,9 +151,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                     name="remote_alert_api_guard",
                     cwd=repo_root,
                     argv=(
-                        "python",
-                        "-m",
-                        "pytest",
+                        *PYTEST_CMD,
                         "backend/tests/test_narrative_v4_api.py::test_v4_observability_alert_route_endpoint_routes_remote_targets",
                         "backend/tests/test_narrative_v4_api.py::test_v4_observability_alert_route_endpoint_applies_cooldown",
                         "-q",
@@ -164,7 +160,7 @@ def _task_definitions(repo_root: Path) -> dict[str, ProductionTask]:
                 TaskCommand(
                     name="layered_v4_regression_gate",
                     cwd=repo_root,
-                    argv=("python", "scripts/run_layered_tests.py", "v4"),
+                    argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v4"),
                 ),
             ),
         ),

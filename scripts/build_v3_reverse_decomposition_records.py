@@ -22,7 +22,7 @@ def main() -> None:
     parser.add_argument("--genre", type=str, required=True)
     args = parser.parse_args()
 
-    payload = json.loads(args.input_report.read_text(encoding="utf-8"))
+    payload = json.loads(args.input_report.read_text(encoding="utf-8-sig"))
     records = build_records_from_plotpilot_report(payload, genre=args.genre)
     projections = [project_record_for_matrix(record) for record in records if record.admission != "rejected"]
 

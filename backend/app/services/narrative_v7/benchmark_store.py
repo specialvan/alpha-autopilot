@@ -503,7 +503,7 @@ class V7BenchmarkStore:
             for file_path in sorted(self.version_root.glob("*.json"), key=lambda item: item.name):
                 total_files += 1
                 try:
-                    payload = json.loads(file_path.read_text(encoding="utf-8"))
+                    payload = json.loads(file_path.read_text(encoding="utf-8-sig"))
                 except Exception:
                     malformed_file_count += 1
                     malformed_files.append(file_path.name)
@@ -552,7 +552,7 @@ class V7BenchmarkStore:
             for file_path in sorted(self.version_root.glob("*.json"), key=lambda item: item.name):
                 total_files += 1
                 try:
-                    payload = json.loads(file_path.read_text(encoding="utf-8"))
+                    payload = json.loads(file_path.read_text(encoding="utf-8-sig"))
                 except Exception:
                     malformed_files.append(file_path)
                     continue
@@ -3731,7 +3731,7 @@ class V7BenchmarkStore:
     ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunRecord] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -3756,7 +3756,7 @@ class V7BenchmarkStore:
     ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunRecord] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -3785,7 +3785,7 @@ class V7BenchmarkStore:
     ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -3819,7 +3819,7 @@ class V7BenchmarkStore:
             BenchmarkMaintenanceAlertGovernanceEscalationRemediationAutoRemediateRunAutoRemediateRunAutoRemediateRunAutoRemediateRunRecord
         ] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -3844,7 +3844,7 @@ class V7BenchmarkStore:
     def _read_governance_run_records(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertGovernanceRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceRunRecord] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -3985,7 +3985,7 @@ class V7BenchmarkStore:
     def _read_alert_events(self, *, path: Path) -> tuple[list[BenchmarkMaintenanceAlertEvent], int]:
         rows: list[BenchmarkMaintenanceAlertEvent] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -4025,7 +4025,7 @@ class V7BenchmarkStore:
     ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationEvent], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceEscalationEvent] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -4050,7 +4050,7 @@ class V7BenchmarkStore:
     ) -> tuple[list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationRunRecord], int]:
         rows: list[BenchmarkMaintenanceAlertGovernanceEscalationRemediationRunRecord] = []
         malformed_count = 0
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -4215,7 +4215,7 @@ class V7BenchmarkStore:
         if not path.exists():
             return None, "version_not_found"
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except Exception:
             return None, "snapshot_parse_failed"
         return self._snapshot_detail_from_payload(payload, expected_version=version)
@@ -4271,7 +4271,7 @@ class V7BenchmarkStore:
         output: list[BenchmarkVersionRecord] = []
         for file_path in sorted(self.version_root.glob("*.json"), key=lambda item: item.name):
             try:
-                payload = json.loads(file_path.read_text(encoding="utf-8"))
+                payload = json.loads(file_path.read_text(encoding="utf-8-sig"))
             except Exception:
                 continue
             detail, reason = self._snapshot_detail_from_payload(payload)
@@ -4336,7 +4336,7 @@ class V7BenchmarkStore:
             return []
 
         rows: list[dict[str, object]] = []
-        for raw in self.path.read_text(encoding="utf-8").splitlines():
+        for raw in self.path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue

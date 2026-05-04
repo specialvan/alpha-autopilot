@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import os
@@ -56,7 +56,7 @@ class DecisionRuleSet:
 
     def _safe_load_rules(self, path: Path) -> dict[str, float]:
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except Exception:
             return {}
         if not isinstance(payload, dict):

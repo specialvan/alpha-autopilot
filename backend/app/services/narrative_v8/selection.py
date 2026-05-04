@@ -5,6 +5,7 @@ from .constraints import (
     evaluate_compatibility_conflict,
     evaluate_knife_rejection,
 )
+from .fallbacks import build_fallback_decision
 from .knife_library import build_compatibility_graph, build_default_knife_library, get_knife_by_id
 from .schemas import (
     DecisionLayer,
@@ -66,7 +67,7 @@ def select_knives(
     ]
     if not viable_candidates:
         return KnifeSelectionResult(
-            decision=_build_fallback_decision(
+            decision=build_fallback_decision(
                 scene=scene,
                 rejected_knives=tuple(
                     rejections
@@ -249,23 +250,6 @@ def _observer_support_bonus(*, knife: KnifePrimitive, scene: SceneContext) -> fl
         if observer.alignment != "target"
     )
     return min(0.14, weighted_support / 50.0)
-
-
-def _build_fallback_decision(
-    *,
-    scene: SceneContext,
-    rejected_knives: tuple[RejectedKnifeReason, ...],
-    fallback_reason: str,
-) -> DecisionLayer:
-    fallback_action = "reduce_exposure" if scene.visibility == "public" else "gather_information"
-    return DecisionLayer(
-        selection_mode="fallback",
-        fallback_action=fallback_action,
-        fallback_reason=fallback_reason,
-        selected_signals=(),
-        rejected_knives=rejected_knives,
-    )
-
 
 def _low_fit_rejections(
     scored_candidates: list[SelectedKnifeSignal], *, detail: str

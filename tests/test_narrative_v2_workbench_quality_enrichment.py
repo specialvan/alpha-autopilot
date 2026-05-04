@@ -94,6 +94,8 @@ def test_workbench_service_enriches_imported_contexts_with_sibling_v3_records(tm
     assert context["v4_preview"]["candidate_count"] >= 2
     assert context["v4_preview"]["selected_candidate"]["predicted_action"]
     assert context["v4_preview"]["relationship_graph"]["edge_count"] >= 1
+    assert context["v8_preview"]["enabled"] is True
+    assert context["v8_preview"]["transition"]["next_state"]
 
 
 def test_workbench_service_keeps_live_history_context_when_imported_source_missing(tmp_path) -> None:
@@ -114,6 +116,8 @@ def test_workbench_service_keeps_live_history_context_when_imported_source_missi
     assert context["v4_preview"]["top_candidates"]
     assert context["v4_preview"]["relationship_graph"]["edge_count"] >= 1
     assert context["v4_preview"]["retention_writeback"]["feedback_count"] >= 1
+    assert context["v8_preview"]["enabled"] is True
+    assert context["v8_preview"]["next_control_state"]
 
 
 def test_workbench_service_keeps_imported_contexts_when_quality_jsonl_is_corrupted(tmp_path) -> None:

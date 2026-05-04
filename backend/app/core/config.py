@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     v7_deadlock_router_enabled: bool = True
     v7_sampler_timeout_ms: int = 3000
     v7_llm_judge_max_tokens: int = 512
+    v8_workbench_enabled: bool = True
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",

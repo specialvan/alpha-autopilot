@@ -44,6 +44,9 @@ def test_v2_workbench_context_route_returns_live_backend_context(tmp_path, monke
     assert body["contexts"][0]["v4_preview"]["relationship_graph"]["edge_count"] >= 1
     assert "retention_writeback" in body["contexts"][0]["v4_preview"]
     assert body["contexts"][0]["v4_preview"]["retention_writeback"]["feedback_count"] >= 1
+    assert body["contexts"][0]["v8_preview"]["enabled"] is True
+    assert body["contexts"][0]["v8_preview"]["next_control_state"]
+    assert body["contexts"][0]["v8_preview"]["transition"]["next_state"]
 
 
 def test_v2_workbench_context_route_returns_imported_quality_enrichment(tmp_path, monkeypatch) -> None:
@@ -132,6 +135,8 @@ def test_v2_workbench_context_route_returns_imported_quality_enrichment(tmp_path
     assert body["contexts"][0]["v4_preview"]["enabled"] is True
     assert body["contexts"][0]["v4_preview"]["candidate_count"] >= 2
     assert body["contexts"][0]["v4_preview"]["relationship_graph"]["edge_count"] >= 1
+    assert body["contexts"][0]["v8_preview"]["enabled"] is True
+    assert body["contexts"][0]["v8_preview"]["decision_mode"] in {"scored_fit", "fallback"}
 
 
 def test_v2_workbench_context_route_falls_back_to_live_context_when_imported_json_is_corrupted(

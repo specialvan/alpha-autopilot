@@ -250,7 +250,7 @@ class PersistentGraphMemoryStore:
             return []
 
         rows: list[dict[str, object]] = []
-        for raw in audit_path.read_text(encoding="utf-8").splitlines():
+        for raw in audit_path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -331,7 +331,7 @@ class PersistentGraphMemoryStore:
         if not self.path.exists():
             return []
         rows: list[GraphMemoryRecord] = []
-        for raw in self.path.read_text(encoding="utf-8").splitlines():
+        for raw in self.path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue
@@ -371,7 +371,7 @@ class PersistentGraphMemoryStore:
         audit_path = self._audit_path()
         if not audit_path.exists():
             return
-        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        lines = [line for line in audit_path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
         if len(lines) <= self.audit_max_rows:
             return
         audit_path.write_text("\n".join(lines[-self.audit_max_rows :]) + "\n", encoding="utf-8")

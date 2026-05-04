@@ -325,6 +325,47 @@ def test_integration_no_fit_fallback_keeps_knife_ids_empty() -> None:
     assert result.packet.transition.next_state != "collapsed"
 
 
+def test_integration_public_suspicious_no_fit_uses_public_mask_and_repair_transition() -> None:
+    result = build_villain_feedback(
+        build_input(
+            build_villain(
+                villain_id="villain-public-fallback",
+                preferred=("courteous_humiliation",),
+                secondary=(),
+            ),
+            build_target(
+                witness_sensitivity="low",
+                weak_points=("certainty",),
+                core_need="distance",
+                social_priorities=(),
+                identity_anchor="模糊",
+            ),
+            build_scene(
+                villain_id="villain-public-fallback",
+                arena="chaotang",
+                stake="reputation",
+                visibility="public",
+                observers=(
+                    {
+                        "id": "observer-transmitter",
+                        "role": "transmitter",
+                        "alignment": "unknown",
+                        "importance": 2,
+                        "visibility_impact": 2,
+                    },
+                ),
+                current_control_state="suspicious",
+            ),
+        )
+    )
+
+    assert result.packet.decision.selection_mode == "fallback"
+    assert result.packet.decision.fallback_action == "defer_to_public_mask"
+    assert result.packet.transition.next_state == "repair_attempt"
+    assert result.packet.transition.recovery_mode == "retreat_to_safer_role"
+    assert result.packet.transition.failure_mode == "narrative_lost"
+
+
 def test_integration_layered_ledger_update_carries_forward_existing_hooks() -> None:
     existing_state = {
         "hook": {
@@ -450,6 +491,30 @@ def test_integration_current_control_state_changes_transition_outcome() -> None:
     assert suspicious_result.packet.transition.next_state != harmless_result.packet.transition.next_state
 
 
+def test_integration_public_judge_only_scene_does_not_upgrade_without_witness_network() -> None:
+    villain = build_villain(
+        villain_id="villain-judge-only",
+        preferred=("self_image_feeding", "courteous_humiliation"),
+    )
+    target = build_target()
+
+    result = build_villain_feedback(
+        build_input(
+            villain,
+            target,
+            build_scene(
+                villain_id="villain-judge-only",
+                observers=judge_observers(),
+                current_control_state="suspicious",
+            ),
+        )
+    )
+
+    assert result.packet.decision.selection_mode == "scored_fit"
+    assert result.packet.transition.next_state == "suspicious"
+    assert result.packet.transition.upgrade_trigger is None
+
+
 def test_integration_output_can_carry_control_state_forward_into_next_scene() -> None:
     villain = build_villain(
         villain_id="villain-carry-forward",
@@ -468,18 +533,22 @@ def test_integration_output_can_carry_control_state_forward_into_next_scene() ->
             ),
         )
     )
+    followup_scene = first_result.build_followup_scene(
+        build_scene(
+            villain_id="villain-carry-forward",
+            observers=networked_observers(),
+            current_control_state="harmless",
+        ),
+        updates={"current_phase": "containment"},
+    )
 
     followup_result = build_villain_feedback(
         build_input(
             villain,
             target,
-            build_scene(
-                villain_id="villain-carry-forward",
-                observers=networked_observers(),
-                current_control_state=first_result.next_control_state,
-                existing_state=first_result.next_snapshot.model_dump(),
-            ),
+            followup_scene.model_dump(),
         )
     )
 
     assert followup_result.packet.transition.prior_state == first_result.next_control_state
+    assert followup_scene.existing_state == first_result.next_snapshot

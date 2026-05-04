@@ -99,7 +99,11 @@ Compared with the earlier `v8` draft, `v8.1` explicitly fixes the following:
    - `TransitionLayer`
    - `VillainFeedbackPacket.transition`
    - `BuildVillainFeedbackOutput.next_control_state`
+   - `backend/app/services/narrative_v8/fallbacks.py`
+   - `backend/app/services/narrative_v8/transition_policy.py`
    - `backend/app/services/narrative_v8/transitions.py`
+   - `tests/test_narrative_v8_fallbacks.py`
+   - `tests/test_narrative_v8_transition_policy.py`
    - `tests/test_narrative_v8_transitions.py`
 
 ## Recommended Review Order
@@ -156,6 +160,6 @@ Claude should mainly verify whether `V8.2` now turns the earlier structural tigh
 - first implementation target is repository-realistic
 - transition-state ownership is elevated into a first-class landed structure instead of a prose-only requirement
 - runtime-vs-doc reality is now called out explicitly instead of being left implicit
-- the remaining review focus is no longer “is transition missing”, but “are the transition heuristics, `next_control_state` adoption path, and controller boundaries tight enough”
+- the remaining review focus is no longer “is transition missing”, but “are the topology-gated transition thresholds broad enough, is the first workbench consumer wiring honest and rollback-safe enough, and are the controller boundaries tight enough”
 
 It is still a planning and review package, not a claim that production runtime is already complete.

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from backend.app.services.narrative_v8.controller import build_villain_feedback
 from backend.app.services.narrative_v8.knife_library import build_default_knife_library
-from backend.app.services.narrative_v8.schemas import BuildVillainFeedbackInput
+from backend.app.services.narrative_v8.schemas import BuildVillainFeedbackInput, TransitionLayer
 
 
 def build_input() -> BuildVillainFeedbackInput:
@@ -139,3 +139,20 @@ def test_controller_delegates_transition_derivation_to_transition_helpers() -> N
         build_villain_feedback(build_input())
 
     assert spy.call_count == 1
+
+
+def test_controller_uses_transition_helper_output_without_rewriting_it() -> None:
+    forced_transition = TransitionLayer(
+        prior_state="suspicious",
+        next_state="hardened",
+        transition_reason="forced-test-transition",
+    )
+
+    with patch(
+        "backend.app.services.narrative_v8.controller.derive_transition_outcome",
+        return_value=forced_transition,
+    ):
+        result = build_villain_feedback(build_input())
+
+    assert result.packet.transition == forced_transition
+    assert result.next_control_state == "hardened"

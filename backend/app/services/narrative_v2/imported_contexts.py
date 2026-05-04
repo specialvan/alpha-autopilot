@@ -74,7 +74,7 @@ def _load_quality_records_from_json(path: Path) -> list[dict[str, object]]:
         return []
 
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
         return []
     if not isinstance(payload, list):
@@ -87,7 +87,7 @@ def _load_quality_records_from_jsonl(path: Path) -> list[dict[str, object]]:
         return []
 
     records: list[dict[str, object]] = []
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
         line = raw_line.strip()
         if not line:
             continue
@@ -354,7 +354,7 @@ def load_workbench_contexts_from_plotpilot_report(
         return None
 
     try:
-        payload = json.loads(report_path.read_text(encoding="utf-8"))
+        payload = json.loads(report_path.read_text(encoding="utf-8-sig"))
     except Exception:
         return None
     if not isinstance(payload, dict):
@@ -429,7 +429,7 @@ def load_imported_workbench_contexts(path: Path) -> dict[str, object] | None:
         return None
 
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
         return None
 

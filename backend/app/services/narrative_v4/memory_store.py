@@ -227,7 +227,7 @@ class V4MemoryStore:
         if not path.exists():
             return []
         rows: list[dict[str, object]] = []
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding="utf-8-sig").splitlines():
             line = raw.strip()
             if not line:
                 continue

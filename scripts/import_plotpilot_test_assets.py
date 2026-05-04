@@ -60,7 +60,7 @@ def import_plotpilot_assets(repo_root: Path, plotpilot_root: Path) -> dict[str, 
     )
 
     report_path = run_dir / "report.json"
-    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    report_payload = json.loads(report_path.read_text(encoding="utf-8-sig"))
     contexts = build_workbench_contexts_from_plotpilot_report(report_payload)
 
     target_root.mkdir(parents=True, exist_ok=True)

@@ -10,6 +10,8 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_EXE = sys.executable
+PYTEST_CMD = (PYTHON_EXE, "-m", "pytest")
 
 
 @dataclass(frozen=True)
@@ -44,13 +46,13 @@ def _resolve_commands(repo_root: Path) -> list[AcceptanceCommand]:
         AcceptanceCommand(
             name="layered_all",
             cwd=repo_root,
-            argv=("python", "scripts/run_layered_tests.py"),
+            argv=(PYTHON_EXE, "scripts/run_layered_tests.py"),
         ),
         AcceptanceCommand(
             name="workbench_contract",
             cwd=repo_root,
             argv=(
-                "pytest",
+                *PYTEST_CMD,
                 "tests/test_narrative_v2_workbench_context_api.py",
                 "tests/test_narrative_v2_imported_contexts.py",
                 "tests/test_narrative_v2_workbench_quality_enrichment.py",

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -68,7 +68,7 @@ class PersistentSimulationStore:
     def _load_from_disk(self) -> dict[str, ParallelPlotSimulationResult]:
         rows: dict[str, ParallelPlotSimulationResult] = {}
         for file_path in self._iter_storage_files():
-            for raw in file_path.read_text(encoding="utf-8").splitlines():
+            for raw in file_path.read_text(encoding="utf-8-sig").splitlines():
                 line = raw.strip()
                 if not line:
                     continue
@@ -139,7 +139,7 @@ class PersistentSimulationStore:
     def _count_rows(path: Path) -> int:
         if not path.exists():
             return 0
-        return sum(1 for raw in path.read_text(encoding="utf-8").splitlines() if raw.strip())
+        return sum(1 for raw in path.read_text(encoding="utf-8-sig").splitlines() if raw.strip())
 
 
 def create_default_v6_simulation_store(root: Path | None = None) -> PersistentSimulationStore:

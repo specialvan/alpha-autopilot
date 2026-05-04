@@ -198,7 +198,7 @@ def _fetch_json_payload_with_meta(
         return None, meta
 
     try:
-        payload: Any = json.loads(raw.decode("utf-8"))
+        payload: Any = json.loads(raw.decode("utf-8-sig"))
     except Exception:
         meta["status"] = "invalid-json"
         return None, meta

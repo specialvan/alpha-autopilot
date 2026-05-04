@@ -43,6 +43,8 @@ def test_v3_build_script_emits_records_and_matrix_projection(tmp_path: Path) -> 
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     assert result.returncode == 0, result.stderr
@@ -60,3 +62,48 @@ def test_v3_build_script_emits_records_and_matrix_projection(tmp_path: Path) -> 
     assert "admission_distribution" in qc
     assert "checkpoint_status_distribution" in qc
     assert "generated_at" in qc
+
+
+def test_v3_build_script_accepts_utf8_bom_report(tmp_path: Path) -> None:
+    source = tmp_path / "report.json"
+    source.write_text(
+        json.dumps(
+            {
+                "model": "gpt-5.4",
+                "results": [
+                    {
+                        "chapter": 1,
+                        "title": "black_jade_awakens",
+                        "success": True,
+                        "chars": 3354,
+                        "preview": "A young cultivator escapes into a sword valley.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8-sig",
+    )
+
+    target = tmp_path / "out"
+    cmd = [
+        sys.executable,
+        "scripts/build_v3_reverse_decomposition_records.py",
+        "--input-report",
+        str(source),
+        "--output-dir",
+        str(target),
+        "--genre",
+        "xuanhuan",
+    ]
+    result = subprocess.run(
+        cmd,
+        cwd=Path(__file__).resolve().parents[1],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (target / "qc_report.json").exists()

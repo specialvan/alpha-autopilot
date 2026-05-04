@@ -167,7 +167,7 @@
 - 更细粒度留存反馈闭环（动态调权与长期追踪）
 - 跨题材和长序列压力场景扩展验证
 
-## V8.1 Standalone Control Core Track (2026-05-04)
+## V8.2 Standalone Control Core Track (2026-05-05)
 
 - Classification: `Increment`, isolated from baseline defaults.
 - Delivered implementation:
@@ -178,12 +178,25 @@
   - `backend/app/services/narrative_v8/selection.py`
   - `backend/app/services/narrative_v8/flavor.py`
   - `backend/app/services/narrative_v8/ledger.py`
+  - `backend/app/services/narrative_v8/fallbacks.py`
+  - `backend/app/services/narrative_v8/transition_policy.py`
+  - `backend/app/services/narrative_v8/transitions.py`
   - `backend/app/services/narrative_v8/controller.py`
-  - focused V8 tests and acceptance gates
+  - `BuildVillainFeedbackOutput.build_followup_scene(...)`
+  - focused V8 tests and acceptance gates with explicit fallback/transition helper coverage
+  - first workbench consumer wiring via `backend/app/services/narrative_v8/workbench_bridge.py`
+  - `backend/app/services/narrative_v2/workbench_service.py` preview enrichment
+  - `backend/app/services/narrative_v2/schemas.py` `v8_preview` payload
+  - `backend/app/core/config.py` `v8_workbench_enabled` rollback gate
 - Engineering entry points:
   - `python scripts/run_layered_tests.py v8`
   - `python scripts/run_v8_acceptance_review.py`
-- Remaining before any consumer integration:
-  - add explicit caller-level feature flag if V8 is later exposed through API/UI/workbench
-  - define route-level rollback gate before any default-path wiring
+- Fresh evidence:
+  - `pytest tests/test_narrative_v8_workbench_preview.py tests/test_narrative_v2_workbench_context_api.py tests/test_narrative_v2_workbench_quality_enrichment.py tests/test_run_layered_tests.py tests/test_run_v8_acceptance_review.py -q` -> `22 passed`
+  - `python scripts/run_layered_tests.py api import v8` -> `api: 24 passed`, `import: 20 passed`, `v8: 84 passed`
+  - `python scripts/run_v8_acceptance_review.py` -> `artifacts/acceptance/v8-acceptance-20260504T185216Z.md`
+- Remaining after first workbench consumer integration:
+  - continue broadening transition benchmark coverage beyond the current public-network upgrade, private-recovery fallback, and disabled rollback workbench scenarios
+  - keep `v8_workbench_enabled` and the disabled-preview payload as the rollback contract for any future API/UI/workbench consumer
+  - extend external adoption beyond workbench only when caller ownership of `next_control_state` / `build_followup_scene(...)` stays explicit
   - keep current standalone core detached from persistence and writer flows

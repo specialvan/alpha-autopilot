@@ -10,6 +10,8 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_EXE = sys.executable
+PYTEST_CMD = (PYTHON_EXE, "-m", "pytest")
 
 
 @dataclass(frozen=True)
@@ -33,7 +35,7 @@ def _commands(repo_root: Path) -> tuple[AcceptanceCommand, ...]:
             name="v6_targeted_gate",
             cwd=repo_root,
             argv=(
-                "pytest",
+                *PYTEST_CMD,
                 "tests/test_graph_rag_retrieval.py",
                 "tests/test_v6_graph_memory_store.py",
                 "tests/test_v6_state_store.py",
@@ -46,7 +48,7 @@ def _commands(repo_root: Path) -> tuple[AcceptanceCommand, ...]:
         AcceptanceCommand(
             name="layered_regression_gate",
             cwd=repo_root,
-            argv=("python", "scripts/run_layered_tests.py", "v6", "api", "v4", "frontend"),
+            argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v6", "api", "v4", "frontend"),
         ),
         AcceptanceCommand(
             name="frontend_build_gate",

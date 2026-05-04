@@ -36,8 +36,8 @@ def test_resolve_task_returns_repo_scoped_commands() -> None:
         "layered_v4_gate",
     ]
     assert all(command.cwd == repo_root for command in task.commands)
-    assert task.commands[0].argv == ("pytest", "tests/test_run_layered_tests.py", "-q")
-    assert task.commands[2].argv == ("python", "scripts/run_layered_tests.py", "v4")
+    assert task.commands[0].argv == (sys.executable, "-m", "pytest", "tests/test_run_layered_tests.py", "-q")
+    assert task.commands[2].argv == (sys.executable, "scripts/run_layered_tests.py", "v4")
 
 
 def test_resolve_t02_task_contains_dual_path_guards() -> None:
@@ -54,12 +54,12 @@ def test_resolve_t02_task_contains_dual_path_guards() -> None:
         "dual_path_api_guard",
         "layered_v4_regression_gate",
     ]
-    assert "test_v4_bridge_result_contains_v3_context_and_qc_summary" in task.commands[0].argv[1]
-    assert "test_v4_bridge_can_be_disabled_for_safe_fallback" in task.commands[0].argv[2]
-    assert task.commands[1].argv[:3] == ("python", "-m", "pytest")
+    assert any("test_v4_bridge_result_contains_v3_context_and_qc_summary" in arg for arg in task.commands[0].argv)
+    assert any("test_v4_bridge_can_be_disabled_for_safe_fallback" in arg for arg in task.commands[0].argv)
+    assert task.commands[1].argv[:3] == (sys.executable, "-m", "pytest")
     assert "test_v4_plot_preview_endpoint_returns_payload_with_candidates_and_qc" in task.commands[1].argv[3]
     assert "test_v4_plot_preview_endpoint_can_disable_v4_for_rollback" in task.commands[1].argv[4]
-    assert task.commands[2].argv == ("python", "scripts/run_layered_tests.py", "v4")
+    assert task.commands[2].argv == (sys.executable, "scripts/run_layered_tests.py", "v4")
 
 
 def test_resolve_t03_task_contains_runtime_metric_guards() -> None:
@@ -76,8 +76,8 @@ def test_resolve_t03_task_contains_runtime_metric_guards() -> None:
         "runtime_metrics_api_guard",
         "layered_v4_regression_gate",
     ]
-    assert "test_v4_observability_snapshot_reports_runtime_threshold_alerts" in task.commands[0].argv[2]
-    assert task.commands[1].argv[:3] == ("python", "-m", "pytest")
+    assert any("test_v4_observability_snapshot_reports_runtime_threshold_alerts" in arg for arg in task.commands[0].argv)
+    assert task.commands[1].argv[:3] == (sys.executable, "-m", "pytest")
     assert "test_v4_observability_snapshot_endpoint_emits_runtime_threshold_alerts" in task.commands[1].argv[4]
 
 
@@ -95,9 +95,9 @@ def test_resolve_t04_task_contains_remote_alert_channel_guards() -> None:
         "remote_alert_api_guard",
         "layered_v4_regression_gate",
     ]
-    assert "test_v4_alert_channel_routes_remote_targets_with_oncall_validation" in task.commands[0].argv[1]
-    assert "test_v4_alert_channel_remote_failure_falls_back_to_local_sink" in task.commands[0].argv[2]
-    assert task.commands[1].argv[:3] == ("python", "-m", "pytest")
+    assert any("test_v4_alert_channel_routes_remote_targets_with_oncall_validation" in arg for arg in task.commands[0].argv)
+    assert any("test_v4_alert_channel_remote_failure_falls_back_to_local_sink" in arg for arg in task.commands[0].argv)
+    assert task.commands[1].argv[:3] == (sys.executable, "-m", "pytest")
     assert "test_v4_observability_alert_route_endpoint_routes_remote_targets" in task.commands[1].argv[3]
     assert "test_v4_observability_alert_route_endpoint_applies_cooldown" in task.commands[1].argv[4]
 

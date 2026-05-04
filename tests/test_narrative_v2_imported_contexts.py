@@ -155,6 +155,45 @@ def test_load_imported_workbench_contexts_returns_none_for_invalid_root_json(tmp
     assert loaded is None
 
 
+def test_load_imported_workbench_contexts_accepts_utf8_bom_payload(tmp_path) -> None:
+    imported_path = tmp_path / "workbench_contexts.json"
+    imported_path.write_text(
+        json.dumps(
+            {
+                "contexts": [
+                    {
+                        "id": "plotpilot-chapter-01",
+                        "chapterNumber": 1,
+                        "title": "black_jade_awakens",
+                        "stage": "opening",
+                        "summary": "Imported PlotPilot fixture",
+                        "state": {
+                            "chapter_index": 1,
+                            "stage": "opening",
+                            "mainline_progress": 0.12,
+                            "sideplot_progress": 0.04,
+                            "conflict_intensity": 0.62,
+                            "emotional_temperature": 0.48,
+                            "pacing_speed": 0.58,
+                            "foreshadowing_load": 0.22,
+                            "payoff_pressure": 0.14,
+                            "characters": {},
+                            "tags": ["plotpilot"],
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8-sig",
+    )
+
+    loaded = load_imported_workbench_contexts(imported_path)
+
+    assert loaded is not None
+    assert loaded["contexts"][0]["id"] == "plotpilot-chapter-01"
+
+
 def test_load_imported_workbench_contexts_returns_none_when_contexts_payload_has_no_dict_items(
     tmp_path,
 ) -> None:

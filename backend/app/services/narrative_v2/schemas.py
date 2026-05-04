@@ -182,6 +182,21 @@ class NarrativeV4WorkbenchPreviewPayload(BaseModel):
     v4_input_profile: dict[str, Any] = Field(default_factory=dict)
 
 
+class NarrativeV8WorkbenchPreviewPayload(BaseModel):
+    enabled: bool
+    fallback_reason: str | None = None
+    decision_mode: str | None = None
+    primary_knife_id: str | None = None
+    secondary_knife_id: str | None = None
+    fallback_action: str | None = None
+    next_control_state: str | None = None
+    transition: dict[str, Any] | None = None
+    explanation: dict[str, str] = Field(default_factory=dict)
+    future_hooks: list[dict[str, Any]] = Field(default_factory=list)
+    risk_if_exposed: list[str] = Field(default_factory=list)
+    v8_input_profile: dict[str, Any] = Field(default_factory=dict)
+
+
 class NarrativeV2WorkbenchContextPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -193,6 +208,7 @@ class NarrativeV2WorkbenchContextPayload(BaseModel):
     state: StoryStateContextPayload
     compare_baseline: NarrativeV2CompareBaselinePayload | None = None
     v4_preview: NarrativeV4WorkbenchPreviewPayload | None = None
+    v8_preview: NarrativeV8WorkbenchPreviewPayload | None = None
     quality: NarrativeV2ContextQualityPayload | None = None
     admission: str | None = None
     primary_function: str | None = None

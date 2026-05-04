@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -72,7 +72,7 @@ class V7RuntimeMetricsStore:
             if not self.path.exists():
                 return []
             rows: list[dict[str, object]] = []
-            for raw in self.path.read_text(encoding="utf-8").splitlines():
+            for raw in self.path.read_text(encoding="utf-8-sig").splitlines():
                 line = raw.strip()
                 if not line:
                     continue
