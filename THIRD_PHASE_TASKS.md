@@ -167,7 +167,7 @@
 - 更细粒度留存反馈闭环（动态调权与长期追踪）
 - 跨题材和长序列压力场景扩展验证
 
-## V8.2 Standalone Control Core Track (2026-05-05)
+## V8.2 Standalone Control Core Closeout Track (2026-05-07)
 
 - Classification: `Increment`, isolated from baseline defaults.
 - Delivered implementation:
@@ -184,19 +184,20 @@
   - `backend/app/services/narrative_v8/controller.py`
   - `BuildVillainFeedbackOutput.build_followup_scene(...)`
   - focused V8 tests and acceptance gates with explicit fallback/transition helper coverage
+  - dedicated benchmark matrix gate `tests/test_narrative_v8_benchmark_matrix.py`
   - first workbench consumer wiring via `backend/app/services/narrative_v8/workbench_bridge.py`
   - `backend/app/services/narrative_v2/workbench_service.py` preview enrichment
-  - `backend/app/services/narrative_v2/schemas.py` `v8_preview` payload
+  - `backend/app/services/narrative_v2/schemas.py` `v8_preview` + `followup_scene` payload
   - `backend/app/core/config.py` `v8_workbench_enabled` rollback gate
 - Engineering entry points:
   - `python scripts/run_layered_tests.py v8`
   - `python scripts/run_v8_acceptance_review.py`
 - Fresh evidence:
-  - `pytest tests/test_narrative_v8_workbench_preview.py tests/test_narrative_v2_workbench_context_api.py tests/test_narrative_v2_workbench_quality_enrichment.py tests/test_run_layered_tests.py tests/test_run_v8_acceptance_review.py -q` -> `22 passed`
-  - `python scripts/run_layered_tests.py api import v8` -> `api: 24 passed`, `import: 20 passed`, `v8: 84 passed`
-  - `python scripts/run_v8_acceptance_review.py` -> `artifacts/acceptance/v8-acceptance-20260504T185216Z.md`
-- Remaining after first workbench consumer integration:
-  - continue broadening transition benchmark coverage beyond the current public-network upgrade, private-recovery fallback, and disabled rollback workbench scenarios
-  - keep `v8_workbench_enabled` and the disabled-preview payload as the rollback contract for any future API/UI/workbench consumer
-  - extend external adoption beyond workbench only when caller ownership of `next_control_state` / `build_followup_scene(...)` stays explicit
-  - keep current standalone core detached from persistence and writer flows
+  - `pytest tests/test_narrative_v8_workbench_preview.py tests/test_narrative_v2_workbench_context_api.py tests/test_narrative_v2_workbench_quality_enrichment.py tests/test_run_layered_tests.py tests/test_run_v8_acceptance_review.py -q` -> `26 passed`
+  - `python scripts/run_layered_tests.py v8` -> `100 passed`
+  - `python scripts/run_v8_acceptance_review.py` -> `artifacts/acceptance/v8-acceptance-20260507T071531Z.md`
+- Closed in current scope:
+  - transition benchmark breadth is now covered by a dedicated benchmark matrix gate rather than only five ad hoc workbench scenarios
+  - `next_control_state` / `build_followup_scene(...)` handoff is now explicit in the workbench consumer payload through `v8_preview.followup_scene`
+  - controller boundary regression is now guarded by delegate, pass-through, workbench-preview, and integration tests
+  - standalone rollback, workbench-only scope, and persistence / writer isolation remain unchanged by design

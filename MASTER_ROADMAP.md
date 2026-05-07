@@ -310,8 +310,8 @@
   - `V8.1` schema/selector/controller baseline has been tightened into a `V8.2` runtime that now includes helper-owned `fallbacks.py`, `transition_policy.py`, and `transitions.py`
   - `SceneContext.current_control_state`, `VillainFeedbackPacket.transition`, `BuildVillainFeedbackOutput.next_control_state`, and `BuildVillainFeedbackOutput.build_followup_scene(...)` are now aligned as the standalone control-surface handoff
   - transition upgrades are now gated by explicit observer-topology and public-trace rules instead of a single soft upgrade window
-  - first external consumer wiring now lands in `/api/v2/workbench/contexts` as `v8_preview`, summarized through `workbench_bridge.py`
-  - differential, transition, fallback, controller, and integration tests are in place
+  - the guarded `/api/v2/workbench/contexts` consumer now adopts both `next_control_state` and `followup_scene` through `v8_preview`, summarized through `workbench_bridge.py`
+  - differential, transition, fallback, controller, integration, and benchmark-matrix tests are in place
   - layered regression entry and acceptance-report script are in place and cover the expanded V8 helper surface
 - Mainline decision:
   - not a mainline candidate yet because only a guarded `v2` workbench consumer is wired; broader API/UI/writer/storage rollout remains out of scope

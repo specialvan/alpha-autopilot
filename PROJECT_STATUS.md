@@ -223,7 +223,25 @@
   - `npm --prefix ui-react run test` -> `7 files passed, 20 tests passed`
   - `npm --prefix ui-react run build` -> `build success`
 
-## V8.2 Villain Feedback Control Core Update (2026-05-05)
+## V6/V7 Formal Production Closeout Update (2026-05-05)
+
+- Status: V6 / V7 已补齐正式 gate 入口、最新验收报告与统一收口包，收口目标转为“可门禁、可关停、可审计”。
+- Delivered hardening:
+  - V6: 新增全局开关 `v6_enabled`，`/api/narrative/v6/*` 路由统一受控
+  - V7: `scripts/run_layered_tests.py` 新增 `v7` layer，新增 `scripts/run_v7_acceptance_review.py`
+  - Closeout package: `claude_review_package/V6_V7_PRODUCTION_CLOSEOUT_2026_05_05.md`
+- Fresh evidence:
+  - `python -m pytest tests/test_run_layered_tests.py tests/test_run_v7_acceptance_review.py tests/test_narrative_v6_api.py -q` -> `21 passed`
+  - `python scripts/run_v7_acceptance_review.py` -> report `artifacts/acceptance/v7-acceptance-20260505T072501Z.md`
+  - `python scripts/run_v6_acceptance_review.py` -> report `artifacts/acceptance/v6-acceptance-20260505T072535Z.md`
+- Gate snapshot:
+  - V7 targeted gate `113 passed`; layered gate `v7 107 + api 24 + frontend 19 passed`; compile gate pass
+  - V6 targeted gate `38 passed`; layered gate `v6 53 + api 24 + v4 38 + frontend 19 passed`; frontend build pass
+- Rollback / boundary:
+  - `v6_enabled=false` and `v7_enabled=false` now form the direct runtime stop path for both increment versions
+  - baseline `v1/v2` default path remains unchanged
+
+## V8.2 Villain Feedback Control Core Closeout Update (2026-05-07)
 
 - Status: `V8.1` standalone core has been tightened into a `V8.2` runtime-aligned increment control core under `backend/app/services/narrative_v8/`.
 - Boundary kept intact:
@@ -247,21 +265,22 @@
   - `BuildVillainFeedbackOutput.build_followup_scene(...)` handoff path in `schemas.py`
 - Delivered engineering gates:
   - focused V8 pytest suite under `tests/test_narrative_v8_*.py`
+  - dedicated benchmark matrix gate `tests/test_narrative_v8_benchmark_matrix.py`
   - layered gate `python scripts/run_layered_tests.py v8`
   - acceptance report script `python scripts/run_v8_acceptance_review.py`
 - First external consumer wiring:
   - `backend/app/services/narrative_v8/workbench_bridge.py`
   - `backend/app/services/narrative_v2/workbench_service.py`
-  - `backend/app/services/narrative_v2/schemas.py` (`v8_preview`)
+  - `backend/app/services/narrative_v2/schemas.py` (`v8_preview`, `followup_scene`)
   - `backend/app/core/config.py` (`v8_workbench_enabled`)
 - Evidence:
-  - `pytest tests/test_narrative_v8_workbench_preview.py tests/test_narrative_v2_workbench_context_api.py tests/test_narrative_v2_workbench_quality_enrichment.py tests/test_run_layered_tests.py tests/test_run_v8_acceptance_review.py -q` -> `22 passed`
-  - `python scripts/run_layered_tests.py api import v8` -> `api: 24 passed`, `import: 20 passed`, `v8: 84 passed`
-  - `python scripts/run_v8_acceptance_review.py` -> report `artifacts/acceptance/v8-acceptance-20260504T185216Z.md`
-- Residual guard items:
-  - transition thresholds are now locked into explicit topology-gated policy rules, and benchmark breadth now covers public-network upgrade, private-recovery fallback, and disabled rollback workbench paths, but broader topology coverage is still bounded
-  - `next_control_state` and `build_followup_scene(...)` now feed a first external consumer through `/api/v2/workbench/contexts` `v8_preview`, gated by `v8_workbench_enabled`, but broader caller adoption still needs guardrails
-  - controller/helper boundaries are now guarded by delegate, transition pass-through, workbench preview, and integration regression tests, but future consumers still need to preserve those owners
+  - `pytest tests/test_narrative_v8_workbench_preview.py tests/test_narrative_v2_workbench_context_api.py tests/test_narrative_v2_workbench_quality_enrichment.py tests/test_run_layered_tests.py tests/test_run_v8_acceptance_review.py -q` -> `26 passed`
+  - `python scripts/run_layered_tests.py v8` -> `100 passed`
+  - `python scripts/run_v8_acceptance_review.py` -> report `artifacts/acceptance/v8-acceptance-20260507T071531Z.md`
+- Closeout hardening:
+  - transition benchmark breadth is now closed inside current scope through `tests/test_narrative_v8_benchmark_matrix.py`, covering public-network upgrade, judge-network upgrade, low-exposure upgrade, public-trace exposure, private fallback repair, public fallback collapse, distrusted hardening, and repair restoration
+  - `next_control_state` and `build_followup_scene(...)` are now both adopted by the guarded `/api/v2/workbench/contexts` consumer through explicit `v8_preview.followup_scene`
+  - controller/helper ownership is now guarded by delegate tests for selection, explanation, future hooks, state shift, and transition, plus pass-through and integration regression coverage
 - Rollback / impact note:
   - V8 remains isolated from baseline recommendation and default runtime paths.
   - Current rollback remains trivial because the only wired caller is workbench preview enrichment and it can be disabled through `v8_workbench_enabled`.
