@@ -29,6 +29,7 @@ def test_v8_acceptance_review_commands_cover_required_gates() -> None:
     assert any("tests/test_narrative_v8_fallbacks.py" in row for row in joined)
     assert any("tests/test_narrative_v8_transition_policy.py" in row for row in joined)
     assert any("tests/test_narrative_v8_transitions.py" in row for row in joined)
+    assert any("tests/test_narrative_v8_benchmark_matrix.py" in row for row in joined)
     assert any("tests/test_narrative_v8_workbench_preview.py" in row for row in joined)
     assert any("tests/test_narrative_v8_controller.py" in row for row in joined)
     assert any("tests/test_narrative_v8_integration.py" in row for row in joined)

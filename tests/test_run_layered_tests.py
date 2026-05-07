@@ -95,6 +95,19 @@ def test_run_layers_uses_windows_npm_cmd_when_needed(monkeypatch) -> None:
     assert calls[0][1] == repo_root / "ui-react"
 
 
+def test_resolve_layers_supports_v7_gate() -> None:
+    repo_root = Path(r"D:\workspace\alpha-autopilot")
+    run_layered_tests = load_run_layered_tests_module()
+
+    commands = run_layered_tests.resolve_layers(["v7"], repo_root=repo_root)
+
+    assert [command.name for command in commands] == ["v7"]
+    assert commands[0].cwd == repo_root
+    assert commands[0].argv[:3] == (sys.executable, "-m", "pytest")
+    assert "tests/test_narrative_v7_modules.py" in commands[0].argv
+    assert "tests/test_narrative_v7_api.py" in commands[0].argv
+
+
 def test_resolve_layers_rejects_unknown_layer_name() -> None:
     run_layered_tests = load_run_layered_tests_module()
     with pytest.raises(SystemExit, match="Unknown layer: missing"):
@@ -131,10 +144,13 @@ def test_layer_definitions_include_required_v3_gate_tests() -> None:
     assert "tests/test_narrative_v6_observability.py" in layer_tests
     assert "tests/test_narrative_v6_api.py" in layer_tests
     assert "tests/test_run_v6_acceptance_review.py" in layer_tests
+    assert "tests/test_narrative_v7_modules.py" in layer_tests
+    assert "tests/test_narrative_v7_api.py" in layer_tests
     assert "tests/test_narrative_v8_schemas.py" in layer_tests
     assert "tests/test_narrative_v8_fallbacks.py" in layer_tests
     assert "tests/test_narrative_v8_transition_policy.py" in layer_tests
     assert "tests/test_narrative_v8_transitions.py" in layer_tests
+    assert "tests/test_narrative_v8_benchmark_matrix.py" in layer_tests
     assert "tests/test_narrative_v8_workbench_preview.py" in layer_tests
     assert "tests/test_narrative_v8_knife_library.py" in layer_tests
     assert "tests/test_narrative_v8_selection.py" in layer_tests

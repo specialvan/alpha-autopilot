@@ -32,33 +32,32 @@ class AcceptanceCommand:
 def _commands(repo_root: Path) -> tuple[AcceptanceCommand, ...]:
     return (
         AcceptanceCommand(
-            name="v8_targeted_gate",
+            name="v7_targeted_gate",
             cwd=repo_root,
             argv=(
                 *PYTEST_CMD,
-                "tests/test_narrative_v8_schemas.py",
-                "tests/test_narrative_v8_knife_library.py",
-                "tests/test_narrative_v8_selection.py",
-                "tests/test_narrative_v8_flavor.py",
-                "tests/test_narrative_v8_ledger.py",
-                "tests/test_narrative_v8_transition_policy.py",
-                "tests/test_narrative_v8_transitions.py",
-                "tests/test_narrative_v8_benchmark_matrix.py",
-                "tests/test_narrative_v8_fallbacks.py",
-                "tests/test_narrative_v8_workbench_preview.py",
-                "tests/test_narrative_v8_controller.py",
-                "tests/test_narrative_v8_integration.py",
-                "tests/test_narrative_v2_workbench_context_api.py",
-                "tests/test_narrative_v2_workbench_quality_enrichment.py",
+                "tests/test_narrative_v7_modules.py",
+                "tests/test_narrative_v7_api.py",
                 "tests/test_run_layered_tests.py",
-                "tests/test_run_v8_acceptance_review.py",
+                "tests/test_run_v7_acceptance_review.py",
                 "-q",
             ),
         ),
         AcceptanceCommand(
-            name="layered_v8_gate",
+            name="v7_compile_gate",
             cwd=repo_root,
-            argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v8"),
+            argv=(
+                PYTHON_EXE,
+                "-m",
+                "compileall",
+                "backend/app/services/narrative_v7",
+                "backend/app/api/routes/narrative_v7.py",
+            ),
+        ),
+        AcceptanceCommand(
+            name="layered_regression_gate",
+            cwd=repo_root,
+            argv=(PYTHON_EXE, "scripts/run_layered_tests.py", "v7", "api", "frontend"),
         ),
     )
 
@@ -81,7 +80,7 @@ def _iso_utc(value: datetime) -> str:
 
 def _default_report_path(repo_root: Path, started_at: datetime) -> Path:
     timestamp = started_at.strftime("%Y%m%dT%H%M%SZ")
-    return repo_root / "artifacts" / "acceptance" / f"v8-acceptance-{timestamp}.md"
+    return repo_root / "artifacts" / "acceptance" / f"v7-acceptance-{timestamp}.md"
 
 
 def _write_report(
@@ -95,7 +94,7 @@ def _write_report(
     report_path.parent.mkdir(parents=True, exist_ok=True)
     duration_seconds = (ended_at - started_at).total_seconds()
     lines: list[str] = []
-    lines.append("# V8 Acceptance Review Report")
+    lines.append("# V7 Acceptance Review Report")
     lines.append("")
     lines.append(f"- started_at_utc: {_iso_utc(started_at)}")
     lines.append(f"- ended_at_utc: {_iso_utc(ended_at)}")
@@ -129,17 +128,13 @@ def run(
     root = (repo_root or REPO_ROOT).resolve()
     started_at = datetime.now(timezone.utc)
     commands = _commands(root)
-    report_path = (
-        _default_report_path(root, started_at)
-        if output is None
-        else (output if output.is_absolute() else (root / output).resolve())
-    )
+    report_path = _default_report_path(root, started_at) if output is None else (output if output.is_absolute() else (root / output).resolve())
 
     out = stream if stream is not None else sys.stdout
     results: list[subprocess.CompletedProcess[str]] = []
     exit_code = 0
     for command in commands:
-        print(f"[v8-acceptance] {command.name}: {command.display()} (cwd={command.cwd})", file=out)
+        print(f"[v7-acceptance] {command.name}: {command.display()} (cwd={command.cwd})", file=out)
         result = _run_command(command)
         results.append(result)
         if result.returncode != 0 and exit_code == 0:
@@ -147,12 +142,12 @@ def run(
 
     ended_at = datetime.now(timezone.utc)
     _write_report(report_path, commands, results, started_at=started_at, ended_at=ended_at)
-    print(f"[v8-acceptance] report: {report_path}", file=out)
+    print(f"[v7-acceptance] report: {report_path}", file=out)
     return exit_code, report_path
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run V8 acceptance gates and write a markdown report.")
+    parser = argparse.ArgumentParser(description="Run V7 acceptance gates and write a markdown report.")
     parser.add_argument(
         "--repo-root",
         type=Path,

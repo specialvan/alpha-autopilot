@@ -126,6 +126,16 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
             "tests/test_run_v6_acceptance_review.py",
         ),
     ),
+    "v7": LayerCommand(
+        name="v7",
+        cwd=REPO_ROOT,
+        argv=(
+            *PYTEST_CMD,
+            "tests/test_narrative_v7_modules.py",
+            "tests/test_narrative_v7_api.py",
+            "tests/test_run_v7_acceptance_review.py",
+        ),
+    ),
     "v8": LayerCommand(
         name="v8",
         cwd=REPO_ROOT,
@@ -138,6 +148,7 @@ LAYER_DEFINITIONS: dict[str, LayerCommand] = {
             "tests/test_narrative_v8_ledger.py",
             "tests/test_narrative_v8_transition_policy.py",
             "tests/test_narrative_v8_transitions.py",
+            "tests/test_narrative_v8_benchmark_matrix.py",
             "tests/test_narrative_v8_fallbacks.py",
             "tests/test_narrative_v8_workbench_preview.py",
             "tests/test_narrative_v8_controller.py",
