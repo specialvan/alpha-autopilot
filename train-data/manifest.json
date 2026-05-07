@@ -1,0 +1,122 @@
+{
+  "dataset_name": "villain_female_dynamics_dataset",
+  "version": "1.3.0",
+  "purpose": "Structured knowledge base for persona analysis, scene reasoning, failure recovery, transition modeling, thinking traces, and synthetic training.",
+  "files": [
+    {
+      "path": "persona_cards.jsonl",
+      "role": "Persona-level structure records",
+      "record_count": 16,
+      "primary_use": ["persona classification", "persona comparison", "upgrade bias reasoning"]
+    },
+    {
+      "path": "shell_library.jsonl",
+      "role": "Legitimacy shell records",
+      "record_count": 15,
+      "primary_use": ["shell matching", "collapse trigger detection", "scene fit"]
+    },
+    {
+      "path": "gap_library.jsonl",
+      "role": "Target gap records",
+      "record_count": 21,
+      "primary_use": ["gap matching", "knife selection", "hard rejection checks"]
+    },
+    {
+      "path": "primitive_library.jsonl",
+      "role": "Primitive / knife records",
+      "record_count": 14,
+      "primary_use": ["primitive selection", "compatibility reasoning", "transition mapping"]
+    },
+    {
+      "path": "scene_matrix.jsonl",
+      "role": "Scene-to-knife fit records",
+      "record_count": 10,
+      "primary_use": ["scene judgment", "scene fit", "observer topology reasoning"]
+    },
+    {
+      "path": "failure_recovery.jsonl",
+      "role": "Failure, recovery, upgrade, and transition records",
+      "record_count": 14,
+      "primary_use": ["failure diagnosis", "repair path reasoning", "upgrade trigger reasoning"]
+    },
+    {
+      "path": "transition_matrix.jsonl",
+      "role": "Explicit state transition records",
+      "record_count": 13,
+      "primary_use": ["state transition inference", "state machine supervision"]
+    },
+    {
+      "path": "compatibility_edges.jsonl",
+      "role": "Primitive compatibility graph edges",
+      "record_count": 49,
+      "primary_use": ["knife compatibility", "combo filtering", "selector hard constraints"]
+    },
+    {
+      "path": "thinking_trace.jsonl",
+      "role": "Decision order, intermediate judgments, and recovery / upgrade traces",
+      "record_count": 20,
+      "primary_use": ["decision trace preservation", "reasoning style tuning", "thinking-order supervision"]
+    },
+    {
+      "path": "training_prompts.jsonl",
+      "role": "Prompt templates for synthetic sample generation",
+      "record_count": 9,
+      "primary_use": ["prompt synthesis", "data expansion", "task templating"]
+    },
+    {
+      "path": "synthetic_samples.jsonl",
+      "role": "Synthetic training samples",
+      "record_count": 50,
+      "primary_use": ["SFT", "DPO", "RL", "retrieval conditioning"]
+    },
+    {
+      "path": "evaluation_set.jsonl",
+      "role": "Held-out evaluation records",
+      "record_count": 50,
+      "primary_use": ["regression testing", "held-out validation", "reasoning checks"]
+    },
+    {
+      "path": "dataset_schema.md",
+      "role": "Schema reference for all records",
+      "primary_use": ["schema lookup", "maintenance", "dataset onboarding"]
+    },
+    {
+      "path": "README.md",
+      "role": "Top-level dataset overview",
+      "primary_use": ["dataset onboarding", "human navigation"]
+    },
+    {
+      "path": "usage_matrix.md",
+      "role": "Consumer routing matrix",
+      "primary_use": ["file selection", "consumer routing", "task-to-file mapping"]
+    },
+    {
+      "path": "rl/README.md",
+      "role": "RL-oriented usage view",
+      "primary_use": ["RL training guidance", "constraint-first routing"]
+    },
+    {
+      "path": "wiki/README.md",
+      "role": "Wiki-oriented usage view",
+      "primary_use": ["human reference navigation", "knowledge base onboarding"]
+    },
+    {
+      "path": "lora/README.md",
+      "role": "LoRA-oriented usage view",
+      "primary_use": ["style tuning guidance", "analysis-order supervision"]
+    }
+  ],
+  "recommended_workflow": [
+    "read dataset_schema.md first",
+    "use manifest.json to locate the relevant record family",
+    "use usage_matrix.md to route the dataset to the correct consumer",
+    "use synthetic_samples.jsonl for generation and training",
+    "use evaluation_set.jsonl for held-out checks",
+    "use compatibility_edges.jsonl, transition_matrix.jsonl, and thinking_trace.jsonl for hard reasoning constraints"
+  ],
+  "notes": [
+    "Record counts are actual counts at the time of this manifest update.",
+    "The dataset is optimized for structure-first reasoning rather than surface style.",
+    "Keep persona, shell, gap, primitive, scene, failure, transition, compatibility, and thinking-trace layers separate in downstream use."
+  ]
+}

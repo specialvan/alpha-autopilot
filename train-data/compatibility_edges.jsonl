@@ -1,0 +1,49 @@
+{"left":"fake_vulnerability","right":"gentle_absorption","relation":"compatible","reason":"soft vulnerability followed by containment reinforces protection-based dependency"}
+{"left":"fake_vulnerability","right":"deferred_asking","relation":"compatible","reason":"vulnerability can open the door for later extraction"}
+{"left":"fake_vulnerability","right":"polite_humiliation","relation":"incompatible","reason":"soft weakness and public pressure conflict in tone and legitimacy"}
+{"left":"fake_vulnerability","right":"relationship_withdrawal","relation":"conditional","reason":"distance can amplify vulnerability only if the target still pursues"}
+{"left":"gentle_absorption","right":"feedback_loop","relation":"compatible","reason":"containment followed by feedback stabilizes emotional dependency"}
+{"left":"gentle_absorption","right":"intentional_gap","relation":"conditional","reason":"a gap can refresh absorption if the target does not feel abandoned"}
+{"left":"gentle_absorption","right":"polite_humiliation","relation":"incompatible","reason":"containment collapses when public humiliation is introduced too early"}
+{"left":"deferred_asking","right":"staged_concession","relation":"compatible","reason":"front-loaded concession supports later extraction"}
+{"left":"deferred_asking","right":"relationship_redefinition","relation":"compatible","reason":"delayed asks are easier to reframe as role evolution"}
+{"left":"deferred_asking","right":"memory_rewriting","relation":"conditional","reason":"memory reframing can support the debt story only after the relationship is legitimized"}
+{"left":"relationship_withdrawal","right":"intentional_gap","relation":"compatible","reason":"withdrawing and leaving a gap are mutually reinforcing pursuit signals"}
+{"left":"relationship_withdrawal","right":"feedback_loop","relation":"conditional","reason":"the loop can survive only if the withdrawal is intermittent"}
+{"left":"relationship_withdrawal","right":"polite_humiliation","relation":"incompatible","reason":"withdrawal depends on scarcity, not overt public pressure"}
+{"left":"self_esteem_feeding","right":"public_control","relation":"compatible","reason":"public positioning and self-image feeding reinforce each other in visible scenes"}
+{"left":"self_esteem_feeding","right":"polite_humiliation","relation":"compatible","reason":"praise followed by pressure can reposition the target in public"}
+{"left":"self_esteem_feeding","right":"memory_rewriting","relation":"conditional","reason":"old praise can be reinterpreted as evidence of an old bond"}
+{"left":"polite_humiliation","right":"public_control","relation":"compatible","reason":"public pressure and room control strengthen the same scene logic"}
+{"left":"polite_humiliation","right":"rational_packaging","relation":"conditional","reason":"the humiliation must be framed as procedure or reason to remain legible"}
+{"left":"polite_humiliation","right":"fake_vulnerability","relation":"incompatible","reason":"the character cannot credibly be weak and publicly dominant in the same beat"}
+{"left":"memory_rewriting","right":"unfinished_narrative","relation":"compatible","reason":"memory reframing works best when the story is still unresolved"}
+{"left":"memory_rewriting","right":"old_wound_trigger","relation":"compatible","reason":"old wounds make the rewrite emotionally sticky"}
+{"left":"memory_rewriting","right":"public_control","relation":"conditional","reason":"public framing can support memory rewriting only when the crowd accepts the version"}
+{"left":"body_language_induction","right":"scene_borrowing","relation":"compatible","reason":"ambient support plus nonverbal cueing creates fast ignition"}
+{"left":"body_language_induction","right":"low_pressure_teasing","relation":"compatible","reason":"light touch and physical cues amplify immediate attraction"}
+{"left":"body_language_induction","right":"rational_packaging","relation":"incompatible","reason":"highly embodied induction clashes with explicit rational framing"}
+{"left":"staged_concession","right":"relationship_redefinition","relation":"compatible","reason":"giving a little first makes role upgrade feel natural later"}
+{"left":"staged_concession","right":"deferred_asking","relation":"compatible","reason":"early concession can seed delayed extraction"}
+{"left":"staged_concession","right":"polite_humiliation","relation":"conditional","reason":"pressure can follow concession only if the target still accepts the frame"}
+{"left":"feedback_loop","right":"intentional_gap","relation":"conditional","reason":"feedback must be sparse enough that the gap still feels alive"}
+{"left":"feedback_loop","right":"gentle_absorption","relation":"compatible","reason":"absorption and feedback together create stable attachment"}
+{"left":"feedback_loop","right":"rational_packaging","relation":"incompatible","reason":"mechanical loop-building clashes with overtly procedural framing"}
+{"left":"scene_borrowing","right":"public_control","relation":"compatible","reason":"borrowed ambience and public order can jointly raise the character's position"}
+{"left":"scene_borrowing","right":"body_language_induction","relation":"compatible","reason":"the scene provides the pressure while the body provides the signal"}
+{"left":"scene_borrowing","right":"fake_vulnerability","relation":"conditional","reason":"borrowed scenes can soften vulnerability only when the mood is already low-pressure"}
+{"left":"rational_packaging","right":"public_control","relation":"compatible","reason":"structured explanation makes public pressure feel legitimate"}
+{"left":"rational_packaging","right":"staged_concession","relation":"compatible","reason":"rational framing can justify earlier concessions as strategy"}
+{"left":"rational_packaging","right":"body_language_induction","relation":"incompatible","reason":"explicit logic undermines embodied immediacy"}
+{"left":"old_wound_trigger","right":"memory_rewriting","relation":"compatible","reason":"the wound makes the new interpretation emotionally hard to resist"}
+{"left":"old_wound_trigger","right":"gentle_absorption","relation":"conditional","reason":"containment can stabilize the wound if the target is not overwhelmed"}
+{"left":"old_wound_trigger","right":"polite_humiliation","relation":"incompatible","reason":"public pressure can shut down the residue before it is usable"}
+{"left":"intentional_gap","right":"relationship_withdrawal","relation":"compatible","reason":"a deliberate gap is the structural expression of withdrawal"}
+{"left":"intentional_gap","right":"feedback_loop","relation":"conditional","reason":"the loop can survive only if the gap is short enough to sustain expectation"}
+{"left":"intentional_gap","right":"public_control","relation":"incompatible","reason":"gaps lose force when the scene is dominated by overt public control"}
+{"left":"high_position_compassion","right":"public_control","relation":"compatible","reason":"authority plus apparent care is a strong public repositioning combo"}
+{"left":"high_position_compassion","right":"polite_humiliation","relation":"conditional","reason":"compassion can justify pressure only if the room accepts the authority frame"}
+{"left":"high_position_compassion","right":"fake_vulnerability","relation":"incompatible","reason":"high position and fake weakness cannot credibly peak at the same time"}
+{"left":"circle_infiltration","right":"feedback_loop","relation":"compatible","reason":"repeated low-friction contact is how infiltration becomes trust"}
+{"left":"circle_infiltration","right":"relationship_redefinition","relation":"conditional","reason":"role change works only after the circle has already normalized the presence"}
+{"left":"circle_infiltration","right":"polite_humiliation","relation":"incompatible","reason":"infiltration relies on staying nonthreatening"}
