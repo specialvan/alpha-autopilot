@@ -1,0 +1,9 @@
+- `backend/app/main.py` 是当前主服务入口，统一挂载 `/api`、`/api/v2`、`/api/v4`、`/api/narrative/v6`、`/api/narrative/v7`。仓库说明应优先围绕这些路由分组，而不是围绕根目录脚本组织。
+- `alpha_autopilot/` 是基础推荐核，负责 `StoryState -> 候选动作 -> 特征打分 -> 推荐输出`，同时提供训练、版本快照、训练日志和指标聚合。它是 Baseline 层的核心，不应和 V4/V6/V7 治理模块混写。
+- `alpha_autopilot_v2/v3/v4` 分别承担规则搜索评估、质量与留存增强、关系图与角色约束增强；`backend/app/services/` 是这些算法层的编排层。解释模块关系时，请按“算法层 -> 服务层 -> API 层”来写。
+- `backend/app/services/narrative_v2/workbench_service.py` 是最重要的关系节点之一：它会按“在线 PlotPilot API -> 本地 report -> 导入 fixture -> live fallback”的顺序解析 contexts，并在返回中嵌入 `v4_preview` 与 `v8_preview`。
+- 仓库内未发现消息队列、未发现内建 scheduler、未发现入站 webhook。很多 `/auto-archive`、`/governance/run`、`/auto-remediate` 接口更像是给外部调度器调用的维护入口，这一点需要重点解释。
+- 当前真实外部 HTTP 依赖只有两类：V2 Workbench 的在线 PlotPilot 报告拉取，以及 V4 critical alert 的出站 webhook 投递。DeepWiki 应明确区分“入站 API”与“出站外部调用”。
+- `backend/app/services/narrative_v6/` 是事件化最强的一层，包含 simulation store、GraphRAG history、event injection、graph memory audit、runtime observability。这里最需要解释的是“状态流转与落盘对象”，而不是算法细节。
+- `backend/app/services/narrative_v7/benchmark_store.py` 是治理复杂度最高的模块，应拆成“benchmark 版本库、maintenance alert、governance run、escalation、remediation、auto-remediate 链”来说明。不要把 50 多个路由平铺成没有层次的一张表。
+- `ui-react/src/api.ts` 是前端实际消费的契约镜像，可反向验证哪些字段已经被 UI 依赖。写仓库说明时，优先解释被 `ui-react` 直接使用的接口与响应字段，边缘实验接口可以后写。
