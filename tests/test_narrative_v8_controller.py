@@ -141,6 +141,27 @@ def test_controller_delegates_transition_derivation_to_transition_helpers() -> N
     assert spy.call_count == 1
 
 
+def test_controller_delegates_explanation_rendering_to_flavor_helpers() -> None:
+    with patch("backend.app.services.narrative_v8.controller.build_explanation", wraps=build_villain_feedback.__globals__["build_explanation"]) as spy:
+        build_villain_feedback(build_input())
+
+    assert spy.call_count == 1
+
+
+def test_controller_delegates_future_hook_planning_to_flavor_helpers() -> None:
+    with patch("backend.app.services.narrative_v8.controller.build_future_hooks", wraps=build_villain_feedback.__globals__["build_future_hooks"]) as spy:
+        build_villain_feedback(build_input())
+
+    assert spy.call_count == 1
+
+
+def test_controller_delegates_state_shift_construction_to_ledger_helpers() -> None:
+    with patch("backend.app.services.narrative_v8.controller.build_state_shift", wraps=build_villain_feedback.__globals__["build_state_shift"]) as spy:
+        build_villain_feedback(build_input())
+
+    assert spy.call_count == 1
+
+
 def test_controller_uses_transition_helper_output_without_rewriting_it() -> None:
     forced_transition = TransitionLayer(
         prior_state="suspicious",

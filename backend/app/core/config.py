@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     v4_prompt_compress_default_mode: str = "bullet"
     v4_prompt_compress_coverage_mode: str = "heuristic"
     v4_character_validation_mode: str = "heuristic"
+    v6_enabled: bool = True
     v6_simulation_store_max_rows_per_file: int = 500
     v6_simulation_store_max_bytes_per_file: int = 2_000_000
     v6_observability_latency_p95_ms_threshold: float = 1200.0

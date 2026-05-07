@@ -262,6 +262,7 @@ def _context_with_previews(
             "fallback_action": None,
             "next_control_state": None,
             "transition": None,
+            "followup_scene": None,
             "explanation": {},
             "future_hooks": [],
             "risk_if_exposed": [],

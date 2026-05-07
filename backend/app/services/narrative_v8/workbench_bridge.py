@@ -20,6 +20,7 @@ def build_v8_workbench_preview(
             "fallback_action": None,
             "next_control_state": None,
             "transition": None,
+            "followup_scene": None,
             "explanation": {},
             "future_hooks": [],
             "risk_if_exposed": [],
@@ -29,6 +30,7 @@ def build_v8_workbench_preview(
     request_payload, input_profile = _build_v8_preview_input(context)
     result = build_villain_feedback(request_payload)
     packet = result.packet
+    followup_scene = result.build_followup_scene(request_payload["scene"])
     return {
         "enabled": True,
         "fallback_reason": None,
@@ -38,6 +40,7 @@ def build_v8_workbench_preview(
         "fallback_action": packet.decision.fallback_action,
         "next_control_state": result.next_control_state,
         "transition": packet.transition.model_dump(),
+        "followup_scene": followup_scene.model_dump(),
         "explanation": packet.explanation.model_dump(),
         "future_hooks": [hook.model_dump() for hook in packet.future_hooks],
         "risk_if_exposed": list(packet.risk_if_exposed),

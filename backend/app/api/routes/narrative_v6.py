@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from time import perf_counter
 
+from ...core.config import settings
 from ...services.narrative_v6.character_interview import CharacterInterviewService
 from ...services.narrative_v6.character_parameterizer import CharacterParameterizer
 from ...services.narrative_v6.conflict_probe import EmergentConflictProbeService
@@ -49,6 +50,11 @@ simulation_store = create_default_v6_simulation_store()
 runtime_metrics_store = create_default_v6_runtime_metrics_store()
 graph_rag_retriever = GraphRAGRetriever()
 graph_memory_store = create_default_v6_graph_memory_store()
+
+
+def _ensure_enabled() -> None:
+    if not settings.v6_enabled:
+        raise HTTPException(status_code=503, detail="v6_disabled")
 
 
 def _append_runtime_metric(
@@ -182,6 +188,7 @@ def extract_narrative_seed(payload: NarrativeSeedExtractionRequest) -> Narrative
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return seed_extractor.extract(payload)
     except HTTPException as exc:
         status = "error"
@@ -210,6 +217,7 @@ def parameterize_characters(payload: CharacterParameterizeRequest) -> CharacterP
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return character_parameterizer.parameterize(payload)
     except HTTPException as exc:
         status = "error"
@@ -244,6 +252,7 @@ def run_parallel_simulation(payload: ParallelSimulationRequest) -> ParallelPlotS
     risk_flags: list[str] | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         graph_query = _build_default_simulation_graph_query(payload)
         retrieval = _retrieve_graph_with_stitching(
             GraphRAGRetrieveRequest(
@@ -311,6 +320,7 @@ def get_parallel_simulation(simulation_id: str) -> ParallelPlotSimulationResult:
     risk_flags: list[str] | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         result = simulation_store.get(simulation_id)
         if result is None:
             status = "error"
@@ -356,6 +366,7 @@ def probe_emergent_conflicts(payload: EmergentConflictProbeRequest) -> EmergentC
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return conflict_probe_service.probe(payload)
     except HTTPException as exc:
         status = "error"
@@ -389,6 +400,7 @@ def inject_event(simulation_id: str, payload: EventInjectionRequest) -> EventInj
     risk_flags: list[str] | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         simulation = simulation_store.get(simulation_id)
         if simulation is None:
             status = "error"
@@ -439,6 +451,7 @@ def interview_character(character_id: str, payload: CharacterInterviewRequest) -
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         graph_rag_hints: list[str] = []
         if payload.relationship_graph_input is not None or payload.group_memory_graph is not None:
             retrieval = _retrieve_graph_with_stitching(
@@ -482,6 +495,7 @@ def apply_group_memory(payload: GroupMemoryApplyRequest) -> GroupMemoryGraph:
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return group_memory_service.apply(payload)
     except HTTPException as exc:
         status = "error"
@@ -512,6 +526,7 @@ def retrieve_graph_context(payload: GraphRAGRetrieveRequest) -> GraphRAGRetrieve
     http_status: int | None = 200
     risk_flags: list[str] | None = None
     try:
+        _ensure_enabled()
         result = _retrieve_graph_with_stitching(
             payload,
             source_route="/api/narrative/v6/graph/retrieve",
@@ -549,6 +564,7 @@ def compact_graph_memory() -> dict[str, int]:
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return graph_memory_store.compact()
     except HTTPException as exc:
         status = "error"
@@ -577,6 +593,7 @@ def audit_graph_memory(limit: int = 20) -> dict[str, object]:
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return graph_memory_store.audit_snapshot(limit=max(1, min(100, int(limit))))
     except HTTPException as exc:
         status = "error"
@@ -605,6 +622,7 @@ def persist_graph_memory_audit_snapshot(limit: int = 20) -> dict[str, object]:
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return graph_memory_store.persist_audit_snapshot(limit=max(1, min(100, int(limit))))
     except HTTPException as exc:
         status = "error"
@@ -633,6 +651,7 @@ def get_graph_memory_audit_history(limit: int = 20) -> list[dict[str, object]]:
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return graph_memory_store.audit_history(limit=max(1, min(100, int(limit))))
     except HTTPException as exc:
         status = "error"
@@ -661,6 +680,7 @@ def get_graph_memory_audit_alerts(limit: int = 20) -> dict[str, object]:
     error_type: str | None = None
     http_status: int | None = 200
     try:
+        _ensure_enabled()
         return graph_memory_store.audit_trend_alerts(limit=max(1, min(100, int(limit))))
     except HTTPException as exc:
         status = "error"
@@ -684,4 +704,5 @@ def get_graph_memory_audit_alerts(limit: int = 20) -> dict[str, object]:
 
 @router.get("/observability", response_model=dict[str, object])
 def get_v6_observability(limit: int = 500) -> dict[str, object]:
+    _ensure_enabled()
     return build_v6_observability_snapshot(runtime_store=runtime_metrics_store, limit=limit)

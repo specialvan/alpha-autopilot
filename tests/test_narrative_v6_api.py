@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 import backend.app.api.routes.narrative_v6 as narrative_v6_route
+from backend.app.core.config import settings
 from backend.app.main import create_app
 from backend.app.services.narrative_v6.graph_memory_store import PersistentGraphMemoryStore
 from backend.app.services.narrative_v6.observability import V6RuntimeMetricsStore
@@ -148,6 +149,16 @@ def test_v6_api_returns_404_when_simulation_is_missing() -> None:
 
     assert response.status_code == 404
     assert "simulation not found" in response.json()["detail"]
+
+
+def test_v6_api_respects_global_feature_flag(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "v6_enabled", False)
+    client = TestClient(create_app())
+
+    response = client.post("/api/narrative/v6/seed/extract", json=_seed_request_payload())
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "v6_disabled"
 
 
 def test_v6_api_supports_conflict_probe_and_group_memory() -> None:

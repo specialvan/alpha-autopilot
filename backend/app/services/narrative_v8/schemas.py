@@ -426,8 +426,13 @@ class TransitionLayer(NarrativeV8BaseModel):
 
     @model_validator(mode="after")
     def _validate_transition_consistency(self) -> "TransitionLayer":
-        if self.upgrade_path is not None and self.upgrade_trigger is None:
-            raise ValueError("upgrade_path requires upgrade_trigger")
+        if (self.upgrade_trigger is None) != (self.upgrade_path is None):
+            raise ValueError("upgrade_trigger and upgrade_path must be set together")
+        if self.next_state == "upgraded":
+            if self.prior_state != "upgraded" and self.upgrade_trigger is None:
+                raise ValueError("upgraded transitions require upgrade_trigger and upgrade_path")
+        elif self.upgrade_trigger is not None or self.upgrade_path is not None:
+            raise ValueError("upgrade metadata is only valid for upgraded transitions")
         if self.next_state == "collapsed" and self.recovery_mode is not None:
             raise ValueError("collapsed transition must not carry recovery_mode")
         return self

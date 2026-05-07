@@ -392,6 +392,22 @@ def test_schema_rejects_transition_upgrade_path_without_trigger() -> None:
         TransitionLayer(**payload)
 
 
+def test_schema_rejects_transition_upgrade_trigger_without_path() -> None:
+    payload = build_transition_payload()
+    payload["upgrade_path"] = None
+
+    with pytest.raises(ValidationError):
+        TransitionLayer(**payload)
+
+
+def test_schema_rejects_upgrade_metadata_on_non_upgraded_transition() -> None:
+    payload = build_transition_payload()
+    payload["next_state"] = "suspicious"
+
+    with pytest.raises(ValidationError):
+        TransitionLayer(**payload)
+
+
 def test_schema_rejects_collapsed_transition_with_active_recovery() -> None:
     payload = build_transition_payload()
     payload["next_state"] = "collapsed"

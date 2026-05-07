@@ -191,6 +191,7 @@ class NarrativeV8WorkbenchPreviewPayload(BaseModel):
     fallback_action: str | None = None
     next_control_state: str | None = None
     transition: dict[str, Any] | None = None
+    followup_scene: dict[str, Any] | None = None
     explanation: dict[str, str] = Field(default_factory=dict)
     future_hooks: list[dict[str, Any]] = Field(default_factory=list)
     risk_if_exposed: list[str] = Field(default_factory=list)
